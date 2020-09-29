@@ -1,3 +1,6 @@
+# Copyright 2020 Flora Canou
+# This work is licensed under the GNU General Public License version 3.
+
 import numpy as np
 from scipy import linalg
 import itertools
@@ -120,7 +123,7 @@ class Temperament:
 
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
 
-#Et construction function
+# Et construction function
 def logn (m, n):
     return np.log (m)/np.log (n)
 
