@@ -1,7 +1,7 @@
 # Copyright 2020 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
 
-import temperament_measures as tm
+import te_temperament_measures as tm
 import numpy as np
 
 # Find et sequence from comma list. Can be used to find optimal patent vals
