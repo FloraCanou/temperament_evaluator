@@ -1,4 +1,4 @@
-# Copyright 2020 Flora Canou
+# © 2020-2021 Flora Canou | Version 0.3
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
@@ -6,32 +6,35 @@ from scipy import linalg
 import itertools
 np.set_printoptions (suppress = True, linewidth = 256)
 
+PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
+
 def map_normalize (map):
     #todo: add something
     return map
 
 class Temperament:
-    def __init__ (self, map, subgroup):
+    def __init__ (self, map, subgroup = None):
         self.map = map_normalize (np.array (map))
-        self.subgroup = subgroup
-        self.jip = np.log2 (subgroup)
-        weight_te = np.eye (self.map.shape[1])
+        self.subgroup = PRIME_LIST[:self.map.shape[1]] if subgroup == None else subgroup
+        self.jip = np.log2 (self.subgroup)
+        tenney_weighter = np.eye (self.map.shape[1])
         for i in range (self.map.shape[1]):
             try:
-                weight_te[i][i] = 1/np.log2 (subgroup[i])
+                tenney_weighter[i][i] = 1/np.log2 (self.subgroup[i])
             except ZeroDivisionError:
                 continue
-        self.weight = weight_te
+        self.weight = tenney_weighter
 
     def weighted (self, matrix):
         return matrix @ self.weight
 
     def unweighted (self, matrix):
-        return matrix @ linalg.pinv (self.weight)
+        return matrix @ linalg.inv (self.weight)
 
-    def gen (self, pote = False): #in octaves
-        gen = linalg.lstsq (self.weighted (self.map).T, self.weighted (self.jip))[0]
-        return gen if not pote else gen / (gen @ self.map)[0]
+    def gen (self, pote = False, tuning = "te"): #in octaves
+        if tuning == "te":
+            gen = linalg.lstsq (self.weighted (self.map).T, self.weighted (self.jip))[0]
+            return gen if not pote else gen / (gen @ self.map)[0]
 
     def tuning_map (self, pote = False, unweighted = False): #in octaves
         return self.gen (pote = pote) @ (self.weighted (self.map) if not unweighted else self.map)
@@ -43,15 +46,15 @@ class Temperament:
         error_l2 = linalg.norm (self.mistuning_map (pote = pote))
         if type == "l2": #standard L2
             return error_l2
-        elif type == "rmsgraham": #RMS normalized by the rank
+        elif type == "rmsgraham": #RMS normalized for the rank
             return error_l2 / np.sqrt (self.map.shape[1])
         elif type == "rmsgene": #RMS
             try:
                 return error_l2 * np.sqrt ((self.map.shape[0] + 1) / (self.map.shape[1] - self.map.shape[0]))
             except ZeroDivisionError:
                 return np.NAN
-        elif type == "l1" or type == "top": #bonus: L1/TOP error
-            return linalg.norm (self.mistuning_map (type = type, pote = pote), ord = 1)
+        elif type == "top": #bonus: L-inf/TOP error
+            return linalg.norm (self.mistuning_map (pote = pote), ord = np.inf)
 
     def wedgie (self, weighted = False):
         combination_list = list (itertools.combinations (range (self.map.shape[1]), self.map.shape[0]))
@@ -68,14 +71,12 @@ class Temperament:
         #complexity_l2 = np.sqrt (linalg.det (self.weighted (self.map) @ self.weighted (self.map).T)) #same
         if type == "l2": #standard L2 complexity
             return complexity_l2
-        elif type == "rmsgraham": #RMS normalized by the rank
+        elif type == "rmsgraham": #Graham Breed's RMS
             return complexity_l2 / np.sqrt (self.map.shape[1]**self.map.shape[0])
             #return np.sqrt (linalg.det (self.weighted (self.map) @ self.weighted (self.map).T / self.map.shape[1])) #same
-        elif type == "rmsgene": #RMS
+        elif type == "rmsgene": #Gene Ward Smith's RMS
             return complexity_l2 / np.sqrt (len (self.wedgie ()))
             #return np.sqrt (linalg.det (self.weighted (self.map) @ self.weighted (self.map).T) / len (self.wedgie ())) #same
-        elif type == "l1" or type == "top": #bonus: L1/TOP complexity
-            return linalg.norm (self.wedgie (weighted = True), ord = 1)
 
     def simple_badness (self, type = "rmsgraham"):
         return self.complexity (type = type) * self.error (type = type)
@@ -85,6 +86,9 @@ class Temperament:
             return self.simple_badness (type = type) * self.complexity (type = type)**(self.map.shape[0]/(self.map.shape[1] - self.map.shape[0]))
         except ZeroDivisionError:
             return np.NAN
+
+    # def bound_edo (self, type = "rmsgraham"):
+    #     return min (1/abs (self.mistuning_map (pote = True)[1:]))
 
     def show_input (self, pote, measure):
         print (f"\nMap: \n{self.map}")
@@ -118,15 +122,11 @@ class Temperament:
             self.show_input (pote, measure)
         self.show_tuning_map (show_input = False, pote = pote, measure = measure)
         self.show_temperament_measures (show_input = False, pote = pote, type = type, measure = measure, badness_scale = badness_scale)
+        # print (f"Bound of edos: {self.bound_edo (type = type):.2f}")
         print (f"Logflat badness: {badness_scale*self.logflat_badness (type = type):.6f} ({badness_scale}x {type})")
         print (f"Wedgie: {self.wedgie (weighted = wedgie_weighted)}")
 
-PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
-
 # Et construction function
-def logn (m, n):
-    return np.log (m)/np.log (n)
-
-def et_construct (n, ed_ratio, subgroup, alt_val = 0):
-    val = np.rint (n*logn (subgroup, ed_ratio)).astype (int, copy = False) + alt_val
+def et_construct (n, subgroup, alt_val = 0):
+    val = np.rint (n*np.log2 (subgroup)).astype (int, copy = False) + alt_val
     return Temperament ([val], subgroup)
