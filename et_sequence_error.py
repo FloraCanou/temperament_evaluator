@@ -1,9 +1,8 @@
-# © 2020-2021 Flora Canou | Version 0.3
+# © 2020-2021 Flora Canou | Version 0.4
 # This work is licensed under the GNU General Public License version 3.
 
 import te_temperament_measures as tm
 import numpy as np
-import math
 
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
 
@@ -12,7 +11,7 @@ PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61
 def et_sequence_error (monzo_list, subgroup = None, cond = "error", progressive = True, threshold = 20, search_range = 1200):
     if subgroup == None:
         subgroup = PRIME_LIST[:monzo_list.shape[0]]
-    gpv = [0]*len (subgroup) #initialize with the all-zero val
+    gpv = [0]*len (subgroup) #initialize with the all-zeroes val
     while not all (gpv): #skip vals with zeroes
         gpv = find_next_gpv (gpv, subgroup)
     while gpv[0] <= search_range:
@@ -38,12 +37,9 @@ def is_gpv (val, subgroup = None):
         subgroup = PRIME_LIST[:len (val)]
     elif len (val) != len (subgroup):
         raise IndexError ("dimension does not match. ")
-    lower_candidate = [None]*len (val)
-    upper_candidate = [None]*len (val)
-    for i in range (len (val)):
-        lower_candidate[i] = (val[i] - 0.5)/math.log2 (subgroup[i])
-        upper_candidate[i] = (val[i] + 0.5)/math.log2 (subgroup[i])
-    if max (lower_candidate) < min (upper_candidate):
+    lower_bounds = (np.array (val) - 0.5) / np.log2 (subgroup)
+    upper_bounds = (np.array (val) + 0.5) / np.log2 (subgroup)
+    if max (lower_bounds) < min (upper_bounds):
         return True
     else:
         return False

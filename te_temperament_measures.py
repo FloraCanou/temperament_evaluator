@@ -1,4 +1,4 @@
-# © 2020-2021 Flora Canou | Version 0.3
+# © 2020-2021 Flora Canou | Version 0.4
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
@@ -17,12 +17,7 @@ class Temperament:
         self.map = map_normalize (np.array (map))
         self.subgroup = PRIME_LIST[:self.map.shape[1]] if subgroup == None else subgroup
         self.jip = np.log2 (self.subgroup)
-        tenney_weighter = np.eye (self.map.shape[1])
-        for i in range (self.map.shape[1]):
-            try:
-                tenney_weighter[i][i] = 1/np.log2 (self.subgroup[i])
-            except ZeroDivisionError:
-                continue
+        tenney_weighter = np.diag (1/np.log2 (self.subgroup))
         self.weight = tenney_weighter
 
     def weighted (self, matrix):
