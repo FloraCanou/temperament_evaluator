@@ -13,4 +13,4 @@ Finds ET sequence from comma list. Can be used to find optimal patent vals.
 Finds the complexity spectrum of the temperament. 
 
 ------
-Note: monzos are column vectors. 
+Note: monzos should be entered as column vectors. 
