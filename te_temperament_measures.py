@@ -1,22 +1,24 @@
-# © 2020-2021 Flora Canou | Version 0.4
+# © 2020-2021 Flora Canou | Version 0.5
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
 from scipy import linalg
 import itertools
-np.set_printoptions (suppress = True, linewidth = 256)
+import tuning_optimizer
+np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
+SCALAR = 1200 #could be in octave, but for precision reason
 
 def map_normalize (map):
     #todo: add something
     return map
 
 class Temperament:
-    def __init__ (self, map, subgroup = None):
+    def __init__ (self, map, subgroup = []):
         self.map = map_normalize (np.array (map))
-        self.subgroup = PRIME_LIST[:self.map.shape[1]] if subgroup == None else subgroup
-        self.jip = np.log2 (self.subgroup)
+        self.subgroup = PRIME_LIST[:self.map.shape[1]] if len (subgroup) == 0 else subgroup
+        self.jip = np.log2 (self.subgroup)*SCALAR
         tenney_weighter = np.diag (1/np.log2 (self.subgroup))
         self.weight = tenney_weighter
 
@@ -26,30 +28,36 @@ class Temperament:
     def unweighted (self, matrix):
         return matrix @ linalg.inv (self.weight)
 
-    def gen (self, pote = False, tuning = "te"): #in octaves
-        if tuning == "te":
-            gen = linalg.lstsq (self.weighted (self.map).T, self.weighted (self.jip))[0]
-            return gen if not pote else gen / (gen @ self.map)[0]
+    def optimize (self, type = "custom", order = 2, cons_monzo_list = np.array ([]), stretch_monzo = np.array ([])): #in cents
+        if not type in {"custom", "te", "pote", "cte", "top", "potop", "ctop"}:
+            print ("Type not recognized, using default")
+            type = "custom"
+        if type == "custom":
+            gen = tuning_optimizer.optimizer_main (self.map, subgroup = self.subgroup, order = order, cons_monzo_list = cons_monzo_list, stretch_monzo = stretch_monzo)
+        elif type == "te":
+            gen = tuning_optimizer.optimizer_main (self.map, subgroup = self.subgroup)
+        elif type == "pote":
+            gen = tuning_optimizer.optimizer_main (self.map, subgroup = self.subgroup, stretch_monzo = np.transpose ([1] + [0]*(len (self.subgroup) - 1)))
+        elif type == "cte":
+            gen = tuning_optimizer.optimizer_main (self.map, subgroup = self.subgroup, cons_monzo_list = np.transpose ([1] + [0]*(len (self.subgroup) - 1)))
+        elif type == "top":
+            gen = tuning_optimizer.optimizer_main (self.map, subgroup = self.subgroup, order = np.inf)
+        elif type == "potop":
+            gen = tuning_optimizer.optimizer_main (self.map, subgroup = self.subgroup, order = np.inf, stretch_monzo = np.transpose ([1] + [0]*(len (self.subgroup) - 1)))
+        elif type == "ctop":
+            gen = tuning_optimizer.optimizer_main (self.map, subgroup = self.subgroup, order = np.inf, cons_monzo_list = np.transpose ([1] + [0]*(len (self.subgroup) - 1)))
+        return gen
 
-    def tuning_map (self, pote = False, unweighted = False): #in octaves
-        return self.gen (pote = pote) @ (self.weighted (self.map) if not unweighted else self.map)
-
-    def mistuning_map (self, pote = False, unweighted = False): #in octaves
-        return self.tuning_map (pote = pote, unweighted = unweighted) - (self.weighted (self.jip) if not unweighted else self.jip)
-
-    def error (self, type = "rmsgraham", pote = False):
-        error_l2 = linalg.norm (self.mistuning_map (pote = pote))
-        if type == "l2": #standard L2
-            return error_l2
-        elif type == "rmsgraham": #RMS normalized for the rank
-            return error_l2 / np.sqrt (self.map.shape[1])
-        elif type == "rmsgene": #RMS
-            try:
-                return error_l2 * np.sqrt ((self.map.shape[0] + 1) / (self.map.shape[1] - self.map.shape[0]))
-            except ZeroDivisionError:
-                return np.NAN
-        elif type == "top": #bonus: L-inf/TOP error
-            return linalg.norm (self.mistuning_map (pote = pote), ord = np.inf)
+    def analyse (self, type = "custom", order = 2, cons_monzo_list = np.array ([]), stretch_monzo = np.array ([])): #in octaves
+        print (f"\nMapping: \n{self.map}", f"Type: {type}", sep = "\n")
+        gen = self.optimize (type = type, order = order, cons_monzo_list = cons_monzo_list, stretch_monzo = stretch_monzo)
+        tuning_map = gen @ self.map
+        tuning_map_w = self.weighted (tuning_map)
+        mistuning_map = tuning_map - self.jip
+        mistuning_map_w = self.weighted (mistuning_map)
+        error = linalg.norm (mistuning_map_w, ord = order) / np.sqrt (self.map.shape[1])
+        bias = np.mean (mistuning_map_w)
+        print (f"Mistuning map: {mistuning_map} (¢)", f"Tuning error: {error:.6f} (¢)", f"Tuning bias: {bias:.6f} (¢)", sep = "\n")
 
     def wedgie (self, weighted = False):
         combination_list = list (itertools.combinations (range (self.map.shape[1]), self.map.shape[0]))
@@ -62,64 +70,44 @@ class Temperament:
         return np.array (wedgie) if wedgie[0] >= 0 else -np.array (wedgie)
 
     def complexity (self, type = "rmsgraham"):
-        complexity_l2 = linalg.norm (self.wedgie (weighted = True))
-        #complexity_l2 = np.sqrt (linalg.det (self.weighted (self.map) @ self.weighted (self.map).T)) #same
-        if type == "l2": #standard L2 complexity
-            return complexity_l2
-        elif type == "rmsgraham": #Graham Breed's RMS
-            return complexity_l2 / np.sqrt (self.map.shape[1]**self.map.shape[0])
-            #return np.sqrt (linalg.det (self.weighted (self.map) @ self.weighted (self.map).T / self.map.shape[1])) #same
+        if not type in {"rmsgraham", "rmsgene", "l2"}:
+            type = "rmsgraham"
+        if type == "rmsgraham": #Graham Breed's RMS (default)
+            complexity = linalg.norm (self.wedgie (weighted = True)) / np.sqrt (self.map.shape[1]**self.map.shape[0])
+            #complexity = np.sqrt (linalg.det (self.weighted (self.map) @ self.weighted (self.map).T / self.map.shape[1])) #same
         elif type == "rmsgene": #Gene Ward Smith's RMS
-            return complexity_l2 / np.sqrt (len (self.wedgie ()))
-            #return np.sqrt (linalg.det (self.weighted (self.map) @ self.weighted (self.map).T) / len (self.wedgie ())) #same
+            complexity = linalg.norm (self.wedgie (weighted = True)) / np.sqrt (len (self.wedgie ()))
+            #complexity = np.sqrt (linalg.det (self.weighted (self.map) @ self.weighted (self.map).T) / len (self.wedgie ())) #same
+        elif type == "l2": #standard L2
+            complexity = linalg.norm (self.wedgie (weighted = True))
+            #complexity = np.sqrt (linalg.det (self.weighted (self.map) @ self.weighted (self.map).T)) #same
+        return complexity
 
-    def simple_badness (self, type = "rmsgraham"):
-        return self.complexity (type = type) * self.error (type = type)
+    def error (self, type = "rmsgraham"): #in cents
+        if not type in {"rmsgraham", "rmsgene", "l2"}:
+            print ("Type not recognized, using default")
+            type = "rmsgraham"
+        if type == "rmsgraham": #Graham Breed's RMS (default)
+            error = linalg.norm (self.weighted (self.jip) @ (linalg.pinv (self.weighted (self.map)) @ self.weighted (self.map) - np.eye (self.map.shape[1]))) / np.sqrt (self.map.shape[1])
+        elif type == "rmsgene": #Gene Ward Smith's RMS
+            error = linalg.norm (self.weighted (self.jip) @ (linalg.pinv (self.weighted (self.map)) @ self.weighted (self.map) - np.eye (self.map.shape[1]))) * np.sqrt ((self.map.shape[0] + 1) / (self.map.shape[1] - self.map.shape[0]))
+        elif type == "l2": #standard L2
+            error = linalg.norm (self.weighted (self.jip) @ (linalg.pinv (self.weighted (self.map)) @ self.weighted (self.map) - np.eye (self.map.shape[1])))
+        return error
 
-    def logflat_badness (self, type = "rmsgraham"):
-        try:
-            return self.simple_badness (type = type) * self.complexity (type = type)**(self.map.shape[0]/(self.map.shape[1] - self.map.shape[0]))
-        except ZeroDivisionError:
-            return np.NAN
+    def badness (self, type = "rmsgraham"): #in octaves
+        return self.error (type = type) * self.complexity (type = type) / SCALAR
 
-    # def bound_edo (self, type = "rmsgraham"):
-    #     return min (1/abs (self.mistuning_map (pote = True)[1:]))
+    def badness_logflat (self, type = "rmsgraham"): #in octaves
+        return self.error (type = type) * self.complexity (type = type)**((self.map.shape[0])/(self.map.shape[1] - self.map.shape[0]) + 1) / SCALAR
 
-    def show_input (self, pote, measure):
-        print (f"\nMap: \n{self.map}")
-        if pote:
-            print ("====== In POTE ======")
-
-    def measure2scale (self, measure):
-        if measure == "cent":
-            return 1200
-        else:
-            return 1
-
-    def show_tuning_map (self, show_input = True, pote = False, measure = "cent"):
-        if show_input:
-            self.show_input (pote, measure)
-        scale = self.measure2scale (measure)
-        print (f"Generators: {scale*self.gen (pote = pote)}")
-        print (f"Tuning map: {scale*self.tuning_map (pote = pote)}")
-        print (f"Mistuning map: {scale*self.mistuning_map (pote = pote)}")
-
-    def show_temperament_measures (self, show_input = True, pote = False, type = "rmsgraham", measure = "cent", badness_scale = 1000):
-        if show_input:
-            self.show_input (pote, measure)
-        scale = self.measure2scale (measure)
-        print (f"Error: {scale*self.error (type = type, pote = pote):.6f} ({type})")
-        print (f"Complexity: {self.complexity (type = type):.6f} ({type})")
-        print (f"Simple badness: {badness_scale*self.simple_badness (type = type):.6f} ({badness_scale}x {type})")
-
-    def show_all (self, show_input = True, pote = False, wedgie_weighted = False, type = "rmsgraham", measure = "cent", badness_scale = 1000):
-        if show_input:
-            self.show_input (pote, measure)
-        self.show_tuning_map (show_input = False, pote = pote, measure = measure)
-        self.show_temperament_measures (show_input = False, pote = pote, type = type, measure = measure, badness_scale = badness_scale)
-        # print (f"Bound of edos: {self.bound_edo (type = type):.2f}")
-        print (f"Logflat badness: {badness_scale*self.logflat_badness (type = type):.6f} ({badness_scale}x {type})")
-        print (f"Wedgie: {self.wedgie (weighted = wedgie_weighted)}")
+    def temperament_measures (self, type = "rmsgraham", badness_scale = 100):
+        print (f"\nMapping: \n{self.map}", f"Type: {type}", sep = "\n")
+        error = self.error (type = type)
+        complexity = self.complexity (type = type)
+        badness = self.badness (type = type) * badness_scale
+        badness_logflat = self.badness_logflat (type = type) * badness_scale
+        print (f"Complexity: {complexity:.6f}", f"Error: {error:.6f} (¢)", f"Badness (simple): {badness:.6f} ({badness_scale}oct)", f"Badness (logflat): {badness_logflat:.6f} ({badness_scale}oct)", sep = "\n")
 
 # Et construction function
 def et_construct (n, subgroup, alt_val = 0):

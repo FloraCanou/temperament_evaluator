@@ -1,4 +1,4 @@
-# © 2020-2021 Flora Canou | Version 0.4
+# © 2020-2021 Flora Canou | Version 0.5
 # This work is licensed under the GNU General Public License version 3.
 
 import te_temperament_measures as tm
@@ -8,8 +8,8 @@ PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61
 
 # Finds et sequence from comma list. Can be used to find optimal patent vals
 # Comma list should be entered as column vectors
-def et_sequence_error (monzo_list, subgroup = None, cond = "error", progressive = True, threshold = 20, search_range = 1200):
-    if subgroup == None:
+def et_sequence_error (monzo_list, subgroup = [], cond = "error", progressive = True, threshold = 20, search_range = 1200):
+    if len (subgroup) == 0:
         subgroup = PRIME_LIST[:monzo_list.shape[0]]
     gpv = [0]*len (subgroup) #initialize with the all-zeroes val
     while not all (gpv): #skip vals with zeroes
@@ -18,36 +18,33 @@ def et_sequence_error (monzo_list, subgroup = None, cond = "error", progressive 
         if not any (([gpv] @ monzo_list)[0]): #tempering out the commas
             et = tm.Temperament ([gpv], subgroup)
             if cond == "error":
-                if et.error ()*1200 <= threshold:
+                if et.error () <= threshold:
                     if progressive:
-                        threshold = et.error ()*1200
-                    et.show_temperament_measures ()
-            elif cond == "simple_badness":
-                if et.simple_badness () <= threshold:
+                        threshold = et.error ()
+                    et.temperament_measures ()
+            elif cond == "badness":
+                if et.badness () <= threshold:
                     if progressive:
-                        threshold = et.simple_badness ()
-                    et.show_temperament_measures ()
+                        threshold = et.badness ()
+                    et.temperament_measures ()
             else:
                 et.show_temperament_measures ()
         gpv = find_next_gpv (gpv, subgroup)
 
 # Checks if a val is a GPV
-def is_gpv (val, subgroup = None):
-    if subgroup == None:
+def is_gpv (val, subgroup = []):
+    if len (subgroup) == 0:
         subgroup = PRIME_LIST[:len (val)]
     elif len (val) != len (subgroup):
         raise IndexError ("dimension does not match. ")
     lower_bounds = (np.array (val) - 0.5) / np.log2 (subgroup)
     upper_bounds = (np.array (val) + 0.5) / np.log2 (subgroup)
-    if max (lower_bounds) < min (upper_bounds):
-        return True
-    else:
-        return False
+    return True if max (lower_bounds) < min (upper_bounds) else False
 
 # Enter a GPV, finds the next one
 # Doesn't handle some nontrivial subgroups
-def find_next_gpv (gpv_current, subgroup = None):
-    if subgroup == None:
+def find_next_gpv (gpv_current, subgroup = []):
+    if len (subgroup) == 0:
         subgroup = PRIME_LIST[:len (gpv_current)]
     if not is_gpv (gpv_current, subgroup): #verify input
         raise ValueError ("input is not a GPV. ")

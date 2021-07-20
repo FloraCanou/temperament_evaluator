@@ -1,4 +1,4 @@
-# © 2020-2021 Flora Canou | Version 0.4
+# © 2020-2021 Flora Canou | Version 0.5
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
@@ -10,23 +10,23 @@ PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61
 # takes a monzo, returns the ratio in [num, den] form
 # doesn't check the validity of the basis
 # ratio[0]: num, ratio[1]: den
-def monzo2ratio (monzo, basis):
+def monzo2ratio (monzo, subgroup):
     ratio = [1, 1]
     for i in range (len (monzo)):
         if monzo[i] > 0:
-            ratio[0] *= basis[i]**monzo[i]
+            ratio[0] *= subgroup[i]**monzo[i]
         elif monzo[i] < 0:
-            ratio[1] *= basis[i]**(-monzo[i])
+            ratio[1] *= subgroup[i]**(-monzo[i])
     return ratio
 
-# te weighting matrix
-def weighter (subgroup):
-    return np.diag (1/np.log2 (subgroup))
+def weighted (matrix, subgroup):
+    tenney_weighter = np.diag (1/np.log2 (subgroup))
+    return matrix @ tenney_weighter
 
 def find_temperamental_norm (map, monzo, subgroup, oe = True, show = True):
     if oe: #octave equivalence
         map = map[1:]
-    P = linalg.pinv (map @ weighter (subgroup) @ weighter (subgroup) @ map.T)
+    P = linalg.pinv (weighted (map, subgroup) @ weighted (map, subgroup).T)
     image = map @ monzo
     norm = np.sqrt (image.T @ P @ image)
     if show:
@@ -34,8 +34,8 @@ def find_temperamental_norm (map, monzo, subgroup, oe = True, show = True):
         print (f"{ratio[0]}/{ratio[1]}\t {norm:.4f}")
     return norm
 
-def find_spectrum (map, monzo_list, subgroup = None, oe = True):
-    if subgroup == None:
+def find_spectrum (map, monzo_list, subgroup = [], oe = True):
+    if len (subgroup) == 0:
         subgroup = PRIME_LIST[:map.shape[1]]
     elif map.shape[1] != len (subgroup):
         raise IndexError ("dimension does not match. ")
@@ -45,7 +45,7 @@ def find_spectrum (map, monzo_list, subgroup = None, oe = True):
     spectrum.sort (key = lambda k: k[1])
     for i in range (len (spectrum)):
         ratio = monzo2ratio (spectrum[i][0], subgroup)
-        print (f"{ratio[0]}/{ratio[1]}\t{round (spectrum[i][1], 4)}")
+        print (f"{ratio[0]}/{ratio[1]}\t{spectrum[i][1]:.4f}")
 
 # monzo list library
 MONZO9 = np.transpose ([[2, -1, 0, 0], [-2, 0, 1, 0], [1, 1, -1, 0], [3, 0, 0, -1], [-1, -1, 0, 1], [0, 0, -1, 1], [-3, 2, 0, 0], [1, -2, 1, 0], [0, 2, 0, -1]])
