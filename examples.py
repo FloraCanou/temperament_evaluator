@@ -10,13 +10,13 @@ import numpy as np
 # methods:
 #   analyse: gives the tuning
 #     parameters:
-#       types: "custom" , "te", "pote", "cte", "top", "potop", or "ctop"
+#       type: "custom" , "te", "pote", "cte", "top", "potop", or "ctop"
 #       order: specifies the order of the norm to be minimized
 #       cons_monzo_list: constrains this list of monzos to pure
 #       stretch_monzo: stretches this monzo to pure
 #   temperament_measures: gives the te temperament measures
 #     parameters:
-#       types: "rmsgraham", "rmsgene", or "l2"
+#       type: "rmsgraham", "rmsgene", or "l2"
 #       badness_scale: scales the badnesses, literally
 
 tm.Temperament ([[1, 0, 2, -1], [0, 5, 1, 12]]).analyse (type = "cte") # septimal magic
