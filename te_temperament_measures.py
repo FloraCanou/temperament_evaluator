@@ -1,4 +1,4 @@
-# © 2020-2021 Flora Canou | Version 0.5
+# © 2020-2021 Flora Canou | Version 0.6
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
@@ -108,8 +108,3 @@ class Temperament:
         badness = self.badness (type = type) * badness_scale
         badness_logflat = self.badness_logflat (type = type) * badness_scale
         print (f"Complexity: {complexity:.6f}", f"Error: {error:.6f} (¢)", f"Badness (simple): {badness:.6f} ({badness_scale}oct)", f"Badness (logflat): {badness_logflat:.6f} ({badness_scale}oct)", sep = "\n")
-
-# Et construction function
-def et_construct (n, subgroup, alt_val = 0):
-    val = np.rint (n*np.log2 (subgroup)).astype (int, copy = False) + alt_val
-    return Temperament ([val], subgroup)

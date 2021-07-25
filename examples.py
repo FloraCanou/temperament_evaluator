@@ -26,7 +26,7 @@ tm.Temperament ([[1, 0, 2, -1], [0, 5, 1, 12]]).temperament_measures (type = "rm
 # parameters:
 #   alt_val: alter the val by this
 
-tm.et_construct (17, [2, 3, 5, 7, 11, 13], alt_val = [0, 0, 1, 0, 0, 0]).temperament_measures (badness_scale = 100) # 17edo in 17c val
+et.et_construct (17, [2, 3, 5, 7, 11, 13], alt_val = [0, 0, 1, 0, 0, 0]).temperament_measures (badness_scale = 100) # 17edo in 17c val
 
 # et_sequence_error
 # parameters:

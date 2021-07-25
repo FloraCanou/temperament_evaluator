@@ -1,10 +1,15 @@
-# © 2020-2021 Flora Canou | Version 0.5
+# © 2020-2021 Flora Canou | Version 0.6
 # This work is licensed under the GNU General Public License version 3.
 
 import te_temperament_measures as tm
 import numpy as np
 
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
+
+# Et construction function
+def et_construct (n, subgroup, alt_val = 0):
+    val = np.rint (n*np.log2 (subgroup)).astype (int, copy = False) + alt_val
+    return tm.Temperament ([val], subgroup)
 
 # Finds et sequence from comma list. Can be used to find optimal patent vals
 # Comma list should be entered as column vectors
@@ -28,7 +33,7 @@ def et_sequence_error (monzo_list, subgroup = [], cond = "error", progressive = 
                         threshold = et.badness ()
                     et.temperament_measures ()
             else:
-                et.show_temperament_measures ()
+                et.temperament_measures ()
         gpv = find_next_gpv (gpv, subgroup)
 
 # Checks if a val is a GPV
