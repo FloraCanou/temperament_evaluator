@@ -1,4 +1,4 @@
-# © 2020-2021 Flora Canou | Version 0.6
+# © 2020-2021 Flora Canou | Version 0.7
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
@@ -32,6 +32,7 @@ class Temperament:
         if not type in {"custom", "te", "pote", "cte", "top", "potop", "ctop"}:
             print ("Type not recognized, using default")
             type = "custom"
+
         if type == "custom":
             gen = tuning_optimizer.optimizer_main (self.map, subgroup = self.subgroup, order = order, cons_monzo_list = cons_monzo_list, stretch_monzo = stretch_monzo)
         elif type == "te":
@@ -72,21 +73,22 @@ class Temperament:
     def complexity (self, type = "rmsgraham"):
         if not type in {"rmsgraham", "rmsgene", "l2"}:
             type = "rmsgraham"
+
         if type == "rmsgraham": #Graham Breed's RMS (default)
-            complexity = linalg.norm (self.wedgie (weighted = True)) / np.sqrt (self.map.shape[1]**self.map.shape[0])
-            #complexity = np.sqrt (linalg.det (self.weighted (self.map) @ self.weighted (self.map).T / self.map.shape[1])) #same
+            complexity = np.sqrt (linalg.det (self.weighted (self.map) @ self.weighted (self.map).T / self.map.shape[1]))
+            # complexity = linalg.norm (self.wedgie (weighted = True)) / np.sqrt (self.map.shape[1]**self.map.shape[0]) #same
         elif type == "rmsgene": #Gene Ward Smith's RMS
-            complexity = linalg.norm (self.wedgie (weighted = True)) / np.sqrt (len (self.wedgie ()))
-            #complexity = np.sqrt (linalg.det (self.weighted (self.map) @ self.weighted (self.map).T) / len (self.wedgie ())) #same
+            complexity = np.sqrt (linalg.det (self.weighted (self.map) @ self.weighted (self.map).T) / len (self.wedgie ()))
+            # complexity = linalg.norm (self.wedgie (weighted = True)) / np.sqrt (len (self.wedgie ())) #same
         elif type == "l2": #standard L2
-            complexity = linalg.norm (self.wedgie (weighted = True))
-            #complexity = np.sqrt (linalg.det (self.weighted (self.map) @ self.weighted (self.map).T)) #same
+            complexity = np.sqrt (linalg.det (self.weighted (self.map) @ self.weighted (self.map).T))
+            # complexity = linalg.norm (self.wedgie (weighted = True)) #same
         return complexity
 
     def error (self, type = "rmsgraham"): #in cents
         if not type in {"rmsgraham", "rmsgene", "l2"}:
-            print ("Type not recognized, using default")
             type = "rmsgraham"
+
         if type == "rmsgraham": #Graham Breed's RMS (default)
             error = linalg.norm (self.weighted (self.jip) @ (linalg.pinv (self.weighted (self.map)) @ self.weighted (self.map) - np.eye (self.map.shape[1]))) / np.sqrt (self.map.shape[1])
         elif type == "rmsgene": #Gene Ward Smith's RMS

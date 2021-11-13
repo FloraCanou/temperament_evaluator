@@ -1,4 +1,4 @@
-# © 2020-2021 Flora Canou | Version 0.6
+# © 2020-2021 Flora Canou | Version 0.7
 # This work is licensed under the GNU General Public License version 3.
 
 import te_temperament_measures as tm
@@ -13,23 +13,33 @@ def et_construct (n, subgroup, alt_val = 0):
 
 # Finds et sequence from comma list. Can be used to find optimal patent vals
 # Comma list should be entered as column vectors
-def et_sequence_error (monzo_list, subgroup = [], cond = "error", progressive = True, threshold = 20, search_range = 1200):
-    if len (subgroup) == 0:
-        subgroup = PRIME_LIST[:monzo_list.shape[0]]
+def et_sequence_error (monzo_list = np.array ([]), subgroup = [], cond = "error", pv = False, prog = True, threshold = 20, search_range = 1200):
+    if monzo_list.size == 0:
+        if len (subgroup) == 0:
+            raise ValueError ("please specify a monzo list or a subgroup. ")
+        else:
+            monzo_list = np.transpose ([[0]*len (subgroup)])
+    else:
+        if len (subgroup) == 0:
+            subgroup = PRIME_LIST[:monzo_list.shape[0]]
+        elif len (subgroup) != monzo_list.shape[0]:
+            raise IndexError ("dimension does not match. ")
+
     gpv = [0]*len (subgroup) #initialize with the all-zeroes val
-    while not all (gpv): #skip vals with zeroes
+    while 0 in gpv : #skip vals with zeroes
         gpv = find_next_gpv (gpv, subgroup)
     while gpv[0] <= search_range:
-        if not any (([gpv] @ monzo_list)[0]): #tempering out the commas
+        if (not pv or is_pv (gpv, subgroup = subgroup)) and np.gcd.reduce (gpv) == 1 and not np.any (([gpv] @ monzo_list)):
+        # is patent val (if pv is set) and defactored and tempering out the commas
             et = tm.Temperament ([gpv], subgroup)
             if cond == "error":
                 if et.error () <= threshold:
-                    if progressive:
+                    if prog:
                         threshold = et.error ()
                     et.temperament_measures ()
             elif cond == "badness":
                 if et.badness () <= threshold:
-                    if progressive:
+                    if prog:
                         threshold = et.badness ()
                     et.temperament_measures ()
             else:
@@ -42,9 +52,19 @@ def is_gpv (val, subgroup = []):
         subgroup = PRIME_LIST[:len (val)]
     elif len (val) != len (subgroup):
         raise IndexError ("dimension does not match. ")
+
     lower_bounds = (np.array (val) - 0.5) / np.log2 (subgroup)
     upper_bounds = (np.array (val) + 0.5) / np.log2 (subgroup)
     return True if max (lower_bounds) < min (upper_bounds) else False
+
+# Checks if a val is a patent val
+def is_pv (val, subgroup = []):
+    if len (subgroup) == 0:
+        subgroup = PRIME_LIST[:len (val)]
+    elif len (val) != len (subgroup):
+        raise IndexError ("dimension does not match. ")
+
+    return True if all (val == np.round (val[0]*np.log2 (subgroup))) else False
 
 # Enter a GPV, finds the next one
 # Doesn't handle some nontrivial subgroups
@@ -53,6 +73,7 @@ def find_next_gpv (gpv_current, subgroup = []):
         subgroup = PRIME_LIST[:len (gpv_current)]
     if not is_gpv (gpv_current, subgroup): #verify input
         raise ValueError ("input is not a GPV. ")
+
     for i in range (1, len (subgroup) + 1):
         gpv_candidate = list.copy (gpv_current)
         gpv_candidate[-i] += 1
