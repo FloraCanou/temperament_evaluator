@@ -33,7 +33,8 @@ et.et_construct (17, [2, 3, 5, 7, 11, 13], alt_val = [0, 0, 1, 0, 0, 0]).tempera
 #   subgroup: specifies a custom ji subgroup
 #   cond: "error" or "badness"
 #   threshold: temperaments failing this will not be shown
-#   progressive: if true (default), threshold will be updated
-#   search_range: upper bound where to stop searching
+#   prog: if true, threshold will be updated
+#   pv: if true, only patent vals will be considered
+#   search_range: specifies the upper bound where to stop searching
 
 et.et_sequence_error (np.transpose ([[-4, 4, -1, 0], [-5, 2, 2, -1]]), cond = "error", search_range = 300) # septimal meantone
