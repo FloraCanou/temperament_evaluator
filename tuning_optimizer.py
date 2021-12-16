@@ -1,4 +1,4 @@
-# © 2020-2021 Flora Canou | Version 0.7
+# © 2020-2021 Flora Canou | Version 0.8
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
@@ -34,7 +34,7 @@ def optimizer_main (map, subgroup = [], order = 2, weighter = "tenney", cons_mon
         print ("L2 tuning without constraints, solved using lstsq. ")
     else:
         gen0 = [SCALAR]*map.shape[0] #initial guess
-        cons = {'type': 'eq', 'fun': lambda gen: (gen @ map_w - jip_w) @ cons_monzo_list} if cons_monzo_list.size else ()
+        cons = {'type': 'eq', 'fun': lambda gen: (gen @ map - jip) @ cons_monzo_list} if cons_monzo_list.size else ()
         res = optimize.minimize (error, gen0, args = (map_w, jip_w, order), method = "SLSQP", constraints = cons)
         print (res.message)
         if res.success:
