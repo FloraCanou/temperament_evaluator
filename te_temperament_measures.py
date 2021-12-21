@@ -1,4 +1,4 @@
-# © 2020-2021 Flora Canou | Version 0.7
+# © 2020-2021 Flora Canou | Version 0.9
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
@@ -59,6 +59,9 @@ class Temperament:
         error = linalg.norm (mistuning_map_w, ord = order) / np.sqrt (self.map.shape[1])
         bias = np.mean (mistuning_map_w)
         print (f"Mistuning map: {mistuning_map} (¢)", f"Tuning error: {error:.6f} (¢)", f"Tuning bias: {bias:.6f} (¢)", sep = "\n")
+
+    optimise = optimize
+    analyze = analyse
 
     def wedgie (self, weighted = False):
         combination_list = list (itertools.combinations (range (self.map.shape[1]), self.map.shape[0]))

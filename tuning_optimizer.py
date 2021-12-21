@@ -1,4 +1,4 @@
-# © 2020-2021 Flora Canou | Version 0.8
+# © 2020-2021 Flora Canou | Version 0.9
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
@@ -47,3 +47,5 @@ def optimizer_main (map, subgroup = [], order = 2, weighter = "tenney", cons_mon
         print (f"Generators: {gen} (¢)", f"Tuning map: {gen @ map} (¢)", sep = "\n")
 
     return gen
+
+optimiser_main = optimizer_main
