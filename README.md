@@ -2,12 +2,13 @@
 
 ## `tuning_optimizer.py`
 
-Optimizes tunings. Custom order, constraints and stretches are supported. 
+Optimizes tunings. Custom norm order, constraints and stretches are supported. 
 
-Use `optimizer_main` to optimize, yet *the next module calls this function with presets so it is recommended to use that instead.* Parameters: 
+Use `optimizer_main` to optimize, yet *it is recommended to use the next module instead it calls this function with presets.* Parameters: 
 - `map`: *first positional*, *required*. The map of the temperament. 
 - `subgroup`: *optional*. Specifies a custom subgroup for the map. Default is prime harmonics. 
-- `order`: *optional*. Specifies the order of the norm to be minimized. Default is `2`, meaning **TE**. For **TOP**, use `np.inf`. 
+- `wtype`: *optional*. Specifies the weighter. Has `"tenney"` (default), `"frobenius"`, and `"partch"`. 
+- `order`: *optional*. Specifies the order of the norm to be minimized. Default is `2`, meaning **Euclidean**. For **TOP**, use `np.inf`. 
 - `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. 
 - `stretch_monzo`: *optional*. Stretches this monzo to pure. Default is empty. 
 
@@ -19,12 +20,14 @@ Analyses tunings and computes TE temperament measures from the temperament map. 
 
 Use `Temperament` to construct a temperament object. Methods: 
 - `analyse`: calls `optimizer_main` and shows the generator, tuning map, mistuning map, tuning error, and tuning bias. Parameters: 
-	- `type`: *optional*. Has presets `"te"`, `"pote"`, `"cte"`, `"top"`, `"potop"`, `"ctop"` and `"custom"` (default). Only in `"custom"` can you specify your own constraints and stretch goals. 
-	- `order`: *optional*, *only works if type is "custom"*. Specifies the order of the norm to be minimized. Default is `2`, meaning **TE**. For **TOP**, use `np.inf`. 
+	- `preset`: *optional*. Has `"te"`, `"pote"`, `"cte"`, `"top"`, `"potop"`, `"ctop"` and `"custom"` (default). Only in `"custom"` can you specify your own constraints and stretch goals. 
+	- `wtype`: *optional*, *only works if type is "custom"*. Specifies the weighter. Has `"tenney"` (default), `"frobenius"`, and `"partch"`. 
+	- `order`: *optional*, *only works if type is "custom"*. Specifies the order of the norm to be minimized. Default is `2`, meaning **Euclidean**. For **TOP**, use `np.inf`. 
 	- `cons_monzo_list`: *optional*, *only works if type is "custom"*. Constrains this list of monzos to pure. Default is empty. 
 	- `stretch_monzo`: *optional*, *only works if type is "custom"*. Stretches this monzo to pure. Default is empty. 
-- `temperament_measures`: shows the TE complexity, TE error, TE badness (simple and logflat). Parameters: 
-	- `type`: *optional*. Has `"rmsgraham"` (default), `"rmsgene"` and `"l2"`. 
+- `temperament_measures`: shows the complexity, error, and badness (simple and logflat). Parameters: 
+	- `ntype`: *optional*. Specifies the averaging method. Has `"breed"` (default), `"smith"` and `"l2"`. 
+	- `wtype`: *optional*. Specifies the weighter. Has `"tenney"` (default), `"frobenius"`, and `"partch"`. 
 	- `badness_scale`: *optional*. Scales the badness, literally. Default is `100`. 
 
 **Important: monzos must be entered as column vectors**. 
@@ -43,9 +46,11 @@ Use `et_sequence_error` to iterate through all GPVs. Parameters:
 - `subgroup`: *optional\**. Specifies a custom subgroup for the map. Default is prime harmonics. 
 	- \* At least one of the above must be specified, for the script to know the dimension. 
 - `cond`: *optional*. Either `"error"` or `"badness"`. Default is `"error"`. 
-- `threshold`: *optional*. Temperaments failing this will not be shown. 
-- `prog`: *optional*. If `True`, threshold will be updated. Default is `True`. 
+- `ntype`: *optional*. Specifies the averaging method. Has `"breed"` (default), `"smith"` and `"l2"`. 
+- `wtype`: *optional*. Specifies the weighter. Has `"tenney"` (default), `"frobenius"`, and `"partch"`. 
 - `pv`: *optional*. If `True`, only patent vals will be considered. Default is `False`. 
+- `prog`: *optional*. If `True`, threshold will be updated. Default is `True`. 
+- `threshold`: *optional*. Temperaments failing this will not be shown. Default is `20`. 
 - `search_range`: *optional*. Specifies the upper bound where to stop searching. Default is `1200`. 
 
 **Important: monzos must be entered as column vectors**. 
