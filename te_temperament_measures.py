@@ -1,4 +1,4 @@
-# © 2020-2021 Flora Canou | Version 0.10
+# © 2020-2021 Flora Canou | Version 0.11
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
@@ -23,30 +23,44 @@ class Temperament:
     def weighted (self, matrix, wtype):
         return tuning_optimizer.weighted (matrix, self.subgroup, wtype = wtype)
 
-    def optimize (self, preset = "custom", wtype = "tenney", order = 2, cons_monzo_list = None, stretch_monzo = None): #in cents
-        if not preset in {"custom", "te", "pote", "cte", "top", "potop", "ctop"}:
-            preset = "custom"
-            raise Warning ("unknown preset, using default (\"custom\")")
+    def optimize (self, wtype = "tenney", order = 2, enforce = "custom", cons_monzo_list = None, stretch_monzo = None): #in cents
+        if not enforce in {"custom", "po", "c", "xoc", "none"}:
+            enforce = "custom"
+            raise Warning ("unknown enforcement type, using default (\"custom\")")
 
-        if preset == "custom":
-            gen = tuning_optimizer.optimizer_main (self.map, subgroup = self.subgroup, wtype = wtype, order = order, cons_monzo_list = cons_monzo_list, stretch_monzo = stretch_monzo)
-        elif preset == "te":
-            gen = tuning_optimizer.optimizer_main (self.map, subgroup = self.subgroup)
-        elif preset == "pote":
-            gen = tuning_optimizer.optimizer_main (self.map, subgroup = self.subgroup, stretch_monzo = np.transpose ([1] + [0]*(len (self.subgroup) - 1)))
-        elif preset == "cte":
-            gen = tuning_optimizer.optimizer_main (self.map, subgroup = self.subgroup, cons_monzo_list = np.transpose ([1] + [0]*(len (self.subgroup) - 1)))
-        elif preset == "top":
-            gen = tuning_optimizer.optimizer_main (self.map, subgroup = self.subgroup, order = np.inf)
-        elif preset == "potop":
-            gen = tuning_optimizer.optimizer_main (self.map, subgroup = self.subgroup, stretch_monzo = np.transpose ([1] + [0]*(len (self.subgroup) - 1)))
-        elif preset == "ctop":
-            gen = tuning_optimizer.optimizer_main (self.map, subgroup = self.subgroup, cons_monzo_list = np.transpose ([1] + [0]*(len (self.subgroup) - 1)))
-        return gen
+        if enforce == "po":
+            stretch_monzo = np.transpose ([1] + [0]*(len (self.subgroup) - 1))
+        elif enforce == "c":
+            cons_monzo_list = np.transpose ([1] + [0]*(len (self.subgroup) - 1))
+        elif enforce == "xoc":
+            cons_monzo_list = np.transpose (self.weighted (np.ones (len (self.subgroup)), wtype = wtype))
+        elif enforce == "none":
+            stretch_monzo = None
+            cons_monzo_list = None
+        return tuning_optimizer.optimizer_main (self.map, subgroup = self.subgroup, wtype = wtype, order = order, cons_monzo_list = cons_monzo_list, stretch_monzo = stretch_monzo)
 
-    def analyse (self, preset = "custom", wtype = "tenney", order = 2, cons_monzo_list = None, stretch_monzo = None): #in octaves
-        print (f"\nMapping: \n{self.map}", f"Preset: {preset}", sep = "\n")
-        gen = self.optimize (preset = preset, wtype = wtype, order = order, cons_monzo_list = cons_monzo_list, stretch_monzo = stretch_monzo)
+    def analyse (self, wtype = "tenney", order = 2, enforce = "custom", cons_monzo_list = None, stretch_monzo = None): #in octaves
+        if order == 2:
+            order_description = "euclidean"
+        elif order == np.inf:
+            order_description = "chebyshevian"
+        elif order == 1:
+            order_description = "minkowskian"
+        else:
+            order_description = f"{order}"
+        if enforce == "po":
+            enforce_description = "stretched"
+        elif enforce == "c":
+            enforce_description = "constrained"
+        elif enforce == "xoc":
+            enforce_description = f"{wtype} ones constrained"
+        elif enforce == "none" or cons_monzo_list is None and stretch_monzo is None:
+            enforce_description = "none"
+        else:
+            enforce_description = "custom"
+        print (f"\nMapping: \n{self.map}", f"Method: {wtype}-{order_description}. Enforcement: {enforce_description}", sep = "\n")
+
+        gen = self.optimize (wtype = wtype, order = order, enforce = enforce, cons_monzo_list = cons_monzo_list, stretch_monzo = stretch_monzo)
         tuning_map = gen @ self.map
         tuning_map_w = self.weighted (tuning_map, wtype = wtype)
         mistuning_map = tuning_map - self.jip
@@ -101,7 +115,7 @@ class Temperament:
         return self.error (ntype = ntype, wtype = wtype) * self.complexity (ntype = ntype, wtype = wtype)**((self.map.shape[0])/(self.map.shape[1] - self.map.shape[0]) + 1) / SCALAR
 
     def temperament_measures (self, ntype = "breed", wtype = "tenney", badness_scale = 100):
-        print (f"\nMapping: \n{self.map}", f"Norm: {ntype}", f"Weighter: {wtype}", sep = "\n")
+        print (f"\nMapping: \n{self.map}", f"Norm: {ntype}. Weighter: {wtype}", sep = "\n")
         error = self.error (ntype = ntype, wtype = wtype)
         complexity = self.complexity (ntype = ntype, wtype = wtype)
         badness = self.badness (ntype = ntype, wtype = wtype) * badness_scale

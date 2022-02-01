@@ -4,11 +4,11 @@
 
 Optimizes tunings. Custom norm order, constraints and stretches are supported. 
 
-Use `optimizer_main` to optimize, yet *it is recommended to use the next module instead it calls this function with presets.* Parameters: 
+Use `optimizer_main` to optimize, yet *it is recommended to use the next module instead since it calls this function with presets.* Parameters: 
 - `map`: *first positional*, *required*. The map of the temperament. 
 - `subgroup`: *optional*. Specifies a custom subgroup for the map. Default is prime harmonics. 
 - `wtype`: *optional*. Specifies the weighter. Has `"tenney"` (default), `"frobenius"`, and `"partch"`. 
-- `order`: *optional*. Specifies the order of the norm to be minimized. Default is `2`, meaning **Euclidean**. For **TOP**, use `np.inf`. 
+- `order`: *optional*. Specifies the order of the norm to be minimized. Default is `2`, meaning **Euclidean**. For **TOP tuning**, use `np.inf`. 
 - `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. 
 - `stretch_monzo`: *optional*. Stretches this monzo to pure. Default is empty. 
 
@@ -20,9 +20,13 @@ Analyses tunings and computes TE temperament measures from the temperament map. 
 
 Use `Temperament` to construct a temperament object. Methods: 
 - `analyse`: calls `optimizer_main` and shows the generator, tuning map, mistuning map, tuning error, and tuning bias. Parameters: 
-	- `preset`: *optional*. Has `"te"`, `"pote"`, `"cte"`, `"top"`, `"potop"`, `"ctop"` and `"custom"` (default). Only in `"custom"` can you specify your own constraints and stretch goals. 
 	- `wtype`: *optional*, *only works if type is "custom"*. Specifies the weighter. Has `"tenney"` (default), `"frobenius"`, and `"partch"`. 
-	- `order`: *optional*, *only works if type is "custom"*. Specifies the order of the norm to be minimized. Default is `2`, meaning **Euclidean**. For **TOP**, use `np.inf`. 
+	- `order`: *optional*, *only works if type is "custom"*. Specifies the order of the norm to be minimized. Default is `2`, meaning **Euclidean**. For **TOP tuning**, use `np.inf`. 
+	- `enforce`: *optional*. Has  `"po"`, `"c"`, `"xoc"` and `"custom"` (default). Only in `"custom"` can you specify your own constraints and stretch goals. 
+		- `"po"`: pure-octave stretched
+		- `"c"`: pure-octave constrained
+		- `"xoc"`: \[weighter type\]-ones constrained
+		- `"none"`: no enforcement (disregard the following parameters)
 	- `cons_monzo_list`: *optional*, *only works if type is "custom"*. Constrains this list of monzos to pure. Default is empty. 
 	- `stretch_monzo`: *optional*, *only works if type is "custom"*. Stretches this monzo to pure. Default is empty. 
 - `temperament_measures`: shows the complexity, error, and badness (simple and logflat). Parameters: 

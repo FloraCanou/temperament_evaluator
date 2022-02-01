@@ -10,27 +10,32 @@ import numpy as np
 # methods:
 #   analyse: gives the tuning
 #     parameters:
-#       type: "custom" , "te", "pote", "cte", "top", "potop", or "ctop"
+#       wtype: specifies the weighter. "tenney", "frobenius", "partch"
 #       order: specifies the order of the norm to be minimized
+#       enforce: "po", "c", "xoc", "none", "custom"
 #       cons_monzo_list: constrains this list of monzos to pure
 #       stretch_monzo: stretches this monzo to pure
-#   temperament_measures: gives the te temperament measures
+#   temperament_measures: gives the temperament measures
 #     parameters:
-#       type: "rmsgraham", "rmsgene", or "l2"
+#       ntype: specifies the averaging method. "breed", "smith", or "l2"
+#       wtype: specifies the weighter. "tenney", "frobenius", "partch"
 #       badness_scale: scales the badnesses, literally
 
-tm.Temperament ([[1, 0, 2, -1], [0, 5, 1, 12]]).analyse (type = "cte") # septimal magic
-tm.Temperament ([[1, 0, 2, -1], [0, 5, 1, 12]]).temperament_measures (type = "rmsgene")
+tm.Temperament ([[1, 0, 2, -1], [0, 5, 1, 12]]).analyse (enforce = "c") # septimal magic in cte tuning
+tm.Temperament ([[1, 0, 2, -1], [0, 5, 1, 12]]).temperament_measures (ntype = "smith")
 
 # et_construct
 # parameters:
-#   alt_val: alter the val by this
+#   subgroup: specifies a custom ji subgroup
+#   alt_val: alters the val by this
 
 et.et_construct (17, [2, 3, 5, 7, 11, 13], alt_val = [0, 0, 1, 0, 0, 0]).temperament_measures (badness_scale = 100) # 17edo in 17c val
 
 # et_sequence_error
 # parameters:
 #   subgroup: specifies a custom ji subgroup
+#   ntype: specifies the averaging method. "breed", "smith", or "l2"
+#   wtype: specifies the weighter. "tenney", "frobenius", "partch"
 #   cond: "error" or "badness"
 #   threshold: temperaments failing this will not be shown
 #   prog: if true, threshold will be updated
