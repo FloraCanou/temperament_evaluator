@@ -1,8 +1,9 @@
-# © 2020-2021 Flora Canou | Version 0.10
+# © 2020-2022 Flora Canou | Version 0.12
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
 from scipy import optimize, linalg
+import warnings
 np.set_printoptions (suppress = True, linewidth = 256)
 
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
@@ -11,7 +12,7 @@ SCALAR = 1200 #could be in octave, but for precision reason
 def weighted (matrix, subgroup, wtype = "tenney"):
     if not wtype in {"tenney", "frobenius", "partch"}:
         wtype = "tenney"
-        raise Warning ("unknown weighter type, using default (\"tenney\")")
+        warnings.warn ("unknown weighter type, using default (\"tenney\")")
 
     if wtype == "tenney":
         weighter = np.diag (1/np.log2 (subgroup))
@@ -46,9 +47,11 @@ def optimizer_main (map, subgroup = None, wtype = "tenney", order = 2, cons_monz
     if not stretch_monzo is None:
         gen *= (jip @ stretch_monzo)/(gen @ map @ stretch_monzo)
 
-    if show:
-        print (f"Generators: {gen} (¢)", f"Tuning map: {gen @ map} (¢)", sep = "\n")
+    tuning_map = gen @ map
 
-    return gen
+    if show:
+        print (f"Generators: {gen} (¢)", f"Tuning map: {tuning_map} (¢)", sep = "\n")
+
+    return gen, tuning_map
 
 optimiser_main = optimizer_main

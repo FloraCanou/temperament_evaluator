@@ -1,22 +1,22 @@
-# © 2020-2021 Flora Canou | Version 0.11
+# © 2020-2022 Flora Canou | Version 0.12
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
 from scipy import linalg
-import itertools
+from sympy.matrices import Matrix, normalforms
+import itertools, warnings
 import tuning_optimizer
 np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
 SCALAR = 1200 #could be in octave, but for precision reason
 
-def map_normalize (map):
-    #todo: add something
-    return map
+def map_normalize (map): #to HNF, only checks multirow mappings
+    return np.flip (np.array (normalforms.hermite_normal_form (Matrix (np.flip (map)).T).T).astype (int)) if map.shape[0] > 1 else map
 
 class Temperament:
     def __init__ (self, map, subgroup = None):
-        self.map = map_normalize (np.array (map))
+        self.map = map_normalize (np.rint (map).astype (np.int))
         self.subgroup = PRIME_LIST[:self.map.shape[1]] if subgroup is None else subgroup
         self.jip = np.log2 (self.subgroup)*SCALAR
 
@@ -26,7 +26,7 @@ class Temperament:
     def optimize (self, wtype = "tenney", order = 2, enforce = "custom", cons_monzo_list = None, stretch_monzo = None): #in cents
         if not enforce in {"custom", "po", "c", "xoc", "none"}:
             enforce = "custom"
-            raise Warning ("unknown enforcement type, using default (\"custom\")")
+            warning.warn ("unknown enforcement type, using default (\"custom\")")
 
         if enforce == "po":
             stretch_monzo = np.transpose ([1] + [0]*(len (self.subgroup) - 1))
@@ -47,7 +47,7 @@ class Temperament:
         elif order == 1:
             order_description = "minkowskian"
         else:
-            order_description = f"{order}"
+            order_description = f"L{order}"
         if enforce == "po":
             enforce_description = "stretched"
         elif enforce == "c":
@@ -60,8 +60,7 @@ class Temperament:
             enforce_description = "custom"
         print (f"\nMapping: \n{self.map}", f"Method: {wtype}-{order_description}. Enforcement: {enforce_description}", sep = "\n")
 
-        gen = self.optimize (wtype = wtype, order = order, enforce = enforce, cons_monzo_list = cons_monzo_list, stretch_monzo = stretch_monzo)
-        tuning_map = gen @ self.map
+        gen, tuning_map = self.optimize (wtype = wtype, order = order, enforce = enforce, cons_monzo_list = cons_monzo_list, stretch_monzo = stretch_monzo)
         tuning_map_w = self.weighted (tuning_map, wtype = wtype)
         mistuning_map = tuning_map - self.jip
         mistuning_map_w = self.weighted (mistuning_map, wtype = wtype)
@@ -73,16 +72,14 @@ class Temperament:
     analyze = analyse
 
     def wedgie (self, wtype = "tenney"):
-        combination_list = list (itertools.combinations (range (self.map.shape[1]), self.map.shape[0]))
-        wedgie = []
-        for entry in combination_list:
-            wedgie.append (linalg.det (self.weighted (self.map, wtype = wtype)[:,entry]))
+        combination_list = itertools.combinations (range (self.map.shape[1]), self.map.shape[0])
+        wedgie = [linalg.det (self.weighted (self.map, wtype = wtype)[:,entry]) for entry in combination_list]
         return np.array (wedgie) if wedgie[0] >= 0 else -np.array (wedgie)
 
     def complexity (self, ntype = "breed", wtype = "tenney"):
         if not ntype in {"breed", "smith", "l2"}:
             ntype = "breed"
-            raise Warning ("unknown ntype, using default (\"breed\")")
+            warnings.warn ("unknown ntype, using default (\"breed\")")
 
         if ntype == "breed": #Graham Breed's RMS (default)
             complexity = np.sqrt (linalg.det (self.weighted (self.map, wtype = wtype) @ self.weighted (self.map, wtype = wtype).T / self.map.shape[1]))
@@ -98,7 +95,7 @@ class Temperament:
     def error (self, ntype = "breed", wtype = "tenney"): #in cents
         if not ntype in {"breed", "smith", "l2"}:
             ntype = "breed"
-            raise Warning ("unknown ntype, using default (\"breed\")")
+            warnings.warn ("unknown ntype, using default (\"breed\")")
 
         if ntype == "breed": #Graham Breed's RMS (default)
             error = linalg.norm (self.weighted (self.jip, wtype = wtype) @ (linalg.pinv (self.weighted (self.map, wtype = wtype)) @ self.weighted (self.map, wtype = wtype) - np.eye (self.map.shape[1]))) / np.sqrt (self.map.shape[1])

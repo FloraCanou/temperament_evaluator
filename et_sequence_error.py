@@ -1,15 +1,20 @@
-# © 2020-2021 Flora Canou | Version 0.10
+# © 2020-2022 Flora Canou | Version 0.12
 # This work is licensed under the GNU General Public License version 3.
 
-import te_temperament_measures as tm
 import numpy as np
+import warnings
+import te_temperament_measures as tm
 
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
 
-# Et construction function
-def et_construct (n, subgroup, alt_val = 0):
-    val = np.rint (n*np.log2 (subgroup)).astype (int, copy = False) + alt_val
-    return tm.Temperament ([val], subgroup)
+# Temperament construction function from ets
+def et_construct (et_list, subgroup, alt_val = 0):
+    try:
+        map = np.array ([n*np.log2 (subgroup) for n in et_list]) + np.resize (alt_val, (len (et_list), len (subgroup)))
+    except TypeError:
+        map = np.array ([et_list*np.log2 (subgroup)]) + np.resize (alt_val, (1, len (subgroup)))
+        warnings.warn ("equal temperament number should be entered as a list. ", FutureWarning)
+    return tm.Temperament (map, subgroup)
 
 # Finds et sequence from comma list. Can be used to find optimal patent vals
 # Comma list should be entered as column vectors
@@ -18,12 +23,13 @@ def et_sequence_error (monzo_list = None, subgroup = None, cond = "error", ntype
         if subgroup is None:
             raise ValueError ("please specify a monzo list or a subgroup. ")
         else:
-            monzo_list = np.transpose ([[0]*len (subgroup)])
+            monzo_list = np.zeros ((len (subgroup), 1))
     else:
         if subgroup is None:
             subgroup = PRIME_LIST[:monzo_list.shape[0]]
         elif len (subgroup) != monzo_list.shape[0]:
-            raise IndexError ("dimension does not match. ")
+            monzo_list = monzo_list[:len (subgroup)]
+            warnings.warn ("dimension does not match. Casting monzo list to subgroup. ")
 
     gpv = [0]*len (subgroup) #initialize with the all-zeroes val
     while 0 in gpv : #skip vals with zeroes
