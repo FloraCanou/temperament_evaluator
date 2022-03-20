@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.12
+# © 2020-2022 Flora Canou | Version 0.12.1
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
@@ -26,7 +26,7 @@ class Temperament:
     def optimize (self, wtype = "tenney", order = 2, enforce = "custom", cons_monzo_list = None, stretch_monzo = None): #in cents
         if not enforce in {"custom", "po", "c", "xoc", "none"}:
             enforce = "custom"
-            warning.warn ("unknown enforcement type, using default (\"custom\")")
+            warnings.warn ("unknown enforcement type, using default (\"custom\")")
 
         if enforce == "po":
             stretch_monzo = np.transpose ([1] + [0]*(len (self.subgroup) - 1))
