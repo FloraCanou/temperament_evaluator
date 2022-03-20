@@ -1,5 +1,10 @@
 # Tuning Optimizer & TE Temperament Measures Calculator
 
+## Dependencies
+
+- [SciPy](https://scipy.org/)
+- [SymPy](https://www.sympy.org/en/index.html)
+
 ## `tuning_optimizer.py`
 
 Optimizes tunings. Custom norm order, constraints and stretches are supported. 
@@ -40,10 +45,10 @@ Use `Temperament` to construct a temperament object. Methods:
 
 Finds the ET sequence from the comma list. Can be used to find optimal patent vals. Requires the above module. 
 
-Use `et_construct` to quickly construct an equal temperament. Parameters: 
-- `n`: *first positional*, *required*. The equal temperament number. 
-- `subgroup`: *second positional*, *required*. The subgroup for the equal temperament. 
-- `alt_val`: *optional*. Alters the val by this row vector. 
+Use `et_construct` to quickly construct temperaments from equal temperaments. Parameters: 
+- `et_list`: *first positional*, *required*. The equal temperament list. 
+- `subgroup`: *second positional*, *required*. The subgroup for the equal temperament list. 
+- `alt_val`: *optional*. Alters the mapping by this matrix. 
 
 Use `et_sequence_error` to iterate through all GPVs. Parameters: 
 - `monzo_list`: *optional\**. Specifies the commas to be tempered out. Default is empty, implying **JI**. 
