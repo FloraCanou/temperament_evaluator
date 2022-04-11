@@ -25,6 +25,9 @@ Use `optimizer_main` to optimize, yet *it is recommended to use the next module 
 
 **Important: monzos must be entered as column vectors**. 
 
+## `te_optimizer_legacy.py`
+Legacy single-file edition (doesn't require `te_common.py`). 
+
 ## `te_temperament_measures.py`
 
 Analyses tunings and computes temperament measures from the temperament map. 
