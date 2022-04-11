@@ -1,14 +1,15 @@
-# © 2020-2021 Flora Canou | Version 0.6
+# © 2020-2022 Flora Canou | Version 0.13
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
 from scipy import linalg
+import te_common as te
 np.set_printoptions (suppress = True, linewidth = 256)
 
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
 
 # takes a monzo, returns the ratio in [num, den] form
-# doesn't check the validity of the basis
+# doesn't validate the basis
 # ratio[0]: num, ratio[1]: den
 def monzo2ratio (monzo, subgroup):
     ratio = [1, 1]
@@ -19,29 +20,26 @@ def monzo2ratio (monzo, subgroup):
             ratio[1] *= subgroup[i]**(-monzo[i])
     return ratio
 
-def weighted (matrix, subgroup):
-    tenney_weighter = np.diag (1/np.log2 (subgroup))
-    return matrix @ tenney_weighter
-
-def find_temperamental_norm (map, monzo, subgroup, oe = True, show = True):
+def find_temperamental_norm (map, monzo, subgroup, wtype = "tenney", oe = True, show = True):
     if oe: #octave equivalence
         map = map[1:]
-    P = linalg.pinv (weighted (map, subgroup) @ weighted (map, subgroup).T)
+    projection_w = linalg.pinv (te.weighted (map, subgroup, wtype = wtype) @ te.weighted (map, subgroup, wtype = wtype).T)
     image = map @ monzo
-    norm = np.sqrt (image.T @ P @ image)
+    norm = np.sqrt (image.T @ projection_w @ image)
     if show:
         ratio = monzo2ratio (monzo, subgroup)
         print (f"{ratio[0]}/{ratio[1]}\t {norm:.4f}")
     return norm
 
-def find_spectrum (map, monzo_list, subgroup = [], oe = True):
-    if len (subgroup) == 0:
+def find_spectrum (map, monzo_list, subgroup = None, wtype = "tenney", oe = True):
+    if subgroup is None:
         subgroup = PRIME_LIST[:map.shape[1]]
     elif map.shape[1] != len (subgroup):
         raise IndexError ("dimension does not match. ")
+
     spectrum = []
     for i in range (monzo_list.shape[1]):
-        spectrum.append ([monzo_list[:,i], find_temperamental_norm (map, monzo_list[:,i], subgroup, oe = oe, show = False)])
+        spectrum.append ([monzo_list[:,i], find_temperamental_norm (map, monzo_list[:,i], subgroup, wtype = wtype, oe = oe, show = False)])
     spectrum.sort (key = lambda k: k[1])
     for i in range (len (spectrum)):
         ratio = monzo2ratio (spectrum[i][0], subgroup)
