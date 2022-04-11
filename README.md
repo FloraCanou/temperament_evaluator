@@ -1,13 +1,19 @@
-# Tuning Optimizer & TE Temperament Measures Calculator
+# Temperament Evaluator
 
 ## Dependencies
 
 - [SciPy](https://scipy.org/)
 - [SymPy](https://www.sympy.org/en/index.html)
 
-## `tuning_optimizer.py`
+## `te_common.py`
+
+Common functions. Required by virtually all subsequent modules. 
+
+## `te_optimizer.py`
 
 Optimizes tunings. Custom norm order, constraints and stretches are supported. 
+
+Requires `te_common`. 
 
 Use `optimizer_main` to optimize, yet *it is recommended to use the next module instead since it calls this function with presets.* Parameters: 
 - `map`: *first positional*, *required*. The map of the temperament. 
@@ -21,7 +27,9 @@ Use `optimizer_main` to optimize, yet *it is recommended to use the next module 
 
 ## `te_temperament_measures.py`
 
-Analyses tunings and computes TE temperament measures from the temperament map. Requires the above module. 
+Analyses tunings and computes temperament measures from the temperament map. 
+
+Requires `te_common` and `te_optimizer`. 
 
 Use `Temperament` to construct a temperament object. Methods: 
 - `analyse`: calls `optimizer_main` and shows the generator, tuning map, mistuning map, tuning error, and tuning bias. Parameters: 
@@ -41,9 +49,11 @@ Use `Temperament` to construct a temperament object. Methods:
 
 **Important: monzos must be entered as column vectors**. 
 
-## `et_sequence_error.py`
+## `te_equal_temperament.py`
 
-Finds the ET sequence from the comma list. Can be used to find optimal patent vals. Requires the above module. 
+Tools related to equal temperaments. Constructs higher-rank temperaments using equal temperaments. Finds the GPVs from the comma list. 
+
+Requires `te_common`, `te_optimizer`, and `te_temperament_measures`. 
 
 Use `et_construct` to quickly construct temperaments from equal temperaments. Parameters: 
 - `et_list`: *first positional*, *required*. The equal temperament list. 
@@ -64,8 +74,8 @@ Use `et_sequence_error` to iterate through all GPVs. Parameters:
 
 **Important: monzos must be entered as column vectors**. 
 
-## `complexity_spectrum.py`
+## `te_lattice.py`
 
-Finds the complexity spectrum from the temperament map. 
+Not fully functional yet. Currently able to find the complexity spectrum from the temperament map. 
 
-See `examples.py`. 
+Requires `te_common`. 

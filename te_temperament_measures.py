@@ -1,11 +1,12 @@
-# © 2020-2022 Flora Canou | Version 0.12.1
+# © 2020-2022 Flora Canou | Version 0.13
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
 from scipy import linalg
 from sympy.matrices import Matrix, normalforms
 import itertools, warnings
-import tuning_optimizer
+import te_common as te
+import te_optimizer as te_opt
 np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
@@ -16,12 +17,13 @@ def map_normalize (map): #to HNF, only checks multirow mappings
 
 class Temperament:
     def __init__ (self, map, subgroup = None):
-        self.map = map_normalize (np.rint (map).astype (np.int))
-        self.subgroup = PRIME_LIST[:self.map.shape[1]] if subgroup is None else subgroup
+        map, subgroup = te.subgroup_normalize (np.array (map), subgroup, axis = "row")
+        self.subgroup = subgroup
         self.jip = np.log2 (self.subgroup)*SCALAR
+        self.map = map_normalize (np.rint (map).astype (np.int))
 
     def weighted (self, matrix, wtype):
-        return tuning_optimizer.weighted (matrix, self.subgroup, wtype = wtype)
+        return te.weighted (matrix, self.subgroup, wtype = wtype)
 
     def optimize (self, wtype = "tenney", order = 2, enforce = "custom", cons_monzo_list = None, stretch_monzo = None): #in cents
         if not enforce in {"custom", "po", "c", "xoc", "none"}:
@@ -37,7 +39,7 @@ class Temperament:
         elif enforce == "none":
             stretch_monzo = None
             cons_monzo_list = None
-        return tuning_optimizer.optimizer_main (self.map, subgroup = self.subgroup, wtype = wtype, order = order, cons_monzo_list = cons_monzo_list, stretch_monzo = stretch_monzo)
+        return te_opt.optimizer_main (self.map, subgroup = self.subgroup, wtype = wtype, order = order, cons_monzo_list = cons_monzo_list, stretch_monzo = stretch_monzo)
 
     def analyse (self, wtype = "tenney", order = 2, enforce = "custom", cons_monzo_list = None, stretch_monzo = None): #in octaves
         if order == 2:
@@ -58,7 +60,10 @@ class Temperament:
             enforce_description = "none"
         else:
             enforce_description = "custom"
-        print (f"\nMapping: \n{self.map}", f"Method: {wtype}-{order_description}. Enforcement: {enforce_description}", sep = "\n")
+        subgroup_string = ".".join (map (str, self.subgroup))
+        print (f"\nSubgroup: {subgroup_string}",
+            f"Mapping: \n{self.map}",
+            f"Method: {wtype}-{order_description}. Enforcement: {enforce_description}", sep = "\n")
 
         gen, tuning_map = self.optimize (wtype = wtype, order = order, enforce = enforce, cons_monzo_list = cons_monzo_list, stretch_monzo = stretch_monzo)
         tuning_map_w = self.weighted (tuning_map, wtype = wtype)
@@ -66,7 +71,9 @@ class Temperament:
         mistuning_map_w = self.weighted (mistuning_map, wtype = wtype)
         error = linalg.norm (mistuning_map_w, ord = order) / np.sqrt (self.map.shape[1])
         bias = np.mean (mistuning_map_w)
-        print (f"Mistuning map: {mistuning_map} (¢)", f"Tuning error: {error:.6f} (¢)", f"Tuning bias: {bias:.6f} (¢)", sep = "\n")
+        print (f"Mistuning map: {mistuning_map} (¢)",
+            f"Tuning error: {error:.6f} (¢)",
+            f"Tuning bias: {bias:.6f} (¢)", sep = "\n")
 
     optimise = optimize
     analyze = analyse
@@ -112,9 +119,16 @@ class Temperament:
         return self.error (ntype = ntype, wtype = wtype) * self.complexity (ntype = ntype, wtype = wtype)**((self.map.shape[0])/(self.map.shape[1] - self.map.shape[0]) + 1) / SCALAR
 
     def temperament_measures (self, ntype = "breed", wtype = "tenney", badness_scale = 100):
-        print (f"\nMapping: \n{self.map}", f"Norm: {ntype}. Weighter: {wtype}", sep = "\n")
+        subgroup_string = ".".join (map (str, self.subgroup))
+        print (f"\nSubgroup: {subgroup_string}",
+            f"Mapping: \n{self.map}",
+            f"Norm: {ntype}. Weighter: {wtype}", sep = "\n")
+
         error = self.error (ntype = ntype, wtype = wtype)
         complexity = self.complexity (ntype = ntype, wtype = wtype)
         badness = self.badness (ntype = ntype, wtype = wtype) * badness_scale
         badness_logflat = self.badness_logflat (ntype = ntype, wtype = wtype) * badness_scale
-        print (f"Complexity: {complexity:.6f}", f"Error: {error:.6f} (¢)", f"Badness (simple): {badness:.6f} ({badness_scale}oct)", f"Badness (logflat): {badness_logflat:.6f} ({badness_scale}oct)", sep = "\n")
+        print (f"Complexity: {complexity:.6f}",
+            f"Error: {error:.6f} (¢)",
+            f"Badness (simple): {badness:.6f} ({badness_scale}oct)",
+            f"Badness (logflat): {badness_logflat:.6f} ({badness_scale}oct)", sep = "\n")
