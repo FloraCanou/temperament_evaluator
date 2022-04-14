@@ -10,7 +10,7 @@ import te_equal_temperament as te_et
 # methods:
 #   analyse: gives the tuning
 #     parameters:
-#       wtype: specifies the weighter. "tenney", "frobenius", "partch"
+#       wtype: specifies the weighter. "tenney", "frobenius", "inverse tenney", and "benedetti"
 #       order: specifies the order of the norm to be minimized
 #       enforce: "po", "c", "xoc", "none", "custom"
 #       cons_monzo_list: constrains this list of monzos to pure
@@ -18,7 +18,7 @@ import te_equal_temperament as te_et
 #   temperament_measures: gives the temperament measures
 #     parameters:
 #       ntype: specifies the averaging method. "breed", "smith", or "l2"
-#       wtype: specifies the weighter. "tenney", "frobenius", "partch"
+#       wtype: specifies the weighter. "tenney", "frobenius", "inverse tenney", and "benedetti"
 #       badness_scale: scales the badnesses, literally
 
 te_tm.Temperament ([[1, 0, 2, -1], [0, 5, 1, 12]]).analyse (enforce = "c") # septimal magic in cte tuning
@@ -35,7 +35,7 @@ te_et.et_construct ([17], [2, 3, 5, 7, 11, 13], alt_val = [0, 0, 1, 0, 0, 0]).te
 # parameters:
 #   subgroup: specifies a custom ji subgroup
 #   ntype: specifies the averaging method. "breed", "smith", or "l2"
-#   wtype: specifies the weighter. "tenney", "frobenius", "partch"
+#   wtype: specifies the weighter. "tenney", "frobenius", "inverse tenney", and "benedetti"
 #   cond: "error" or "badness"
 #   threshold: temperaments failing this will not be shown
 #   prog: if true, threshold will be updated
