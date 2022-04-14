@@ -18,7 +18,7 @@ Requires `te_common`.
 Use `optimizer_main` to optimize, yet *it is recommended to use the next module instead since it calls this function with presets.* Parameters: 
 - `map`: *first positional*, *required*. The map of the temperament. 
 - `subgroup`: *optional*. Specifies a custom subgroup for the map. Default is prime harmonics. 
-- `wtype`: *optional*. Specifies the weighter. Has `"tenney"` (default), `"frobenius"`, and `"partch"`. 
+- `wtype`: *optional*. Specifies the weighter. Has `"tenney"` (default), `"frobenius"`, `"inverse tenney"`, and `"benedetti"`. 
 - `order`: *optional*. Specifies the order of the norm to be minimized. Default is `2`, meaning **Euclidean**. For **TOP tuning**, use `np.inf`. 
 - `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. 
 - `stretch_monzo`: *optional*. Stretches this monzo to pure. Default is empty. 
@@ -36,8 +36,8 @@ Requires `te_common` and `te_optimizer`.
 
 Use `Temperament` to construct a temperament object. Methods: 
 - `analyse`: calls `optimizer_main` and shows the generator, tuning map, mistuning map, tuning error, and tuning bias. Parameters: 
-	- `wtype`: *optional*, *only works if type is "custom"*. Specifies the weighter. Has `"tenney"` (default), `"frobenius"`, and `"partch"`. 
-	- `order`: *optional*, *only works if type is "custom"*. Specifies the order of the norm to be minimized. Default is `2`, meaning **Euclidean**. For **TOP tuning**, use `np.inf`. 
+	- `wtype`: *optional*, *only works if type is "custom"*. Specifies the weighter. See above. 
+	- `order`: *optional*, *only works if type is "custom"*. Specifies the order of the norm to be minimized. See above. 
 	- `enforce`: *optional*. Has  `"po"`, `"c"`, `"xoc"` and `"custom"` (default). Only in `"custom"` can you specify your own constraints and stretch goals. 
 		- `"po"`: pure-octave stretched
 		- `"c"`: pure-octave constrained
@@ -47,7 +47,7 @@ Use `Temperament` to construct a temperament object. Methods:
 	- `stretch_monzo`: *optional*, *only works if type is "custom"*. Stretches this monzo to pure. Default is empty. 
 - `temperament_measures`: shows the complexity, error, and badness (simple and logflat). Parameters: 
 	- `ntype`: *optional*. Specifies the averaging method. Has `"breed"` (default), `"smith"` and `"l2"`. 
-	- `wtype`: *optional*. Specifies the weighter. Has `"tenney"` (default), `"frobenius"`, and `"partch"`. 
+	- `wtype`: *optional*. Specifies the weighter. See above. 
 	- `badness_scale`: *optional*. Scales the badness, literally. Default is `100`. 
 
 **Important: monzos must be entered as column vectors**. 
@@ -68,8 +68,8 @@ Use `et_sequence_error` to iterate through all GPVs. Parameters:
 - `subgroup`: *optional\**. Specifies a custom subgroup for the map. Default is prime harmonics. 
 	- \* At least one of the above must be specified, for the script to know the dimension. 
 - `cond`: *optional*. Either `"error"` or `"badness"`. Default is `"error"`. 
-- `ntype`: *optional*. Specifies the averaging method. Has `"breed"` (default), `"smith"` and `"l2"`. 
-- `wtype`: *optional*. Specifies the weighter. Has `"tenney"` (default), `"frobenius"`, and `"partch"`. 
+- `ntype`: *optional*. Specifies the averaging method. See above. 
+- `wtype`: *optional*. Specifies the weighter. See above. 
 - `pv`: *optional*. If `True`, only patent vals will be considered. Default is `False`. 
 - `prog`: *optional*. If `True`, threshold will be updated. Default is `True`. 
 - `threshold`: *optional*. Temperaments failing this will not be shown. Default is `20`. 
