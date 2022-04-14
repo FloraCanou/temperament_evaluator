@@ -31,9 +31,9 @@ class Temperament:
             warnings.warn ("unknown enforcement type, using default (\"custom\")")
 
         if enforce == "po":
-            stretch_monzo = np.transpose ([1] + [0]*(len (self.subgroup) - 1))
+            stretch_monzo = np.transpose ([[1] + [0]*(len (self.subgroup) - 1)])
         elif enforce == "c":
-            cons_monzo_list = np.transpose ([1] + [0]*(len (self.subgroup) - 1))
+            cons_monzo_list = np.transpose ([[1] + [0]*(len (self.subgroup) - 1)])
         elif enforce == "xoc":
             cons_monzo_list = np.transpose (self.weighted (np.ones (len (self.subgroup)), wtype = wtype))
         elif enforce == "none":

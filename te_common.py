@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.13
+# © 2020-2022 Flora Canou | Version 0.14
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
@@ -32,7 +32,7 @@ def subgroup_normalize (main, subgroup, axis):
     return main, subgroup
 
 def weighted (main, subgroup, wtype = "tenney"):
-    if not wtype in {"tenney", "frobenius", "partch"}:
+    if not wtype in {"tenney", "frobenius", "inverse tenney", "benedetti"}:
         wtype = "tenney"
         warnings.warn ("unknown weighter type, using default (\"tenney\")")
 
@@ -40,6 +40,8 @@ def weighted (main, subgroup, wtype = "tenney"):
         weighter = np.diag (1/np.log2 (subgroup))
     elif wtype == "frobenius":
         weighter = np.eye (len (subgroup))
-    elif wtype == "partch":
+    elif wtype == "inverse tenney":
         weighter = np.diag (np.log2 (subgroup))
+    elif wtype == "benedetti":
+        weighter = np.diag (1/np.array (subgroup))
     return main @ weighter
