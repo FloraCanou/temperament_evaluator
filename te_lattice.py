@@ -1,12 +1,10 @@
-# © 2020-2022 Flora Canou | Version 0.14
+# © 2020-2022 Flora Canou | Version 0.15
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
 from scipy import linalg
 import te_common as te
 np.set_printoptions (suppress = True, linewidth = 256)
-
-PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
 
 # takes a monzo, returns the ratio in [num, den] form
 # doesn't validate the basis

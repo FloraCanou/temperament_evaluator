@@ -1,10 +1,11 @@
-# © 2020-2022 Flora Canou | Version 0.14
+# © 2020-2022 Flora Canou | Version 0.15
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
 import warnings
 
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
+SCALAR = 1200 #could be in octave, but for precision reason
 
 def subgroup_normalize (main, subgroup, axis):
     if subgroup is None:

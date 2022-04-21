@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.13
+# © 2020-2022 Flora Canou | Version 0.15
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
@@ -6,7 +6,7 @@ import warnings
 import te_common as te
 import te_temperament_measures as te_tm
 
-PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
+WARTS_LIST = ["", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r"]
 
 # Temperament construction function from ets
 def et_construct (et_list, subgroup, alt_val = 0):
@@ -19,7 +19,7 @@ def et_construct (et_list, subgroup, alt_val = 0):
 
 # Finds et sequence from comma list. Can be used to find optimal patent vals
 # Comma list should be entered as column vectors
-def et_sequence (monzo_list = None, subgroup = None, cond = "error", ntype = "breed", wtype = "tenney", pv = False, prog = True, threshold = 20, search_range = 1200):
+def et_sequence (monzo_list = None, subgroup = None, cond = "error", ntype = "breed", wtype = "tenney", pv = False, prog = True, verbose = False, threshold = 20, search_range = 1200):
     if monzo_list is None:
         if subgroup is None:
             raise ValueError ("please specify a monzo list or a subgroup. ")
@@ -39,14 +39,23 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error", ntype = "br
                 if (current := et.error (ntype = ntype, wtype = wtype)) <= threshold:
                     if prog:
                         threshold = current
-                    et.temperament_measures (ntype = ntype, wtype = wtype)
+                    if verbose:
+                        et.temperament_measures (ntype = ntype, wtype = wtype)
+                    else:
+                        print (f"{gpv} ({val2warts (gpv, subgroup = subgroup)})")
             elif cond == "badness":
                 if (current := et.badness (ntype = ntype, wtype = wtype)) <= threshold:
                     if prog:
                         threshold = current
-                    et.temperament_measures (ntype = ntype, wtype = wtype)
+                    if verbose:
+                        et.temperament_measures (ntype = ntype, wtype = wtype)
+                    else:
+                        print (f"{gpv} ({val2warts (gpv, subgroup = subgroup)})")
             else:
-                et.temperament_measures (ntype = ntype, wtype = wtype)
+                if verbose:
+                    et.temperament_measures (ntype = ntype, wtype = wtype)
+                else:
+                    print (f"{gpv} ({val2warts (gpv, subgroup = subgroup)})")
         gpv = find_next_gpv (gpv, subgroup)
 
 et_sequence_error = et_sequence
@@ -61,7 +70,7 @@ def is_gpv (val, subgroup = None):
 # Checks if a val is a patent val
 def is_pv (val, subgroup = None):
     val, subgroup = te.subgroup_normalize (val, subgroup, axis = "vec")
-    return True if all (val == np.round (val[0]*np.log2 (subgroup))) else False
+    return True if all (val == np.round (val[0]*np.log2 (subgroup)/np.log2 (subgroup[0]))) else False
 
 # Enter a GPV, finds the next one
 # Doesn't handle some nontrivial subgroups
@@ -78,8 +87,23 @@ def find_next_gpv (val, subgroup = None):
     else:
         raise NotImplementedError ("this nontrivial subgroup cannot be processed. ")
 
-def warts2val (warts, subgroup = None):
-    pass
-
 def val2warts (val, subgroup = None):
+    val, subgroup = te.subgroup_normalize (val, subgroup, axis = "vec")
+    warts = str (val[0])
+    if subgroup[0] not in te.PRIME_LIST: #nonprime equave
+        warts = "*" + warts
+    else: #prime equave
+        warts = str (WARTS_LIST[te.PRIME_LIST.index (subgroup[0])]) + warts
+    if not is_pv (val, subgroup):
+        if any (entry not in te.PRIME_LIST for entry in subgroup): #nonprime subgroup
+            warts += "*"
+        else: #prime subgroup
+            jip_n = val[0]*np.log2 (subgroup)/np.log2 (subgroup[0]) #jip in edostep numbers
+            pv = np.round (jip_n) #corresponding patent val
+            warts_number_list = (2*np.abs (val - pv) + (np.copysign (1, (val - pv)*(pv - jip_n)) - 1)/2).astype ("int")
+            for i in range (len (val)):
+                warts += warts_number_list[i]*str (WARTS_LIST[te.PRIME_LIST.index (subgroup[i])])
+    return warts
+
+def warts2val (warts, subgroup = None):
     pass

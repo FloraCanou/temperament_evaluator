@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.13
+# © 2020-2022 Flora Canou | Version 0.15
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
@@ -9,9 +9,6 @@ import te_common as te
 import te_optimizer as te_opt
 np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
-PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
-SCALAR = 1200 #could be in octave, but for precision reason
-
 def map_normalize (map): #to HNF, only checks multirow mappings
     return np.flip (np.array (normalforms.hermite_normal_form (Matrix (np.flip (map)).T).T).astype (int)) if map.shape[0] > 1 else map
 
@@ -19,7 +16,7 @@ class Temperament:
     def __init__ (self, map, subgroup = None):
         map, subgroup = te.subgroup_normalize (np.array (map), subgroup, axis = "row")
         self.subgroup = subgroup
-        self.jip = np.log2 (self.subgroup)*SCALAR
+        self.jip = np.log2 (self.subgroup)*te.SCALAR
         self.map = map_normalize (np.rint (map).astype (np.int))
 
     def weighted (self, matrix, wtype):
@@ -113,10 +110,10 @@ class Temperament:
         return error
 
     def badness (self, ntype = "breed", wtype = "tenney"): #in octaves
-        return self.error (ntype = ntype, wtype = wtype) * self.complexity (ntype = ntype, wtype = wtype) / SCALAR
+        return self.error (ntype = ntype, wtype = wtype) * self.complexity (ntype = ntype, wtype = wtype) / te.SCALAR
 
     def badness_logflat (self, ntype = "breed", wtype = "tenney"): #in octaves
-        return self.error (ntype = ntype, wtype = wtype) * self.complexity (ntype = ntype, wtype = wtype)**((self.map.shape[0])/(self.map.shape[1] - self.map.shape[0]) + 1) / SCALAR
+        return self.error (ntype = ntype, wtype = wtype) * self.complexity (ntype = ntype, wtype = wtype)**((self.map.shape[0])/(self.map.shape[1] - self.map.shape[0]) + 1) / te.SCALAR
 
     def temperament_measures (self, ntype = "breed", wtype = "tenney", badness_scale = 100):
         subgroup_string = ".".join (map (str, self.subgroup))
