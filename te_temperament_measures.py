@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.15
+# © 2020-2022 Flora Canou | Version 0.15.1
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
@@ -85,15 +85,13 @@ class Temperament:
             ntype = "breed"
             warnings.warn ("unknown ntype, using default (\"breed\")")
 
+        #standard L2 complexity
+        complexity = np.sqrt (linalg.det (self.weighted (self.map, wtype = wtype) @ self.weighted (self.map, wtype = wtype).T))
+        # complexity = linalg.norm (self.wedgie (wtype = wtype)) #same
         if ntype == "breed": #Graham Breed's RMS (default)
-            complexity = np.sqrt (linalg.det (self.weighted (self.map, wtype = wtype) @ self.weighted (self.map, wtype = wtype).T / self.map.shape[1]))
-            # complexity = linalg.norm (self.wedgie (wtype = wtype)) / np.sqrt (self.map.shape[1]**self.map.shape[0]) #same
+            complexity *= 1/np.sqrt (self.map.shape[1]**self.map.shape[0])
         elif ntype == "smith": #Gene Ward Smith's RMS
-            complexity = np.sqrt (linalg.det (self.weighted (self.map, wtype = wtype) @ self.weighted (self.map, wtype = wtype).T) / len (self.wedgie ()))
-            # complexity = linalg.norm (self.wedgie (wtype = wtype)) / np.sqrt (len (self.wedgie ())) #same
-        elif ntype == "l2": #standard L2
-            complexity = np.sqrt (linalg.det (self.weighted (self.map, wtype = wtype) @ self.weighted (self.map, wtype = wtype).T))
-            # complexity = linalg.norm (self.wedgie (wtype = wtype)) #same
+            complexity *= 1/np.sqrt (len (self.wedgie ()))
         return complexity
 
     def error (self, ntype = "breed", wtype = "tenney"): #in cents
@@ -101,19 +99,25 @@ class Temperament:
             ntype = "breed"
             warnings.warn ("unknown ntype, using default (\"breed\")")
 
+        #standard L2 error
+        error = linalg.norm (self.weighted (self.jip, wtype = wtype) @ (linalg.pinv (self.weighted (self.map, wtype = wtype)) @ self.weighted (self.map, wtype = wtype) - np.eye (self.map.shape[1])))
         if ntype == "breed": #Graham Breed's RMS (default)
-            error = linalg.norm (self.weighted (self.jip, wtype = wtype) @ (linalg.pinv (self.weighted (self.map, wtype = wtype)) @ self.weighted (self.map, wtype = wtype) - np.eye (self.map.shape[1]))) / np.sqrt (self.map.shape[1])
+            error *= 1/np.sqrt (self.map.shape[1])
         elif ntype == "smith": #Gene Ward Smith's RMS
-            error = linalg.norm (self.weighted (self.jip, wtype = wtype) @ (linalg.pinv (self.weighted (self.map, wtype = wtype)) @ self.weighted (self.map, wtype = wtype) - np.eye (self.map.shape[1]))) * np.sqrt ((self.map.shape[0] + 1) / (self.map.shape[1] - self.map.shape[0]))
-        elif ntype == "l2": #standard L2
-            error = linalg.norm (self.weighted (self.jip, wtype = wtype) @ (linalg.pinv (self.weighted (self.map, wtype = wtype)) @ self.weighted (self.map, wtype = wtype) - np.eye (self.map.shape[1])))
+            try:
+                error *= np.sqrt ((self.map.shape[0] + 1) / (self.map.shape[1] - self.map.shape[0]))
+            except ZeroDivisionError:
+                error = np.nan
         return error
 
     def badness (self, ntype = "breed", wtype = "tenney"): #in octaves
         return self.error (ntype = ntype, wtype = wtype) * self.complexity (ntype = ntype, wtype = wtype) / te.SCALAR
 
     def badness_logflat (self, ntype = "breed", wtype = "tenney"): #in octaves
-        return self.error (ntype = ntype, wtype = wtype) * self.complexity (ntype = ntype, wtype = wtype)**((self.map.shape[0])/(self.map.shape[1] - self.map.shape[0]) + 1) / te.SCALAR
+        try:
+            return self.error (ntype = ntype, wtype = wtype) * self.complexity (ntype = ntype, wtype = wtype)**((self.map.shape[0])/(self.map.shape[1] - self.map.shape[0]) + 1) / te.SCALAR
+        except ZeroDivisionError:
+            return np.nan
 
     def temperament_measures (self, ntype = "breed", wtype = "tenney", badness_scale = 100):
         subgroup_string = ".".join (map (str, self.subgroup))

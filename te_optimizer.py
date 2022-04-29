@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.15
+# © 2020-2022 Flora Canou | Version 0.15.1
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
@@ -31,7 +31,7 @@ def optimizer_main (map, subgroup = None, wtype = "tenney", order = 2, cons_monz
             raise ValueError ("infeasible optimization problem. ")
 
     if not stretch_monzo is None:
-        if stretch_monzo.shape[1] != 1:
+        if np.array (stretch_monzo).ndim > 1 and np.array (stretch_monzo).shape[1] != 1:
             raise IndexError ("only one stretch target is allowed. ")
         elif (tempered_size := gen @ map @ stretch_monzo) == 0:
             raise ZeroDivisionError ("stretch target is in the nullspace. ")

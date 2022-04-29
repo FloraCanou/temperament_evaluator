@@ -23,7 +23,7 @@ Use `optimizer_main` to optimize, yet *it is recommended to use the next module 
 - `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. 
 - `stretch_monzo`: *optional*. Stretches this monzo to pure. Default is empty. 
 
-**Important: monzos must be entered as column vectors**. 
+**Important: a single monzo should be entered as a vector. A monzo list should be entered as composed by column vectors.** 
 
 ## `te_optimizer_legacy.py`
 Legacy single-file edition (doesn't require `te_common.py`). 
@@ -50,7 +50,7 @@ Use `Temperament` to construct a temperament object. Methods:
 	- `wtype`: *optional*. Specifies the weighter. See above. 
 	- `badness_scale`: *optional*. Scales the badness, literally. Default is `100`. 
 
-**Important: monzos must be entered as column vectors**. 
+**Important: a single monzo should be entered as a vector. A monzo list should be entered as composed by column vectors.** 
 
 ## `te_equal_temperament.py`
 
@@ -73,9 +73,10 @@ Use `et_sequence_error` to iterate through all GPVs. Parameters:
 - `pv`: *optional*. If `True`, only patent vals will be considered. Default is `False`. 
 - `prog`: *optional*. If `True`, threshold will be updated. Default is `True`. 
 - `threshold`: *optional*. Temperaments failing this will not be shown. Default is `20`. 
+- `verbose`: *optional*. If `True`, shows te temperament measures for each equal temperament. Default is `False`. 
 - `search_range`: *optional*. Specifies the upper bound where to stop searching. Default is `1200`. 
 
-**Important: monzos must be entered as column vectors**. 
+**Important: a single monzo should be entered as a vector. A monzo list should be entered as composed by column vectors.** 
 
 ## `te_lattice.py`
 
