@@ -1,6 +1,6 @@
 import numpy as np
 import te_temperament_measures as te_tm
-import te_equal_temperament as te_et
+import te_equal as te_et
 import te_lattice as te_la
 
 # Note: a single monzo should be entered as a vector; a monzo list should be entered as composed by column vectors
