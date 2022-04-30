@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.16
+# © 2020-2022 Flora Canou | Version 0.16.1
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
@@ -97,7 +97,9 @@ def val2warts (val, subgroup = None):
         prefix = str (WARTS_LIST[te.PRIME_LIST.index (subgroup[0])])
     else: #nonprime equave
         prefix = "*"
-    if not is_pv (val, subgroup):
+    if is_pv (val, subgroup):
+        postfix = ""
+    else:
         if all (entry in te.PRIME_LIST for entry in subgroup): #prime subgroup
             jip_n = val[0]*np.log2 (subgroup)/np.log2 (subgroup[0]) #jip in edostep numbers
             pv = np.round (jip_n) #corresponding patent val
@@ -116,7 +118,7 @@ def warts2val (warts, subgroup):
     match = re.match ("(^[a-r]?)(\d+)([a-r]*)", str (warts))
     if not match or (match.group (1) and re.match (match.group (1), match.group (3))):
         raise ValueError ("Invalid wart notation. ")
-    
+
     wart_equave = te.PRIME_LIST[WARTS_LIST.index (match.group (1))] if match.group (1) else 2
     warts_number_list = np.array ([len (re.findall (WARTS_LIST[te.PRIME_LIST.index (entry)], match.group (3))) for entry in subgroup])
     jip_n = int (match.group (2))*np.log (subgroup)/np.log (wart_equave) #jip in edostep numbers
