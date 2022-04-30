@@ -52,7 +52,7 @@ Use `Temperament` to construct a temperament object. Methods:
 
 **Important: a single monzo should be entered as a vector. A monzo list should be entered as composed by column vectors.** 
 
-## `te_equal_temperament.py`
+## `te_equal.py`
 
 Tools related to equal temperaments. Constructs higher-rank temperaments using equal temperaments. Finds the GPVs from the comma list. 
 
@@ -63,7 +63,7 @@ Use `et_construct` to quickly construct temperaments from equal temperaments. Pa
 - `subgroup`: *second positional*, *required*. The subgroup for the equal temperament list. 
 - `alt_val`: *optional*. Alters the mapping by this matrix. 
 
-Use `et_sequence_error` to iterate through all GPVs. Parameters: 
+Use `et_sequence` to iterate through all GPVs. Parameters: 
 - `monzo_list`: *optional\**. Specifies the commas to be tempered out. Default is empty, implying **JI**. 
 - `subgroup`: *optional\**. Specifies a custom subgroup for the map. Default is prime harmonics. 
 	- \* At least one of the above must be specified, for the script to know the dimension. 
