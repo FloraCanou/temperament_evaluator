@@ -1,19 +1,19 @@
-# © 2020-2022 Flora Canou | Version 0.15
+# © 2020-2022 Flora Canou | Version 0.16
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
-import warnings
+import re, warnings
 import te_common as te
 import te_temperament_measures as te_tm
 
-WARTS_LIST = ["", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r"]
+WARTS_LIST = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r"]
 
 # Temperament construction function from ets
 def et_construct (et_list, subgroup, alt_val = 0):
-    try:
-        map = np.array ([n*np.log2 (subgroup) for n in et_list]) + np.resize (alt_val, (len (et_list), len (subgroup)))
-    except TypeError:
-        map = np.array ([et_list*np.log2 (subgroup)]) + np.resize (alt_val, (1, len (subgroup)))
+    if isinstance (et_list, list):
+        map = np.array ([warts2val (n, subgroup) for n in et_list]) + np.resize (alt_val, (len (et_list), len (subgroup)))
+    else:
+        map = np.array ([warts2val (et_list, subgroup)]) + np.resize (alt_val, (1, len (subgroup)))
         warnings.warn ("equal temperament number should be entered as a list. ", FutureWarning)
     return te_tm.Temperament (map, subgroup)
 
@@ -87,23 +87,39 @@ def find_next_gpv (val, subgroup = None):
     else:
         raise NotImplementedError ("this nontrivial subgroup cannot be processed. ")
 
+# Enter a val, finds its wart notation
 def val2warts (val, subgroup = None):
     val, subgroup = te.subgroup_normalize (val, subgroup, axis = "vec")
-    warts = str (val[0])
-    if subgroup[0] not in te.PRIME_LIST: #nonprime equave
-        warts = "*" + warts
-    else: #prime equave
-        warts = str (WARTS_LIST[te.PRIME_LIST.index (subgroup[0])]) + warts
+
+    if subgroup[0] == 2: #octave equave
+        prefix = ""
+    elif subgroup[0] in te.PRIME_LIST: #non-octave prime equave
+        prefix = str (WARTS_LIST[te.PRIME_LIST.index (subgroup[0])])
+    else: #nonprime equave
+        prefix = "*"
     if not is_pv (val, subgroup):
-        if any (entry not in te.PRIME_LIST for entry in subgroup): #nonprime subgroup
-            warts += "*"
-        else: #prime subgroup
+        if all (entry in te.PRIME_LIST for entry in subgroup): #prime subgroup
             jip_n = val[0]*np.log2 (subgroup)/np.log2 (subgroup[0]) #jip in edostep numbers
             pv = np.round (jip_n) #corresponding patent val
             warts_number_list = (2*np.abs (val - pv) + (np.copysign (1, (val - pv)*(pv - jip_n)) - 1)/2).astype ("int")
+            postfix = ""
             for i in range (len (val)):
-                warts += warts_number_list[i]*str (WARTS_LIST[te.PRIME_LIST.index (subgroup[i])])
-    return warts
+                postfix += warts_number_list[i]*str (WARTS_LIST[te.PRIME_LIST.index (subgroup[i])])
+        else: #nonprime subgroup
+            postfix = "*"
+    return prefix + str (val[0]) + postfix
 
-def warts2val (warts, subgroup = None):
-    pass
+# Enter a wart notation and a subgroup, finds the val
+# Presence of the same letter in the prefix and postfix is considered invalid
+# Equave is the octave regardless of the subgroup unless specified explicitly
+def warts2val (warts, subgroup):
+    match = re.match ("(^[a-r]?)(\d+)([a-r]*)", str (warts))
+    if not match or (match.group (1) and re.match (match.group (1), match.group (3))):
+        raise ValueError ("Invalid wart notation. ")
+    
+    wart_equave = te.PRIME_LIST[WARTS_LIST.index (match.group (1))] if match.group (1) else 2
+    warts_number_list = np.array ([len (re.findall (WARTS_LIST[te.PRIME_LIST.index (entry)], match.group (3))) for entry in subgroup])
+    jip_n = int (match.group (2))*np.log (subgroup)/np.log (wart_equave) #jip in edostep numbers
+    pv = np.round (jip_n) #corresponding patent val
+    alt_val = np.copysign (np.ceil (warts_number_list/2), (1 - 2*(warts_number_list % 2))*(pv - jip_n))
+    return (pv + alt_val).astype ("int")
