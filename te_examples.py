@@ -31,7 +31,7 @@ A.temperament_measures (ntype = "smith")
 #   subgroup: specifies a custom ji subgroup
 #   alt_val: alters the val by this matrix
 
-A = te_et.et_construct ([17], [2, 3, 5, 7, 11, 13], alt_val = [0, 0, 1, 0, 0, 0])
+A = te_et.et_construct (["17c"], [2, 3, 5, 7, 11, 13])
 A.temperament_measures (badness_scale = 100) # 17edo in 17c val
 
 # et_sequence
@@ -50,4 +50,4 @@ te_et.et_sequence (np.transpose ([[-4, 4, -1, 0], [-5, 2, 2, -1]]), cond = "erro
 
 # find_spectrum
 A = te_tm.Temperament ([[1, 2, 0, 0, 1, 2], [0, 6, 0, -7, -2, 9], [0, 0, 1, 1, 1, 1]])
-te_la.find_spectrum (A.map, te_la.MONZO11)
+te_la.find_spectrum (A.map, te_la.MONZO15)

@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.16.1
+# © 2020-2022 Flora Canou | Version 0.16.2
 # This work is licensed under the GNU General Public License version 3.
 
 import numpy as np
@@ -29,34 +29,29 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error", ntype = "br
         monzo_list, subgroup = te.subgroup_normalize (monzo_list, subgroup, axis = "col")
 
     gpv = [0]*len (subgroup) #initialize with the all-zeroes val
-    while 0 in gpv : #skip vals with zeroes
+    while 0 in gpv:
         gpv = find_next_gpv (gpv, subgroup)
     while gpv[0] <= search_range:
-        if (not pv or is_pv (gpv, subgroup = subgroup)) and np.gcd.reduce (gpv) == 1 and not np.any (([gpv] @ monzo_list)):
-        # is patent val (if pv is set) and defactored and tempering out the commas
-            et = te_tm.Temperament ([gpv], subgroup)
-            if cond == "error":
-                if (current := et.error (ntype = ntype, wtype = wtype)) <= threshold:
-                    if prog:
-                        threshold = current
-                    if verbose:
-                        et.temperament_measures (ntype = ntype, wtype = wtype)
-                    else:
-                        print (f"{gpv} ({val2warts (gpv, subgroup = subgroup)})")
-            elif cond == "badness":
-                if (current := et.badness (ntype = ntype, wtype = wtype)) <= threshold:
-                    if prog:
-                        threshold = current
-                    if verbose:
-                        et.temperament_measures (ntype = ntype, wtype = wtype)
-                    else:
-                        print (f"{gpv} ({val2warts (gpv, subgroup = subgroup)})")
-            else:
-                if verbose:
-                    et.temperament_measures (ntype = ntype, wtype = wtype)
-                else:
-                    print (f"{gpv} ({val2warts (gpv, subgroup = subgroup)})")
         gpv = find_next_gpv (gpv, subgroup)
+        if (pv and not is_pv (gpv, subgroup = subgroup) # non-patent val if pv is set
+            or np.gcd.reduce (gpv) > 1 #enfactored
+            or np.any ([gpv] @ monzo_list)): #not tempering out the commas
+                continue
+
+        et = te_tm.Temperament ([gpv], subgroup)
+        if cond == "error":
+            current = et.error (ntype = ntype, wtype = wtype)
+        elif cond == "badness":
+            current = et.badness (ntype = ntype, wtype = wtype)
+        else:
+            current = threshold
+        if current <= threshold:
+            if prog:
+                threshold = current
+            if verbose:
+                et.temperament_measures (ntype = ntype, wtype = wtype)
+            else:
+                print (f"{gpv} ({val2warts (gpv, subgroup = subgroup)})")
 
 et_sequence_error = et_sequence
 
@@ -97,18 +92,18 @@ def val2warts (val, subgroup = None):
         prefix = str (WARTS_LIST[te.PRIME_LIST.index (subgroup[0])])
     else: #nonprime equave
         prefix = "*"
-    if is_pv (val, subgroup):
+
+    if is_pv (val, subgroup): #patent val
         postfix = ""
-    else:
-        if all (entry in te.PRIME_LIST for entry in subgroup): #prime subgroup
-            jip_n = val[0]*np.log2 (subgroup)/np.log2 (subgroup[0]) #jip in edostep numbers
-            pv = np.round (jip_n) #corresponding patent val
-            warts_number_list = (2*np.abs (val - pv) + (np.copysign (1, (val - pv)*(pv - jip_n)) - 1)/2).astype ("int")
-            postfix = ""
-            for i in range (len (val)):
-                postfix += warts_number_list[i]*str (WARTS_LIST[te.PRIME_LIST.index (subgroup[i])])
-        else: #nonprime subgroup
-            postfix = "*"
+    elif all (entry in te.PRIME_LIST for entry in subgroup): #nonpatent val in prime subgroup
+        jip_n = val[0]*np.log2 (subgroup)/np.log2 (subgroup[0]) #jip in edostep numbers
+        pv = np.round (jip_n) #corresponding patent val
+        warts_number_list = (2*np.abs (val - pv) + (np.copysign (1, (val - pv)*(pv - jip_n)) - 1)/2).astype ("int")
+        postfix = ""
+        for i in range (len (val)):
+            postfix += warts_number_list[i]*str (WARTS_LIST[te.PRIME_LIST.index (subgroup[i])])
+    else: #nonpatent val in nonprime subgroup
+        postfix = "*"
     return prefix + str (val[0]) + postfix
 
 # Enter a wart notation and a subgroup, finds the val
