@@ -1,8 +1,8 @@
-# © 2020-2022 Flora Canou | Version 0.16.2
+# © 2020-2022 Flora Canou | Version 0.17
 # This work is licensed under the GNU General Public License version 3.
 
-import numpy as np
 import re, warnings
+import numpy as np
 import te_common as te
 import te_temperament_measures as te_tm
 
@@ -19,7 +19,8 @@ def et_construct (et_list, subgroup, alt_val = 0):
 
 # Finds et sequence from comma list. Can be used to find optimal patent vals
 # Comma list should be entered as column vectors
-def et_sequence (monzo_list = None, subgroup = None, cond = "error", ntype = "breed", wtype = "tenney", pv = False, prog = True, verbose = False, threshold = 20, search_range = 1200):
+def et_sequence (monzo_list = None, subgroup = None, cond = "error",
+        ntype = "breed", wtype = "tenney", pv = False, prog = True, verbose = False, threshold = 20, search_range = 1200):
     if monzo_list is None:
         if subgroup is None:
             raise ValueError ("please specify a monzo list or a subgroup. ")

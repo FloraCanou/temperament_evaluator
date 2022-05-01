@@ -1,9 +1,9 @@
-# © 2020-2022 Flora Canou | Version 0.15.1
+# © 2020-2022 Flora Canou | Version 0.17
 # This work is licensed under the GNU General Public License version 3.
 
+import warnings
 import numpy as np
 from scipy import optimize, linalg
-import warnings
 np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
@@ -19,24 +19,37 @@ def subgroup_normalize (main, subgroup):
         subgroup = subgroup[:dim]
     return main, subgroup
 
-def weighted (matrix, subgroup, wtype = "tenney"):
-    if not wtype in {"tenney", "frobenius", "partch"}:
-        wtype = "tenney"
+def weighted (main, subgroup, wtype = "tenney"):
+    if not wtype in {"tenney", "frobenius", "inverse tenney", "benedetti", "weil"}:
         warnings.warn ("unknown weighter type, using default (\"tenney\")")
+        wtype = "tenney"
 
     if wtype == "tenney":
         weighter = np.diag (1/np.log2 (subgroup))
     elif wtype == "frobenius":
         weighter = np.eye (len (subgroup))
-    elif wtype == "partch":
+    elif wtype == "inverse tenney":
         weighter = np.diag (np.log2 (subgroup))
-    return matrix @ weighter
+    elif wtype == "benedetti":
+        weighter = np.diag (1/np.array (subgroup))
+    elif wtype == "weil":
+        weighter = linalg.pinv (np.append (np.diag (np.log2 (subgroup)), [np.log2 (subgroup)], axis = 0))
+
+    return main @ weighter
 
 def error (gen, map, jip, order = 2):
     return linalg.norm (gen @ map - jip, ord = order)
 
-def optimizer_main (map, subgroup = None, wtype = "tenney", order = 2, cons_monzo_list = None, stretch_monzo = None, show = True):
+def optimizer_main (map, subgroup = None, wtype = "tenney", order = 2,
+        cons_monzo_list = None, des_monzo = None, show = True, *, stretch_monzo = None):
     map, subgroup = subgroup_normalize (np.array (map), subgroup)
+
+    if not stretch_monzo is None:
+        warnings.warn ("\"stretch_monzo\" is deprecated. Please use \"des_monzo\"", FutureWarning)
+        if des_monzo is None:
+            des_monzo = stretch_monzo
+        else:
+            raise TypeError ("Optimizer received both des_monzo and stretch_monzo. ")
 
     jip = np.log2 (subgroup)*SCALAR
     map_w = weighted (map, subgroup, wtype = wtype)
@@ -55,13 +68,13 @@ def optimizer_main (map, subgroup = None, wtype = "tenney", order = 2, cons_monz
         else:
             raise ValueError ("infeasible optimization problem. ")
 
-    if not stretch_monzo is None:
-        if np.array (stretch_monzo).ndim > 1 and np.array (stretch_monzo).shape[1] != 1:
-            raise IndexError ("only one stretch target is allowed. ")
-        elif (tempered_size := gen @ map @ stretch_monzo) == 0:
-            raise ZeroDivisionError ("stretch target is in the nullspace. ")
+    if not des_monzo is None:
+        if np.array (des_monzo).ndim > 1 and np.array (des_monzo).shape[1] != 1:
+            raise IndexError ("only one destretch target is allowed. ")
+        elif (tempered_size := gen @ map @ des_monzo) == 0:
+            raise ZeroDivisionError ("destretch target is in the nullspace. ")
         else:
-            gen *= (jip @ stretch_monzo)/tempered_size
+            gen *= (jip @ des_monzo)/tempered_size
 
     tuning_map = gen @ map
 

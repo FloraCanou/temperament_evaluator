@@ -11,11 +11,11 @@ import te_lattice as te_la
 # methods:
 #   analyse: gives the tuning
 #     parameters:
-#       wtype: specifies the weighter. "tenney", "frobenius", "inverse tenney", and "benedetti"
+#       wtype: specifies the weighter. "tenney", "frobenius", "inverse tenney", "benedetti" and "weil"
 #       order: specifies the order of the norm to be minimized
-#       enforce: "po", "c", "xoc", "none", "custom"
+#       enforce: "d", "c", "xoc", "none", "custom"
 #       cons_monzo_list: constrains this list of monzos to pure
-#       stretch_monzo: stretches this monzo to pure
+#       des_monzo: destretches this monzo to pure
 #   temperament_measures: gives the temperament measures
 #     parameters:
 #       ntype: specifies the averaging method. "breed", "smith", or "l2"

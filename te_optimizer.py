@@ -1,17 +1,25 @@
-# © 2020-2022 Flora Canou | Version 0.15.1
+# © 2020-2022 Flora Canou | Version 0.17
 # This work is licensed under the GNU General Public License version 3.
 
+import warnings
 import numpy as np
 from scipy import optimize, linalg
-import warnings
 import te_common as te
 np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
 def error (gen, map, jip, order = 2):
     return linalg.norm (gen @ map - jip, ord = order)
 
-def optimizer_main (map, subgroup = None, wtype = "tenney", order = 2, cons_monzo_list = None, stretch_monzo = None, show = True):
+def optimizer_main (map, subgroup = None, wtype = "tenney", order = 2,
+        cons_monzo_list = None, des_monzo = None, show = True, *, stretch_monzo = None):
     map, subgroup = te.subgroup_normalize (np.array (map), subgroup, axis = "row")
+    
+    if not stretch_monzo is None:
+        warnings.warn ("\"stretch_monzo\" is deprecated. Please use \"des_monzo\"", FutureWarning)
+        if des_monzo is None:
+            des_monzo = stretch_monzo
+        else:
+            raise TypeError ("Optimizer received both des_monzo and stretch_monzo. ")
 
     jip = np.log2 (subgroup)*te.SCALAR
     map_w = te.weighted (map, subgroup, wtype = wtype)
@@ -30,13 +38,13 @@ def optimizer_main (map, subgroup = None, wtype = "tenney", order = 2, cons_monz
         else:
             raise ValueError ("infeasible optimization problem. ")
 
-    if not stretch_monzo is None:
-        if np.array (stretch_monzo).ndim > 1 and np.array (stretch_monzo).shape[1] != 1:
-            raise IndexError ("only one stretch target is allowed. ")
-        elif (tempered_size := gen @ map @ stretch_monzo) == 0:
-            raise ZeroDivisionError ("stretch target is in the nullspace. ")
+    if not des_monzo is None:
+        if np.array (des_monzo).ndim > 1 and np.array (des_monzo).shape[1] != 1:
+            raise IndexError ("only one destretch target is allowed. ")
+        elif (tempered_size := gen @ map @ des_monzo) == 0:
+            raise ZeroDivisionError ("destretch target is in the nullspace. ")
         else:
-            gen *= (jip @ stretch_monzo)/tempered_size
+            gen *= (jip @ des_monzo)/tempered_size
 
     tuning_map = gen @ map
 

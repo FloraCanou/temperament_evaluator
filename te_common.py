@@ -1,8 +1,9 @@
-# © 2020-2022 Flora Canou | Version 0.15.1
+# © 2020-2022 Flora Canou | Version 0.17
 # This work is licensed under the GNU General Public License version 3.
 
-import numpy as np
 import warnings
+import numpy as np
+from scipy import linalg
 
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
 SCALAR = 1200 #could be in octave, but for precision reason
@@ -14,6 +15,7 @@ def subgroup_normalize (main, subgroup, axis):
         length_main = main.shape[0]
     elif axis == "vec":
         length_main = len (main)
+
     if subgroup is None:
         subgroup = PRIME_LIST[:length_main]
     elif length_main != len (subgroup):
@@ -26,10 +28,11 @@ def subgroup_normalize (main, subgroup, axis):
         elif axis == "vec":
             main = main[:dim]
         subgroup = subgroup[:dim]
+
     return main, subgroup
 
 def weighted (main, subgroup, wtype = "tenney"):
-    if not wtype in {"tenney", "frobenius", "inverse tenney", "benedetti"}:
+    if not wtype in {"tenney", "frobenius", "inverse tenney", "benedetti", "weil"}:
         wtype = "tenney"
         warnings.warn ("unknown weighter type, using default (\"tenney\")")
 
@@ -41,4 +44,7 @@ def weighted (main, subgroup, wtype = "tenney"):
         weighter = np.diag (np.log2 (subgroup))
     elif wtype == "benedetti":
         weighter = np.diag (1/np.array (subgroup))
+    elif wtype == "weil":
+        weighter = linalg.pinv (np.append (np.diag (np.log2 (subgroup)), [np.log2 (subgroup)], axis = 0))
+
     return main @ weighter

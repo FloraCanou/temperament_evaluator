@@ -1,10 +1,10 @@
-# © 2020-2022 Flora Canou | Version 0.15.1
+# © 2020-2022 Flora Canou | Version 0.17
 # This work is licensed under the GNU General Public License version 3.
 
+import itertools, warnings
 import numpy as np
 from scipy import linalg
 from sympy.matrices import Matrix, normalforms
-import itertools, warnings
 import te_common as te
 import te_optimizer as te_opt
 np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
@@ -19,26 +19,43 @@ class Temperament:
         self.jip = np.log2 (self.subgroup)*te.SCALAR
         self.map = map_normalize (np.rint (map).astype (np.int))
 
-    def weighted (self, matrix, wtype):
-        return te.weighted (matrix, self.subgroup, wtype = wtype)
+    def weighted (self, main, wtype):
+        return te.weighted (main, self.subgroup, wtype = wtype)
 
-    def optimize (self, wtype = "tenney", order = 2, enforce = "custom", cons_monzo_list = None, stretch_monzo = None): #in cents
-        if not enforce in {"custom", "po", "c", "xoc", "none"}:
+    def optimize (self, wtype = "tenney", order = 2,
+            enforce = "custom", cons_monzo_list = None, des_monzo = None, *, stretch_monzo = None): #in cents
+        if not enforce in {"custom", "d", "po", "c", "xoc", "none"}:
+            warnings.warn ("unknown enforcement type, using default (\"custom\"). ")
             enforce = "custom"
-            warnings.warn ("unknown enforcement type, using default (\"custom\")")
 
+        if not stretch_monzo is None:
+            warnings.warn ("\"stretch_monzo\" is deprecated. Please use \"des_monzo\". ", FutureWarning)
+            des_monzo = stretch_monzo
         if enforce == "po":
-            stretch_monzo = np.transpose ([[1] + [0]*(len (self.subgroup) - 1)])
+            warnings.warn ("\"po\" is deprecated. Please use \"d\". ", FutureWarning)
+            enforce = "d"
+
+        if enforce == "d":
+            des_monzo = np.transpose ([[1] + [0]*(len (self.subgroup) - 1)])
         elif enforce == "c":
             cons_monzo_list = np.transpose ([[1] + [0]*(len (self.subgroup) - 1)])
         elif enforce == "xoc":
             cons_monzo_list = np.transpose (self.weighted (np.ones (len (self.subgroup)), wtype = wtype))
         elif enforce == "none":
-            stretch_monzo = None
+            des_monzo = None
             cons_monzo_list = None
-        return te_opt.optimizer_main (self.map, subgroup = self.subgroup, wtype = wtype, order = order, cons_monzo_list = cons_monzo_list, stretch_monzo = stretch_monzo)
+        return te_opt.optimizer_main (self.map, subgroup = self.subgroup,
+            wtype = wtype, order = order, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
 
-    def analyse (self, wtype = "tenney", order = 2, enforce = "custom", cons_monzo_list = None, stretch_monzo = None): #in octaves
+    def analyse (self, wtype = "tenney", order = 2,
+            enforce = "custom", cons_monzo_list = None, des_monzo = None, *, stretch_monzo = None):
+        if not stretch_monzo is None:
+            warnings.warn ("\"stretch_monzo\" is deprecated. Please use \"des_monzo\". ", FutureWarning)
+            des_monzo = stretch_monzo
+        if enforce == "po":
+            warnings.warn ("\"po\" is deprecated. Please use \"d\". ", FutureWarning)
+            enforce = "d"
+
         if order == 2:
             order_description = "euclidean"
         elif order == np.inf:
@@ -47,13 +64,13 @@ class Temperament:
             order_description = "minkowskian"
         else:
             order_description = f"L{order}"
-        if enforce == "po":
-            enforce_description = "stretched"
+        if enforce == "d":
+            enforce_description = "destretched"
         elif enforce == "c":
             enforce_description = "constrained"
         elif enforce == "xoc":
             enforce_description = f"{wtype} ones constrained"
-        elif enforce == "none" or cons_monzo_list is None and stretch_monzo is None:
+        elif enforce == "none" or cons_monzo_list is None and des_monzo is None:
             enforce_description = "none"
         else:
             enforce_description = "custom"
@@ -62,7 +79,8 @@ class Temperament:
             f"Mapping: \n{self.map}",
             f"Method: {wtype}-{order_description}. Enforcement: {enforce_description}", sep = "\n")
 
-        gen, tuning_map = self.optimize (wtype = wtype, order = order, enforce = enforce, cons_monzo_list = cons_monzo_list, stretch_monzo = stretch_monzo)
+        gen, tuning_map = self.optimize (wtype = wtype, order = order,
+            enforce = enforce, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
         tuning_map_w = self.weighted (tuning_map, wtype = wtype)
         mistuning_map = tuning_map - self.jip
         mistuning_map_w = self.weighted (mistuning_map, wtype = wtype)
@@ -77,8 +95,8 @@ class Temperament:
 
     def wedgie (self, wtype = "tenney"):
         combination_list = itertools.combinations (range (self.map.shape[1]), self.map.shape[0])
-        wedgie = [linalg.det (self.weighted (self.map, wtype = wtype)[:,entry]) for entry in combination_list]
-        return np.array (wedgie) if wedgie[0] >= 0 else -np.array (wedgie)
+        wedgie = np.array ([linalg.det (self.weighted (self.map, wtype = wtype)[:, entry]) for entry in combination_list])
+        return wedgie if wedgie[0] >= 0 else -wedgie
 
     def complexity (self, ntype = "breed", wtype = "tenney"):
         if not ntype in {"breed", "smith", "l2"}:
@@ -92,6 +110,7 @@ class Temperament:
             complexity *= 1/np.sqrt (self.map.shape[1]**self.map.shape[0])
         elif ntype == "smith": #Gene Ward Smith's RMS
             complexity *= 1/np.sqrt (len (self.wedgie ()))
+
         return complexity
 
     def error (self, ntype = "breed", wtype = "tenney"): #in cents
@@ -100,7 +119,11 @@ class Temperament:
             warnings.warn ("unknown ntype, using default (\"breed\")")
 
         #standard L2 error
-        error = linalg.norm (self.weighted (self.jip, wtype = wtype) @ (linalg.pinv (self.weighted (self.map, wtype = wtype)) @ self.weighted (self.map, wtype = wtype) - np.eye (self.map.shape[1])))
+        error = linalg.norm (
+            self.weighted (self.jip, wtype = wtype)
+            @ (linalg.pinv (self.weighted (self.map, wtype = wtype))
+            @ self.weighted (self.map, wtype = wtype)
+            - np.eye (self.map.shape[1])))
         if ntype == "breed": #Graham Breed's RMS (default)
             error *= 1/np.sqrt (self.map.shape[1])
         elif ntype == "smith": #Gene Ward Smith's RMS
@@ -108,14 +131,19 @@ class Temperament:
                 error *= np.sqrt ((self.map.shape[0] + 1) / (self.map.shape[1] - self.map.shape[0]))
             except ZeroDivisionError:
                 error = np.nan
+
         return error
 
     def badness (self, ntype = "breed", wtype = "tenney"): #in octaves
-        return self.error (ntype = ntype, wtype = wtype) * self.complexity (ntype = ntype, wtype = wtype) / te.SCALAR
+        return (self.error (ntype = ntype, wtype = wtype)
+            * self.complexity (ntype = ntype, wtype = wtype)
+            / te.SCALAR)
 
     def badness_logflat (self, ntype = "breed", wtype = "tenney"): #in octaves
         try:
-            return self.error (ntype = ntype, wtype = wtype) * self.complexity (ntype = ntype, wtype = wtype)**((self.map.shape[0])/(self.map.shape[1] - self.map.shape[0]) + 1) / te.SCALAR
+            return (self.error (ntype = ntype, wtype = wtype)
+                * self.complexity (ntype = ntype, wtype = wtype)**((self.map.shape[0])/(self.map.shape[1] - self.map.shape[0]) + 1)
+                / te.SCALAR)
         except ZeroDivisionError:
             return np.nan
 
