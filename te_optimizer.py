@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.17
+# © 2020-2022 Flora Canou | Version 0.18
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -11,15 +11,8 @@ def error (gen, map, jip, order = 2):
     return linalg.norm (gen @ map - jip, ord = order)
 
 def optimizer_main (map, subgroup = None, wtype = "tenney", order = 2,
-        cons_monzo_list = None, des_monzo = None, show = True, *, stretch_monzo = None):
+        cons_monzo_list = None, des_monzo = None, show = True):
     map, subgroup = te.subgroup_normalize (np.array (map), subgroup, axis = "row")
-    
-    if not stretch_monzo is None:
-        warnings.warn ("\"stretch_monzo\" is deprecated. Please use \"des_monzo\"", FutureWarning)
-        if des_monzo is None:
-            des_monzo = stretch_monzo
-        else:
-            raise TypeError ("Optimizer received both des_monzo and stretch_monzo. ")
 
     jip = np.log2 (subgroup)*te.SCALAR
     map_w = te.weighted (map, subgroup, wtype = wtype)

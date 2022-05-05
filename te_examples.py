@@ -21,10 +21,12 @@ import te_lattice as te_la
 #       ntype: specifies the averaging method. "breed", "smith", or "l2"
 #       wtype: specifies the weighter. "tenney", "frobenius", "inverse tenney", and "benedetti"
 #       badness_scale: scales the badnesses, literally
+#   comma_basis: gives the comma basis
 
 A = te_tm.Temperament ([[1, 0, 2, -1], [0, 5, 1, 12]])
 A.analyse (enforce = "c") # septimal magic in cte tuning
 A.temperament_measures (ntype = "smith")
+A.comma_basis ()
 
 # et_construct
 # parameters:
@@ -43,10 +45,10 @@ A.temperament_measures (badness_scale = 100) # 17edo in 17c val
 #   threshold: temperaments failing this will not be shown
 #   prog: if true, threshold will be updated
 #   pv: if true, only patent vals will be considered
-#   verbose: if true, shows te temperament measures for each equal temperament
 #   search_range: specifies the upper bound where to stop searching
 
-te_et.et_sequence (np.transpose ([[-4, 4, -1, 0], [-5, 2, 2, -1]]), cond = "error", search_range = 300) # septimal meantone
+A = te_tm.Temperament ([[1, 0, -4, -13], [0, 1, 4, 10]])
+te_et.et_sequence (A.comma_basis (show = False), cond = "error", search_range = 300) # septimal meantone
 
 # find_spectrum
 A = te_tm.Temperament ([[1, 2, 0, 0, 1, 2], [0, 6, 0, -7, -2, 9], [0, 0, 1, 1, 1, 1]])

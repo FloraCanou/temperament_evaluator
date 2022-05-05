@@ -1,24 +1,10 @@
-# © 2020-2022 Flora Canou | Version 0.15.1
+# © 2020-2022 Flora Canou | Version 0.18
 # This work is licensed under the GNU General Public License version 3.
 
+import te_common as te
 import numpy as np
 from scipy import linalg
-import te_common as te
-import te_temperament_measures as te_tm
 np.set_printoptions (suppress = True, linewidth = 256)
-
-# takes a monzo, returns the ratio in [num, den] form
-# doesn't validate the basis
-# ratio[0]: num, ratio[1]: den
-def monzo2ratio (monzo, subgroup = None):
-    monzo, subgroup = te.subgroup_normalize (monzo, subgroup, axis = "vec")
-    ratio = [1, 1]
-    for i in range (len (monzo)):
-        if monzo[i] > 0:
-            ratio[0] *= subgroup[i]**monzo[i]
-        elif monzo[i] < 0:
-            ratio[1] *= subgroup[i]**(-monzo[i])
-    return ratio
 
 def find_temperamental_norm (map, monzo, subgroup = None, wtype = "tenney", oe = False, show = True):
     map, subgroup = te.subgroup_normalize (map, subgroup, axis = "row")
@@ -30,7 +16,7 @@ def find_temperamental_norm (map, monzo, subgroup = None, wtype = "tenney", oe =
     tmonzo = map @ monzo
     norm = np.sqrt (tmonzo.T @ projection_w @ tmonzo)
     if show:
-        ratio = monzo2ratio (monzo, subgroup)
+        ratio = te.monzo2ratio (monzo, subgroup)
         print (f"{ratio[0]}/{ratio[1]}\t {norm}")
     return norm
 
@@ -40,8 +26,9 @@ def find_spectrum (map, monzo_list, subgroup = None, wtype = "tenney", oe = True
 
     spectrum = [[monzo_list[:, i], find_temperamental_norm (map, monzo_list[:, i], subgroup = subgroup, wtype = wtype, oe = oe, show = False)] for i in range (monzo_list.shape[1])]
     spectrum.sort (key = lambda k: k[1])
+    print ("\nComplexity spectrum: ")
     for entry in spectrum:
-        ratio = monzo2ratio (entry[0], subgroup)
+        ratio = te.monzo2ratio (entry[0], subgroup)
         print (f"{ratio[0]}/{ratio[1]}\t{entry[1]:.4f}")
 
 # monzo list library

@@ -1,10 +1,11 @@
-# © 2020-2022 Flora Canou | Version 0.17
+# © 2020-2022 Flora Canou | Version 0.18
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, warnings
 import numpy as np
 from scipy import linalg
 from sympy.matrices import Matrix, normalforms
+from sympy import gcd
 import te_common as te
 import te_optimizer as te_opt
 np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
@@ -23,17 +24,10 @@ class Temperament:
         return te.weighted (main, self.subgroup, wtype = wtype)
 
     def optimize (self, wtype = "tenney", order = 2,
-            enforce = "custom", cons_monzo_list = None, des_monzo = None, *, stretch_monzo = None): #in cents
-        if not enforce in {"custom", "d", "po", "c", "xoc", "none"}:
+            enforce = "custom", cons_monzo_list = None, des_monzo = None): #in cents
+        if not enforce in {"custom", "d", "c", "xoc", "none"}:
             warnings.warn ("unknown enforcement type, using default (\"custom\"). ")
             enforce = "custom"
-
-        if not stretch_monzo is None:
-            warnings.warn ("\"stretch_monzo\" is deprecated. Please use \"des_monzo\". ", FutureWarning)
-            des_monzo = stretch_monzo
-        if enforce == "po":
-            warnings.warn ("\"po\" is deprecated. Please use \"d\". ", FutureWarning)
-            enforce = "d"
 
         if enforce == "d":
             des_monzo = np.transpose ([[1] + [0]*(len (self.subgroup) - 1)])
@@ -48,14 +42,7 @@ class Temperament:
             wtype = wtype, order = order, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
 
     def analyse (self, wtype = "tenney", order = 2,
-            enforce = "custom", cons_monzo_list = None, des_monzo = None, *, stretch_monzo = None):
-        if not stretch_monzo is None:
-            warnings.warn ("\"stretch_monzo\" is deprecated. Please use \"des_monzo\". ", FutureWarning)
-            des_monzo = stretch_monzo
-        if enforce == "po":
-            warnings.warn ("\"po\" is deprecated. Please use \"d\". ", FutureWarning)
-            enforce = "d"
-
+            enforce = "custom", cons_monzo_list = None, des_monzo = None):
         if order == 2:
             order_description = "euclidean"
         elif order == np.inf:
@@ -120,10 +107,10 @@ class Temperament:
 
         #standard L2 error
         error = linalg.norm (
-            self.weighted (self.jip, wtype = wtype)
-            @ (linalg.pinv (self.weighted (self.map, wtype = wtype))
-            @ self.weighted (self.map, wtype = wtype)
-            - np.eye (self.map.shape[1])))
+            self.weighted (self.jip, wtype)
+            @ linalg.pinv (self.weighted (self.map, wtype))
+            @ self.weighted (self.map, wtype)
+            - (self.weighted (self.jip, wtype)))
         if ntype == "breed": #Graham Breed's RMS (default)
             error *= 1/np.sqrt (self.map.shape[1])
         elif ntype == "smith": #Gene Ward Smith's RMS
@@ -161,3 +148,21 @@ class Temperament:
             f"Error: {error:.6f} (¢)",
             f"Badness (simple): {badness:.6f} ({badness_scale}oct)",
             f"Badness (logflat): {badness_logflat:.6f} ({badness_scale}oct)", sep = "\n")
+
+    def comma_basis (self, show = True):
+        comma_basis_frac = Matrix (self.map).nullspace ()
+        comma_basis = np.transpose ([np.squeeze (entry/gcd (tuple (entry))) for entry in comma_basis_frac])
+        if show:
+            subgroup_string = ".".join (map (str, self.subgroup))
+            print (f"\nSubgroup: {subgroup_string}",
+                f"Mapping: \n{self.map}",
+                "Comma basis: ", sep = "\n")
+            for i in range (comma_basis.shape[1]):
+                monzo = comma_basis[:, i]
+                ratio = te.monzo2ratio (monzo, self.subgroup)
+                monzo_str = "[" + " ".join (map (str, np.trim_zeros (monzo, trim = "b"))) + ">"
+                if ratio[0] < 10e7:
+                    print (monzo_str, f"({ratio[0]}/{ratio[1]})")
+                else:
+                    print (monzo_str)
+        return comma_basis

@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.17
+# © 2020-2022 Flora Canou | Version 0.18
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -20,7 +20,7 @@ def et_construct (et_list, subgroup, alt_val = 0):
 # Finds et sequence from comma list. Can be used to find optimal patent vals
 # Comma list should be entered as column vectors
 def et_sequence (monzo_list = None, subgroup = None, cond = "error",
-        ntype = "breed", wtype = "tenney", pv = False, prog = True, verbose = False, threshold = 20, search_range = 1200):
+        ntype = "breed", wtype = "tenney", pv = False, prog = True, threshold = 20, search_range = 1200, *, verbose = False):
     if monzo_list is None:
         if subgroup is None:
             raise ValueError ("please specify a monzo list or a subgroup. ")
@@ -29,6 +29,7 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error",
     else:
         monzo_list, subgroup = te.subgroup_normalize (monzo_list, subgroup, axis = "col")
 
+    print ("\nOptimal GPV sequence: ")
     gpv = [0]*len (subgroup) #initialize with the all-zeroes val
     while 0 in gpv:
         gpv = find_next_gpv (gpv, subgroup)
@@ -50,9 +51,11 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error",
             if prog:
                 threshold = current
             if verbose:
+                warnings.warn ("\"verbose\" is deprecated. ", FutureWarning)
                 et.temperament_measures (ntype = ntype, wtype = wtype)
             else:
-                print (f"{gpv} ({val2warts (gpv, subgroup = subgroup)})")
+                gpv_str = "<" + " ".join (map (str, np.trim_zeros (gpv, trim = "b"))) + "]"
+                print (f"{gpv_str} ({val2warts (gpv, subgroup = subgroup)})")
 
 et_sequence_error = et_sequence
 
@@ -105,6 +108,7 @@ def val2warts (val, subgroup = None):
             postfix += warts_number_list[i]*str (WARTS_LIST[te.PRIME_LIST.index (subgroup[i])])
     else: #nonpatent val in nonprime subgroup
         postfix = "*"
+
     return prefix + str (val[0]) + postfix
 
 # Enter a wart notation and a subgroup, finds the val
@@ -120,4 +124,5 @@ def warts2val (warts, subgroup):
     jip_n = int (match.group (2))*np.log (subgroup)/np.log (wart_equave) #jip in edostep numbers
     pv = np.round (jip_n) #corresponding patent val
     alt_val = np.copysign (np.ceil (warts_number_list/2), (1 - 2*(warts_number_list % 2))*(pv - jip_n))
+
     return (pv + alt_val).astype ("int")

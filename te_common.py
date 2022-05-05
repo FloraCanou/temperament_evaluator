@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.17
+# © 2020-2022 Flora Canou | Version 0.18
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -33,8 +33,8 @@ def subgroup_normalize (main, subgroup, axis):
 
 def weighted (main, subgroup, wtype = "tenney"):
     if not wtype in {"tenney", "frobenius", "inverse tenney", "benedetti", "weil"}:
-        wtype = "tenney"
         warnings.warn ("unknown weighter type, using default (\"tenney\")")
+        wtype = "tenney"
 
     if wtype == "tenney":
         weighter = np.diag (1/np.log2 (subgroup))
@@ -48,3 +48,16 @@ def weighted (main, subgroup, wtype = "tenney"):
         weighter = linalg.pinv (np.append (np.diag (np.log2 (subgroup)), [np.log2 (subgroup)], axis = 0))
 
     return main @ weighter
+
+# takes a monzo, returns the ratio in [num, den] form
+# doesn't validate the basis
+# ratio[0]: num, ratio[1]: den
+def monzo2ratio (monzo, subgroup = None):
+    monzo, subgroup = subgroup_normalize (monzo, subgroup, axis = "vec")
+    ratio = [1, 1]
+    for i in range (len (monzo)):
+        if monzo[i] > 0:
+            ratio[0] *= subgroup[i]**monzo[i]
+        elif monzo[i] < 0:
+            ratio[1] *= subgroup[i]**(-monzo[i])
+    return ratio
