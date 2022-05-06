@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.18
+# © 2020-2022 Flora Canou | Version 0.18.1
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -13,6 +13,9 @@ def error (gen, map, jip, order = 2):
 def optimizer_main (map, subgroup = None, wtype = "tenney", order = 2,
         cons_monzo_list = None, des_monzo = None, show = True):
     map, subgroup = te.subgroup_normalize (np.array (map), subgroup, axis = "row")
+
+    if wtype == "weil" and order != 2:
+        warnings.warn ("The weil weighter as of now is only meant to be used for L2.")
 
     jip = np.log2 (subgroup)*te.SCALAR
     map_w = te.weighted (map, subgroup, wtype = wtype)
