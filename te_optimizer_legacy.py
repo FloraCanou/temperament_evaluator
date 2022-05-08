@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.18.1
+# © 2020-2022 Flora Canou | Version 0.18.2
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -33,7 +33,7 @@ def weighted (main, subgroup, wtype = "tenney"):
     elif wtype == "benedetti":
         weighter = np.diag (1/np.array (subgroup))
     elif wtype == "weil":
-        weighter = linalg.pinv (np.append (np.diag (np.log2 (subgroup)), [np.log2 (subgroup)], axis = 0))
+        weighter = linalg.pinv (np.append (np.diag (np.log2 (subgroup)), [np.log2 (subgroup)], axis = 0)/2)
 
     return main @ weighter
 

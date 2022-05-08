@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.18
+# © 2020-2022 Flora Canou | Version 0.18.2
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -45,7 +45,7 @@ def weighted (main, subgroup, wtype = "tenney"):
     elif wtype == "benedetti":
         weighter = np.diag (1/np.array (subgroup))
     elif wtype == "weil":
-        weighter = linalg.pinv (np.append (np.diag (np.log2 (subgroup)), [np.log2 (subgroup)], axis = 0))
+        weighter = linalg.pinv (np.append (np.diag (np.log2 (subgroup)), [np.log2 (subgroup)], axis = 0)/2)
 
     return main @ weighter
 
@@ -55,9 +55,9 @@ def weighted (main, subgroup, wtype = "tenney"):
 def monzo2ratio (monzo, subgroup = None):
     monzo, subgroup = subgroup_normalize (monzo, subgroup, axis = "vec")
     ratio = [1, 1]
-    for i in range (len (monzo)):
-        if monzo[i] > 0:
-            ratio[0] *= subgroup[i]**monzo[i]
-        elif monzo[i] < 0:
-            ratio[1] *= subgroup[i]**(-monzo[i])
+    for i, mi in enumerate (monzo):
+        if mi > 0:
+            ratio[0] *= subgroup[i]**mi
+        elif mi < 0:
+            ratio[1] *= subgroup[i]**(-mi)
     return ratio

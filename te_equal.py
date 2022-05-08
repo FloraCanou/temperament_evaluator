@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.18
+# © 2020-2022 Flora Canou | Version 0.18.2
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -104,8 +104,8 @@ def val2warts (val, subgroup = None):
         pv = np.round (jip_n) #corresponding patent val
         warts_number_list = (2*np.abs (val - pv) + (np.copysign (1, (val - pv)*(pv - jip_n)) - 1)/2).astype ("int")
         postfix = ""
-        for i in range (len (val)):
-            postfix += warts_number_list[i]*str (WARTS_LIST[te.PRIME_LIST.index (subgroup[i])])
+        for i, si in enumerate (subgroup):
+            postfix += warts_number_list[i]*str (WARTS_LIST[te.PRIME_LIST.index (si)])
     else: #nonpatent val in nonprime subgroup
         postfix = "*"
 
