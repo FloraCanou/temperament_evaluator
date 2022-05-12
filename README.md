@@ -49,6 +49,7 @@ Use `Temperament` to construct a temperament object. Methods:
 	- `ntype`: *optional*. Specifies the averaging method. Has `"breed"` (default), `"smith"` and `"l2"`. 
 	- `wtype`: *optional*. Specifies the weighter. See above. 
 	- `badness_scale`: *optional*. Scales the badness, literally. Default is `100`. 
+- `comma_basis`: returns and shows the comma basis of the temperament. 
 
 **Important: a single monzo should be entered as a vector. A monzo list should be entered as composed by column vectors.** 
 
@@ -73,7 +74,6 @@ Use `et_sequence` to iterate through all GPVs. Parameters:
 - `pv`: *optional*. If `True`, only patent vals will be considered. Default is `False`. 
 - `prog`: *optional*. If `True`, threshold will be updated. Default is `True`. 
 - `threshold`: *optional*. Temperaments failing this will not be shown. Default is `20`. 
-- `verbose`: *optional*. If `True`, shows te temperament measures for each equal temperament. Default is `False`. 
 - `search_range`: *optional*. Specifies the upper bound where to stop searching. Default is `1200`. 
 
 **Important: a single monzo should be entered as a vector. A monzo list should be entered as composed by column vectors.** 
