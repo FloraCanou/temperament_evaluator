@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.18
+# © 2020-2022 Flora Canou | Version 0.19
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, warnings
@@ -20,11 +20,11 @@ class Temperament:
         self.jip = np.log2 (self.subgroup)*te.SCALAR
         self.map = map_normalize (np.rint (map).astype (np.int))
 
-    def weighted (self, main, wtype):
-        return te.weighted (main, self.subgroup, wtype = wtype)
+    def weighted (self, main, wtype, *, k = 0.5):
+        return te.weighted (main, self.subgroup, wtype = wtype, k = k)
 
     def optimize (self, wtype = "tenney", order = 2,
-            enforce = "custom", cons_monzo_list = None, des_monzo = None): #in cents
+            enforce = "custom", cons_monzo_list = None, des_monzo = None, *, k = 0.5): #in cents
         if not enforce in {"custom", "d", "c", "xoc", "none"}:
             warnings.warn ("unknown enforcement type, using default (\"custom\"). ")
             enforce = "custom"
@@ -39,10 +39,10 @@ class Temperament:
             des_monzo = None
             cons_monzo_list = None
         return te_opt.optimizer_main (self.map, subgroup = self.subgroup,
-            wtype = wtype, order = order, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
+            wtype = wtype, order = order, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo, k = k)
 
     def analyse (self, wtype = "tenney", order = 2,
-            enforce = "custom", cons_monzo_list = None, des_monzo = None):
+            enforce = "custom", cons_monzo_list = None, des_monzo = None, *, k = 0.5):
         if order == 2:
             order_description = "euclidean"
         elif order == np.inf:
@@ -67,10 +67,10 @@ class Temperament:
             f"Method: {wtype}-{order_description}. Enforcement: {enforce_description}", sep = "\n")
 
         gen, tuning_map = self.optimize (wtype = wtype, order = order,
-            enforce = enforce, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
-        tuning_map_w = self.weighted (tuning_map, wtype = wtype)
+            enforce = enforce, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo, k = k)
+        tuning_map_w = self.weighted (tuning_map, wtype, k = k)
         mistuning_map = tuning_map - self.jip
-        mistuning_map_w = self.weighted (mistuning_map, wtype = wtype)
+        mistuning_map_w = self.weighted (mistuning_map, wtype, k = k)
         error = linalg.norm (mistuning_map_w, ord = order) / np.sqrt (self.map.shape[1])
         bias = np.mean (mistuning_map_w)
         print (f"Mistuning map: {mistuning_map} (¢)",
@@ -80,18 +80,18 @@ class Temperament:
     optimise = optimize
     analyze = analyse
 
-    def wedgie (self, wtype = "tenney"):
+    def wedgie (self, wtype = "tenney", *, k = 0.5):
         combination_list = itertools.combinations (range (self.map.shape[1]), self.map.shape[0])
-        wedgie = np.array ([linalg.det (self.weighted (self.map, wtype = wtype)[:, entry]) for entry in combination_list])
+        wedgie = np.array ([linalg.det (self.weighted (self.map, wtype, k = k)[:, entry]) for entry in combination_list])
         return wedgie if wedgie[0] >= 0 else -wedgie
 
-    def complexity (self, ntype = "breed", wtype = "tenney"):
+    def complexity (self, ntype = "breed", wtype = "tenney", *, k = 0.5):
         if not ntype in {"breed", "smith", "l2"}:
             ntype = "breed"
             warnings.warn ("unknown ntype, using default (\"breed\")")
 
         #standard L2 complexity
-        complexity = np.sqrt (linalg.det (self.weighted (self.map, wtype = wtype) @ self.weighted (self.map, wtype = wtype).T))
+        complexity = np.sqrt (linalg.det (self.weighted (self.map, wtype, k = k) @ self.weighted (self.map, wtype, k = k).T))
         # complexity = linalg.norm (self.wedgie (wtype = wtype)) #same
         if ntype == "breed": #Graham Breed's RMS (default)
             complexity *= 1/np.sqrt (self.map.shape[1]**self.map.shape[0])
@@ -100,17 +100,17 @@ class Temperament:
 
         return complexity
 
-    def error (self, ntype = "breed", wtype = "tenney"): #in cents
+    def error (self, ntype = "breed", wtype = "tenney", *, k = 0.5): #in cents
         if not ntype in {"breed", "smith", "l2"}:
             ntype = "breed"
             warnings.warn ("unknown ntype, using default (\"breed\")")
 
         #standard L2 error
         error = linalg.norm (
-            self.weighted (self.jip, wtype)
-            @ linalg.pinv (self.weighted (self.map, wtype))
-            @ self.weighted (self.map, wtype)
-            - (self.weighted (self.jip, wtype)))
+            self.weighted (self.jip, wtype, k = k)
+            @ linalg.pinv (self.weighted (self.map, wtype, k = k))
+            @ self.weighted (self.map, wtype, k = k)
+            - (self.weighted (self.jip, wtype, k = k)))
         if ntype == "breed": #Graham Breed's RMS (default)
             error *= 1/np.sqrt (self.map.shape[1])
         elif ntype == "smith": #Gene Ward Smith's RMS
@@ -121,29 +121,29 @@ class Temperament:
 
         return error
 
-    def badness (self, ntype = "breed", wtype = "tenney"): #in octaves
-        return (self.error (ntype = ntype, wtype = wtype)
-            * self.complexity (ntype = ntype, wtype = wtype)
+    def badness (self, ntype = "breed", wtype = "tenney", *, k = 0.5): #in octaves
+        return (self.error (ntype = ntype, wtype = wtype, k = k)
+            * self.complexity (ntype = ntype, wtype = wtype, k = k)
             / te.SCALAR)
 
-    def badness_logflat (self, ntype = "breed", wtype = "tenney"): #in octaves
+    def badness_logflat (self, ntype = "breed", wtype = "tenney", *, k = 0.5): #in octaves
         try:
-            return (self.error (ntype = ntype, wtype = wtype)
-                * self.complexity (ntype = ntype, wtype = wtype)**((self.map.shape[0])/(self.map.shape[1] - self.map.shape[0]) + 1)
+            return (self.error (ntype = ntype, wtype = wtype, k = k)
+                * self.complexity (ntype = ntype, wtype = wtype, k = k)**((self.map.shape[0])/(self.map.shape[1] - self.map.shape[0]) + 1)
                 / te.SCALAR)
         except ZeroDivisionError:
             return np.nan
 
-    def temperament_measures (self, ntype = "breed", wtype = "tenney", badness_scale = 100):
+    def temperament_measures (self, ntype = "breed", wtype = "tenney", badness_scale = 100, *, k = 0.5):
         subgroup_string = ".".join (map (str, self.subgroup))
         print (f"\nSubgroup: {subgroup_string}",
             f"Mapping: \n{self.map}",
             f"Norm: {ntype}. Weighter: {wtype}", sep = "\n")
 
-        error = self.error (ntype = ntype, wtype = wtype)
-        complexity = self.complexity (ntype = ntype, wtype = wtype)
-        badness = self.badness (ntype = ntype, wtype = wtype) * badness_scale
-        badness_logflat = self.badness_logflat (ntype = ntype, wtype = wtype) * badness_scale
+        error = self.error (ntype = ntype, wtype = wtype, k = k)
+        complexity = self.complexity (ntype = ntype, wtype = wtype, k = k)
+        badness = self.badness (ntype = ntype, wtype = wtype, k = k) * badness_scale
+        badness_logflat = self.badness_logflat (ntype = ntype, wtype = wtype, k = k) * badness_scale
         print (f"Complexity: {complexity:.6f}",
             f"Error: {error:.6f} (¢)",
             f"Badness (simple): {badness:.6f} ({badness_scale}oct)",

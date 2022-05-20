@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.18.2
+# © 2020-2022 Flora Canou | Version 0.19
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -19,7 +19,7 @@ def subgroup_normalize (main, subgroup):
         subgroup = subgroup[:dim]
     return main, subgroup
 
-def weighted (main, subgroup, wtype = "tenney"):
+def weighted (main, subgroup, wtype = "tenney", *, k = 0.5):
     if not wtype in {"tenney", "frobenius", "inverse tenney", "benedetti", "weil"}:
         warnings.warn ("unknown weighter type, using default (\"tenney\")")
         wtype = "tenney"
@@ -33,7 +33,7 @@ def weighted (main, subgroup, wtype = "tenney"):
     elif wtype == "benedetti":
         weighter = np.diag (1/np.array (subgroup))
     elif wtype == "weil":
-        weighter = linalg.pinv (np.append (np.diag (np.log2 (subgroup)), [np.log2 (subgroup)], axis = 0)/2)
+        weighter = linalg.pinv (np.append ((1 - k)*np.diag (np.log2 (subgroup)), [k*np.log2 (subgroup)], axis = 0))
 
     return main @ weighter
 
@@ -41,15 +41,15 @@ def error (gen, map, jip, order = 2):
     return linalg.norm (gen @ map - jip, ord = order)
 
 def optimizer_main (map, subgroup = None, wtype = "tenney", order = 2,
-        cons_monzo_list = None, des_monzo = None, show = True):
+        cons_monzo_list = None, des_monzo = None, show = True, *, k = 0.5):
     map, subgroup = subgroup_normalize (np.array (map), subgroup)
 
     if wtype == "weil" and order != 2:
         warnings.warn ("The weil weighter as of now is only meant to be used for L2.")
 
     jip = np.log2 (subgroup)*SCALAR
-    map_w = weighted (map, subgroup, wtype = wtype)
-    jip_w = weighted (jip, subgroup, wtype = wtype)
+    map_w = weighted (map, subgroup, wtype = wtype, k = k)
+    jip_w = weighted (jip, subgroup, wtype = wtype, k = k)
     if order == 2 and cons_monzo_list is None: #te with no constraints, simply use lstsq for better performance
         res = linalg.lstsq (map_w.T, jip_w)
         gen = res[0]

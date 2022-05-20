@@ -20,7 +20,7 @@ def et_construct (et_list, subgroup, alt_val = 0):
 # Finds et sequence from comma list. Can be used to find optimal patent vals
 # Comma list should be entered as column vectors
 def et_sequence (monzo_list = None, subgroup = None, cond = "error",
-        ntype = "breed", wtype = "tenney", pv = False, prog = True, threshold = 20, search_range = 1200, *, verbose = False):
+        ntype = "breed", wtype = "tenney", pv = False, prog = True, threshold = 20, search_range = 1200, *, k = 0.5, verbose = False):
     if monzo_list is None:
         if subgroup is None:
             raise ValueError ("please specify a monzo list or a subgroup. ")
@@ -42,9 +42,9 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error",
 
         et = te_tm.Temperament ([gpv], subgroup)
         if cond == "error":
-            current = et.error (ntype = ntype, wtype = wtype)
+            current = et.error (ntype = ntype, wtype = wtype, k = k)
         elif cond == "badness":
-            current = et.badness (ntype = ntype, wtype = wtype)
+            current = et.badness (ntype = ntype, wtype = wtype, k = k)
         else:
             current = threshold
         if current <= threshold:
@@ -52,7 +52,7 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error",
                 threshold = current
             if verbose:
                 warnings.warn ("\"verbose\" is deprecated. ", FutureWarning)
-                et.temperament_measures (ntype = ntype, wtype = wtype)
+                et.temperament_measures (ntype = ntype, wtype = wtype, k = k)
             else:
                 gpv_str = "<" + " ".join (map (str, np.trim_zeros (gpv, trim = "b"))) + "]"
                 print (f"{gpv_str} ({val2warts (gpv, subgroup = subgroup)})")

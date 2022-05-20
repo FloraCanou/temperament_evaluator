@@ -52,4 +52,4 @@ te_et.et_sequence (A.comma_basis (show = False), cond = "error", search_range = 
 
 # find_spectrum
 A = te_tm.Temperament ([[1, 2, 0, 0, 1, 2], [0, 6, 0, -7, -2, 9], [0, 0, 1, 1, 1, 1]])
-te_la.find_spectrum (A.map, te_la.MONZO15)
+te_la.find_spectrum (A.map, te_la.odd_limit_monzo_list_gen (15))

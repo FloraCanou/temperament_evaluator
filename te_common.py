@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.18.2
+# © 2020-2022 Flora Canou | Version 0.19
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -31,7 +31,7 @@ def subgroup_normalize (main, subgroup, axis):
 
     return main, subgroup
 
-def weighted (main, subgroup, wtype = "tenney"):
+def weighted (main, subgroup, wtype = "tenney", *, k = 0.5):
     if not wtype in {"tenney", "frobenius", "inverse tenney", "benedetti", "weil"}:
         warnings.warn ("unknown weighter type, using default (\"tenney\")")
         wtype = "tenney"
@@ -45,8 +45,7 @@ def weighted (main, subgroup, wtype = "tenney"):
     elif wtype == "benedetti":
         weighter = np.diag (1/np.array (subgroup))
     elif wtype == "weil":
-        weighter = linalg.pinv (np.append (np.diag (np.log2 (subgroup)), [np.log2 (subgroup)], axis = 0)/2)
-
+        weighter = linalg.pinv (np.append ((1 - k)*np.diag (np.log2 (subgroup)), [k*np.log2 (subgroup)], axis = 0))
     return main @ weighter
 
 # takes a monzo, returns the ratio in [num, den] form
@@ -61,3 +60,28 @@ def monzo2ratio (monzo, subgroup = None):
         elif mi < 0:
             ratio[1] *= subgroup[i]**(-mi)
     return ratio
+
+# takes a ratio in [num, den] form, returns the monzo
+def ratio2monzo (ratio, subgroup = None):
+    if not all (isinstance (entry, int) for entry in ratio) or any (entry < 1 for entry in ratio):
+        raise ValueError ("numerator and denominator should be positive integers. ")
+    if subgroup is None:
+        subgroup = PRIME_LIST
+        trim = True
+    else:
+        trim = False
+
+    monzo = [0]*len (subgroup)
+    for i, si in enumerate (subgroup):
+        while ratio[0] % si == 0:
+            monzo[i] += 1
+            ratio[0] /= si
+        while ratio[1] % si == 0:
+            monzo[i] -= 1
+            ratio[1] /= si
+        if all (entry == 1 for entry in ratio):
+            break
+    else:
+        raise ValueError ("improper subgroup. ")
+
+    return np.trim_zeros (monzo, trim = "b") if trim else np.array (monzo)

@@ -1,9 +1,10 @@
-# © 2020-2022 Flora Canou | Version 0.18
+# © 2020-2022 Flora Canou | Version 0.19
 # This work is licensed under the GNU General Public License version 3.
 
-import te_common as te
+import math
 import numpy as np
 from scipy import linalg
+import te_common as te
 np.set_printoptions (suppress = True, linewidth = 256)
 
 def find_temperamental_norm (map, monzo, subgroup = None, wtype = "tenney", oe = False, show = True):
@@ -31,15 +32,23 @@ def find_spectrum (map, monzo_list, subgroup = None, wtype = "tenney", oe = True
         ratio = te.monzo2ratio (entry[0], subgroup)
         print (f"{ratio[0]}/{ratio[1]}\t{entry[1]:.4f}")
 
-# monzo list library
-MONZO9 = np.transpose ([[2, -1, 0, 0], [-2, 0, 1, 0], [1, 1, -1, 0], [3, 0, 0, -1], [-1, -1, 0, 1], [0, 0, -1, 1], [-3, 2, 0, 0], [1, -2, 1, 0], [0, 2, 0, -1]])
-MONZO11 = np.transpose ([[2, -1, 0, 0, 0], [-2, 0, 1, 0, 0], [1, 1, -1, 0, 0], [3, 0, 0, -1, 0], [-1, -1, 0, 1, 0], [0, 0, -1, 1, 0], [-3, 2, 0, 0, 0], [1, -2, 1, 0, 0], [0, 2, 0, -1, 0], \
-[-3, 0, 0, 0, 1], [2, 1, 0, 0, -1], [0, -2, 0, 0, 1], [-1, 0, -1, 0, 1], [1, 0, 0, 1, -1]])
-MONZO15 = np.transpose ([[2, -1, 0, 0, 0, 0], [-2, 0, 1, 0, 0, 0], [1, 1, -1, 0, 0, 0], [3, 0, 0, -1, 0, 0], [-1, -1, 0, 1, 0, 0], [0, 0, -1, 1, 0, 0], [-3, 2, 0, 0, 0, 0], [1, -2, 1, 0, 0, 0], [0, 2, 0, -1, 0, 0], \
-[-3, 0, 0, 0, 1, 0], [2, 1, 0, 0, -1, 0], [0, -2, 0, 0, 1, 0], [-1, 0, -1, 0, 1, 0], [1, 0, 0, 1, -1, 0], \
-[4, 0, 0, 0, 0, -1], [-2, -1, 0, 0, 0, 1], [1, 2, 0, 0, 0, -1], [-1, 0, -1, 0, 0, 1], [1, 0, 0, 1, 0, -1], [0, 0, 0, 0, -1, 1], \
-[4, -1, -1, 0, 0, 0], [-1, 1, 1, -1, 0, 0], [0, 1, 1, 0, -1, 0], [0, 1, 1, 0, 0, -1]])
-MONZO21no11no13 = np.transpose ([[2, -1, 0, 0, 0, 0], [-2, 0, 1, 0, 0, 0], [1, 1, -1, 0, 0, 0], [3, 0, 0, -1, 0, 0], [-1, -1, 0, 1, 0, 0], [0, 0, -1, 1, 0, 0], [-3, 2, 0, 0, 0, 0], [1, -2, 1, 0, 0, 0], [0, 2, 0, -1, 0, 0], \
-[4, -1, -1, 0, 0, 0], [-1, 1, 1, -1, 0, 0], [-4, 1, 0, 1, 0, 0], [-2, 1, -1, 1, 0, 0], \
-[-4, 0, 0, 0, 1, 0], [3, 1, 0, 0, -1, 0], [1, 2, 0, 0, -1, 0], [2, 0, 1, 0, -1, 0], [0, -1, -1, 0, 1, 0], [-1, 0, 0, -1, 1, 0], [0, 1, 0, 1, -1, 0], \
-[-4, 0, 0, 0, 0, 1], [3, 1, 0, 0, 0, -1], [-1, -2, 0, 0, 0, 1], [2, 0, 1, 0, 0, -1], [0, -1, -1, 0, 0, 1], [-1, 0, 0, -1, 0, 1], [0, 1, 0, 1, 0, -1], [0, 0, 0, 0, -1, 1]])
+# octave-reduce the ratio in [num, den] form
+def ratio_8ve_reduction (ratio):
+    oct = math.floor (math.log (ratio[0]/ratio[1], 2))
+    if oct > 0:
+        ratio[1] *= 2**oct
+    elif oct < 0:
+        ratio[0] *= 2**(-oct)
+    return ratio
+
+# enter an odd limit, returns the monzo list
+def odd_limit_monzo_list_gen (odd_limit, sort = None):
+    subgroup = list (filter (lambda q: q <= odd_limit, te.PRIME_LIST))
+    ratio_list = []
+    for num in range (1, odd_limit + 1, 2):
+        for den in range (1, odd_limit + 1, 2):
+            if math.gcd (num, den) == 1:
+                ratio_list.append (ratio_8ve_reduction ([num, den]))
+    if sort == "size":
+        ratio_list.sort (key = lambda k: k[0]/k[1])
+    return np.transpose ([te.ratio2monzo (entry, subgroup) for entry in ratio_list])

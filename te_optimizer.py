@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.18.1
+# © 2020-2022 Flora Canou | Version 0.19
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -11,15 +11,15 @@ def error (gen, map, jip, order = 2):
     return linalg.norm (gen @ map - jip, ord = order)
 
 def optimizer_main (map, subgroup = None, wtype = "tenney", order = 2,
-        cons_monzo_list = None, des_monzo = None, show = True):
+        cons_monzo_list = None, des_monzo = None, show = True, *, k = 0.5):
     map, subgroup = te.subgroup_normalize (np.array (map), subgroup, axis = "row")
 
     if wtype == "weil" and order != 2:
         warnings.warn ("The weil weighter as of now is only meant to be used for L2.")
 
     jip = np.log2 (subgroup)*te.SCALAR
-    map_w = te.weighted (map, subgroup, wtype = wtype)
-    jip_w = te.weighted (jip, subgroup, wtype = wtype)
+    map_w = te.weighted (map, subgroup, wtype = wtype, k = k)
+    jip_w = te.weighted (jip, subgroup, wtype = wtype, k = k)
     if order == 2 and cons_monzo_list is None: #te with no constraints, simply use lstsq for better performance
         res = linalg.lstsq (map_w.T, jip_w)
         gen = res[0]
