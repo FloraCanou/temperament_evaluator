@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.19
+# © 2020-2022 Flora Canou | Version 0.19.1
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -7,6 +7,9 @@ from scipy import linalg
 
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
 SCALAR = 1200 #could be in octave, but for precision reason
+
+def as_list (a):
+    return a if isinstance (a, list) else [a]
 
 def subgroup_normalize (main, subgroup, axis):
     if axis == "row":

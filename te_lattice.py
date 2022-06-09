@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.19
+# © 2020-2022 Flora Canou | Version 0.19.1
 # This work is licensed under the GNU General Public License version 3.
 
 import math
@@ -42,13 +42,16 @@ def ratio_8ve_reduction (ratio):
     return ratio
 
 # enter an odd limit, returns the monzo list
-def odd_limit_monzo_list_gen (odd_limit, sort = None):
+def odd_limit_monzo_list_gen (odd_limit, excl = [], sort = None):
     subgroup = list (filter (lambda q: q <= odd_limit, te.PRIME_LIST))
     ratio_list = []
     for num in range (1, odd_limit + 1, 2):
+        if num in te.as_list (excl):
+            continue
         for den in range (1, odd_limit + 1, 2):
-            if math.gcd (num, den) == 1:
-                ratio_list.append (ratio_8ve_reduction ([num, den]))
+            if (den in te.as_list (excl)) or math.gcd (num, den) != 1:
+                continue
+            ratio_list.append (ratio_8ve_reduction ([num, den]))
     if sort == "size":
         ratio_list.sort (key = lambda k: k[0]/k[1])
     return np.transpose ([te.ratio2monzo (entry, subgroup) for entry in ratio_list])

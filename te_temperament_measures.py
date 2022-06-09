@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.19
+# © 2020-2022 Flora Canou | Version 0.19.1
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, warnings
@@ -14,11 +14,11 @@ def map_normalize (map): #to HNF, only checks multirow mappings
     return np.flip (np.array (normalforms.hermite_normal_form (Matrix (np.flip (map)).T).T).astype (int)) if map.shape[0] > 1 else map
 
 class Temperament:
-    def __init__ (self, map, subgroup = None):
+    def __init__ (self, map, subgroup = None, normalize = True):
         map, subgroup = te.subgroup_normalize (np.array (map), subgroup, axis = "row")
         self.subgroup = subgroup
         self.jip = np.log2 (self.subgroup)*te.SCALAR
-        self.map = map_normalize (np.rint (map).astype (np.int))
+        self.map = map_normalize (np.rint (map).astype (np.int)) if normalize else map
 
     def weighted (self, main, wtype, *, k = 0.5):
         return te.weighted (main, self.subgroup, wtype = wtype, k = k)

@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.18.2
+# © 2020-2022 Flora Canou | Version 0.19.1
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -10,11 +10,8 @@ WARTS_LIST = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "
 
 # Temperament construction function from ets
 def et_construct (et_list, subgroup, alt_val = 0):
-    if isinstance (et_list, list):
-        map = np.array ([warts2val (n, subgroup) for n in et_list]) + np.resize (alt_val, (len (et_list), len (subgroup)))
-    else:
-        map = np.array ([warts2val (et_list, subgroup)]) + np.resize (alt_val, (1, len (subgroup)))
-        warnings.warn ("equal temperament number should be entered as a list. ", FutureWarning)
+    map = (np.array ([warts2val (n, subgroup) for n in te.as_list (et_list)])
+        + np.resize (alt_val, (len (te.as_list (et_list)), len (subgroup))))
     return te_tm.Temperament (map, subgroup)
 
 # Finds et sequence from comma list. Can be used to find optimal patent vals
@@ -30,11 +27,10 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error",
         monzo_list, subgroup = te.subgroup_normalize (monzo_list, subgroup, axis = "col")
 
     print ("\nOptimal GPV sequence: ")
-    gpv = [0]*len (subgroup) #initialize with the all-zeroes val
-    while 0 in gpv:
-        gpv = find_next_gpv (gpv, subgroup)
-    while gpv[0] <= search_range:
-        gpv = find_next_gpv (gpv, subgroup)
+    gpv_infra = [0]*len (subgroup) #initialize with the all-zeroes val
+    while (gpv_infra := gpv_roll (gpv_infra, subgroup))[0] == 0: #skip zero-equave vals
+        gpv = gpv_infra
+    while (gpv := gpv_roll (gpv, subgroup))[0] <= search_range:
         if (pv and not is_pv (gpv, subgroup = subgroup) # non-patent val if pv is set
             or np.gcd.reduce (gpv) > 1 #enfactored
             or np.any ([gpv] @ monzo_list)): #not tempering out the commas
@@ -71,24 +67,37 @@ def is_pv (val, subgroup = None):
     val, subgroup = te.subgroup_normalize (val, subgroup, axis = "vec")
     return True if all (val == np.round (val[0]*np.log2 (subgroup)/np.log2 (subgroup[0]))) else False
 
-# Enter a GPV, finds the next one
+# Enter a GPV, finds the n-th next GPV
 # Doesn't handle some nontrivial subgroups
-def find_next_gpv (val, subgroup = None):
+def gpv_roll (val, subgroup = None, n = 1):
     val, subgroup = te.subgroup_normalize (val, subgroup, axis = "vec")
     if not is_gpv (val, subgroup): #verify input
         raise ValueError ("input is not a GPV. ")
 
-    for i in range (1, len (subgroup) + 1):
-        val_copy = list.copy (val)
-        val_copy[-i] += 1
-        if is_gpv (val_copy, subgroup):
-            return val_copy
+    if int (n) == 0:
+        return val
     else:
-        raise NotImplementedError ("this nontrivial subgroup cannot be processed. ")
+        for i in range (1, len (subgroup) + 1):
+            val_copy = list.copy (val)
+            val_copy[-i] += int (np.copysign (1, n))
+            if is_gpv (val_copy, subgroup):
+                return gpv_roll (val_copy, subgroup, n - int (np.copysign (1, n)))
+        else:
+            raise NotImplementedError ("this nontrivial subgroup cannot be processed. ")
+
+# Enter a GPV, finds the next one
+# Doesn't handle some nontrivial subgroups
+# NOTE: replaced by the more powerful gpv_roll
+def find_next_gpv (val, subgroup = None):
+    warnings.warn ("find_next_gpv is deprecated. Use gpv_roll instead. ", FutureWarning)
+    return gpv_roll (val, subgroup, 1)
 
 # Enter a val, finds its wart notation
+# Zero equave is disallowed
 def val2warts (val, subgroup = None):
     val, subgroup = te.subgroup_normalize (val, subgroup, axis = "vec")
+    if val[0] == 0:
+        raise ValueError ("Wart is undefined. ")
 
     if subgroup[0] == 2: #octave equave
         prefix = ""
