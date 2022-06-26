@@ -1,9 +1,10 @@
-# © 2020-2022 Flora Canou | Version 0.19.1
+# © 2020-2022 Flora Canou | Version 0.19.2
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
 import numpy as np
 from scipy import linalg
+from sympy.matrices import Matrix, normalforms
 
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
 SCALAR = 1200 #could be in octave, but for precision reason
@@ -11,6 +12,17 @@ SCALAR = 1200 #could be in octave, but for precision reason
 def as_list (a):
     return a if isinstance (a, list) else [a]
 
+# normalizes matrices to HNF, only checks multirank matrices
+def hnf (main):
+    return np.flip (np.array (normalforms.hermite_normal_form (Matrix (np.flip (main)).T).T).astype (int))
+
+def normalize (main, axis):
+    if axis == "row":
+        return hnf (main) if main.shape[0] > 1 else main
+    elif axis == "col":
+        return np.flip (hnf (np.flip (main).T)).T if main.shape[1] > 1 else main
+
+# Gets the subgroup and tries to match the dimensions
 def subgroup_normalize (main, subgroup, axis):
     if axis == "row":
         length_main = main.shape[1]
@@ -68,11 +80,8 @@ def monzo2ratio (monzo, subgroup = None):
 def ratio2monzo (ratio, subgroup = None):
     if not all (isinstance (entry, int) for entry in ratio) or any (entry < 1 for entry in ratio):
         raise ValueError ("numerator and denominator should be positive integers. ")
-    if subgroup is None:
+    if trim := (subgroup is None):
         subgroup = PRIME_LIST
-        trim = True
-    else:
-        trim = False
 
     monzo = [0]*len (subgroup)
     for i, si in enumerate (subgroup):

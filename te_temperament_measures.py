@@ -1,24 +1,21 @@
-# © 2020-2022 Flora Canou | Version 0.19.1
+# © 2020-2022 Flora Canou | Version 0.19.2
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, warnings
 import numpy as np
 from scipy import linalg
-from sympy.matrices import Matrix, normalforms
+from sympy.matrices import Matrix
 from sympy import gcd
 import te_common as te
 import te_optimizer as te_opt
 np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
-
-def map_normalize (map): #to HNF, only checks multirow mappings
-    return np.flip (np.array (normalforms.hermite_normal_form (Matrix (np.flip (map)).T).T).astype (int)) if map.shape[0] > 1 else map
 
 class Temperament:
     def __init__ (self, map, subgroup = None, normalize = True):
         map, subgroup = te.subgroup_normalize (np.array (map), subgroup, axis = "row")
         self.subgroup = subgroup
         self.jip = np.log2 (self.subgroup)*te.SCALAR
-        self.map = map_normalize (np.rint (map).astype (np.int)) if normalize else map
+        self.map = te.normalize (np.rint (map).astype (np.int), axis = "row") if normalize else map
 
     def weighted (self, main, wtype, *, k = 0.5):
         return te.weighted (main, self.subgroup, wtype = wtype, k = k)
@@ -42,25 +39,26 @@ class Temperament:
             wtype = wtype, order = order, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo, k = k)
 
     def analyse (self, wtype = "tenney", order = 2,
-            enforce = "custom", cons_monzo_list = None, des_monzo = None, *, k = 0.5):
-        if order == 2:
-            order_description = "euclidean"
-        elif order == np.inf:
-            order_description = "chebyshevian"
-        elif order == 1:
-            order_description = "minkowskian"
-        else:
+            enforce = "none", cons_monzo_list = None, des_monzo = None, *, k = 0.5):
+        order_dict = {
+            1: "chebyshevian",
+            2: "euclidean",
+            np.inf: "minkowskian"}
+        try:
+            order_description = order_dict[order]
+        except KeyError:
             order_description = f"L{order}"
-        if enforce == "d":
-            enforce_description = "destretched"
-        elif enforce == "c":
-            enforce_description = "constrained"
-        elif enforce == "xoc":
-            enforce_description = f"{wtype} ones constrained"
-        elif enforce == "none" or cons_monzo_list is None and des_monzo is None:
-            enforce_description = "none"
-        else:
+
+        enforce_dict = {
+            "d": "destretched",
+            "c": "constrained",
+            "xoc": f"{wtype} ones constrained",
+            "none": "none"}
+        try:
+            enforce_description = enforce_dict[enforce]
+        except KeyError:
             enforce_description = "custom"
+
         subgroup_string = ".".join (map (str, self.subgroup))
         print (f"\nSubgroup: {subgroup_string}",
             f"Mapping: \n{self.map}",
