@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.19
+# © 2020-2022 Flora Canou | Version 0.20.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -12,7 +12,7 @@ def error (gen, map, jip, order = 2):
 
 def optimizer_main (map, subgroup = None, wtype = "tenney", order = 2,
         cons_monzo_list = None, des_monzo = None, show = True, *, k = 0.5):
-    map, subgroup = te.subgroup_normalize (np.array (map), subgroup, axis = "row")
+    map, subgroup = te.get_subgroup (np.array (map), subgroup, axis = te.ROW)
 
     if wtype == "weil" and order != 2:
         warnings.warn ("The weil weighter as of now is only meant to be used for L2.")
@@ -43,10 +43,13 @@ def optimizer_main (map, subgroup = None, wtype = "tenney", order = 2,
             gen *= (jip @ des_monzo)/tempered_size
 
     tuning_map = gen @ map
+    mistuning_map = tuning_map - jip
 
     if show:
-        print (f"Generators: {gen} (¢)", f"Tuning map: {tuning_map} (¢)", sep = "\n")
+        print (f"Generators: {gen} (¢)",
+            f"Tuning map: {tuning_map} (¢)",
+            f"Mistuning map: {mistuning_map} (¢)", sep = "\n")
 
-    return gen, tuning_map
+    return gen, tuning_map, mistuning_map
 
 optimiser_main = optimizer_main

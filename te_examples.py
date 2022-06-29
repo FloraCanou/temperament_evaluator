@@ -9,7 +9,7 @@ import te_lattice as te_la
 # parameters:
 #   subgroup: specifies a custom ji subgroup
 # methods:
-#   analyse: gives the tuning
+#   tune: gives the tuning
 #     parameters:
 #       wtype: specifies the weighter. "tenney", "frobenius", "inverse tenney", "benedetti" and "weil"
 #       order: specifies the order of the norm to be minimized
@@ -24,7 +24,7 @@ import te_lattice as te_la
 #   comma_basis: gives the comma basis
 
 A = te_tm.Temperament ([[1, 0, 2, -1], [0, 5, 1, 12]])
-A.analyse (enforce = "c") # septimal magic in cte tuning
+A.tune (enforce = "c") # septimal magic in cte tuning
 A.temperament_measures (ntype = "smith")
 A.comma_basis ()
 
@@ -51,5 +51,5 @@ A = te_tm.Temperament ([[1, 0, -4, -13], [0, 1, 4, 10]])
 te_et.et_sequence (A.comma_basis (show = False), cond = "error", search_range = 300) # septimal meantone
 
 # find_spectrum
-A = te_tm.Temperament ([[1, 2, 0, 0, 1, 2], [0, 6, 0, -7, -2, 9], [0, 0, 1, 1, 1, 1]])
-te_la.find_spectrum (A.map, te_la.odd_limit_monzo_list_gen (15))
+A = te_la.TemperamentLattice ([[1, 2, 0, 0, 1, 2], [0, 6, 0, -7, -2, 9], [0, 0, 1, 1, 1, 1]])
+A.find_spectrum (te_la.odd_limit_monzo_list_gen (15))

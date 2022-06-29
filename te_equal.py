@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.19.1
+# © 2020-2022 Flora Canou | Version 0.20.0
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -24,7 +24,7 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error",
         else:
             monzo_list = np.zeros ((len (subgroup), 1))
     else:
-        monzo_list, subgroup = te.subgroup_normalize (monzo_list, subgroup, axis = "col")
+        monzo_list, subgroup = te.get_subgroup (monzo_list, subgroup, axis = te.COL)
 
     print ("\nOptimal GPV sequence: ")
     gpv_infra = [0]*len (subgroup) #initialize with the all-zeroes val
@@ -57,24 +57,26 @@ et_sequence_error = et_sequence
 
 # Checks if a val is a GPV
 def is_gpv (val, subgroup = None):
-    val, subgroup = te.subgroup_normalize (val, subgroup, axis = "vec")
+    val, subgroup = te.get_subgroup (val, subgroup, axis = te.VEC)
     lower_bounds = (np.array (val) - 0.5) / np.log2 (subgroup)
     upper_bounds = (np.array (val) + 0.5) / np.log2 (subgroup)
-    return True if max (lower_bounds) < min (upper_bounds) else False
+    return max (lower_bounds) < min (upper_bounds)
 
 # Checks if a val is a patent val
 def is_pv (val, subgroup = None):
-    val, subgroup = te.subgroup_normalize (val, subgroup, axis = "vec")
-    return True if all (val == np.round (val[0]*np.log2 (subgroup)/np.log2 (subgroup[0]))) else False
+    val, subgroup = te.get_subgroup (val, subgroup, axis = te.VEC)
+    return all (val == np.round (val[0]*np.log2 (subgroup)/np.log2 (subgroup[0])))
 
 # Enter a GPV, finds the n-th next GPV
 # Doesn't handle some nontrivial subgroups
 def gpv_roll (val, subgroup = None, n = 1):
-    val, subgroup = te.subgroup_normalize (val, subgroup, axis = "vec")
+    val, subgroup = te.get_subgroup (val, subgroup, axis = te.VEC)
     if not is_gpv (val, subgroup): #verify input
         raise ValueError ("input is not a GPV. ")
+    if not isinstance (n, int):
+        raise TypeError ("n must be an integer. ")
 
-    if int (n) == 0:
+    if n == 0:
         return val
     else:
         for i in range (1, len (subgroup) + 1):
@@ -85,17 +87,10 @@ def gpv_roll (val, subgroup = None, n = 1):
         else:
             raise NotImplementedError ("this nontrivial subgroup cannot be processed. ")
 
-# Enter a GPV, finds the next one
-# Doesn't handle some nontrivial subgroups
-# NOTE: replaced by the more powerful gpv_roll
-def find_next_gpv (val, subgroup = None):
-    warnings.warn ("find_next_gpv is deprecated. Use gpv_roll instead. ", FutureWarning)
-    return gpv_roll (val, subgroup, 1)
-
 # Enter a val, finds its wart notation
 # Zero equave is disallowed
 def val2warts (val, subgroup = None):
-    val, subgroup = te.subgroup_normalize (val, subgroup, axis = "vec")
+    val, subgroup = te.get_subgroup (val, subgroup, axis = te.VEC)
     if val[0] == 0:
         raise ValueError ("Wart is undefined. ")
 

@@ -11,11 +11,11 @@ Common functions. Required by virtually all subsequent modules.
 
 ## `te_optimizer.py`
 
-Optimizes tunings. Custom norm order, constraints and stretches are supported. 
+Optimizes tunings. Custom norm order, constraints and stretches are supported. *It is recommended to use `te_temperament_measures` instead since it calls this module and it has a more accessible interface.*
 
 Requires `te_common`. 
 
-Use `optimizer_main` to optimize, yet *it is recommended to use the next module instead since it calls this function with presets.* Parameters: 
+Use `optimizer_main` to optimize. Parameters: 
 - `map`: *first positional*, *required*. The map of the temperament. 
 - `subgroup`: *optional*. Specifies a custom subgroup for the map. Default is prime harmonics. 
 - `wtype`: *optional*. Specifies the weighter. Has `"tenney"` (default), `"frobenius"`, `"inverse tenney"`, `"benedetti"` and `"weil"`. 
@@ -26,25 +26,33 @@ Use `optimizer_main` to optimize, yet *it is recommended to use the next module 
 **Important: a single monzo should be entered as a vector. A monzo list should be entered as composed by column vectors.** 
 
 ## `te_optimizer_legacy.py`
+
 Legacy single-file edition (doesn't require `te_common.py`). 
+
+## `te_symbolic.py`
+
+Solves tunings symbolically. *It is recommended to use `te_temperament_measures` instead since it calls this module and it has a more accessible interface.*
+
+Requires `te_common`. 
 
 ## `te_temperament_measures.py`
 
 Analyses tunings and computes temperament measures from the temperament map. 
 
-Requires `te_common` and `te_optimizer`. 
+Requires `te_common`, `te_optimizer`, and optionally `te_symbolic`. 
 
 Use `Temperament` to construct a temperament object. Methods: 
-- `analyse`: calls `optimizer_main` and shows the generator, tuning map, mistuning map, tuning error, and tuning bias. Parameters: 
+- `tune`: calls `optimizer_main`/`symbolic` and shows the generator, tuning map, mistuning map, tuning error, and tuning bias. Parameters: 
 	- `wtype`: *optional*, *only works if type is "custom"*. Specifies the weighter. See above. 
 	- `order`: *optional*, *only works if type is "custom"*. Specifies the order of the norm to be minimized. See above. 
-	- `enforce`: *optional*. Has  `"d"`, `"c"`, `"xoc"` and `"custom"` (default). Only in `"custom"` can you specify your own constraints and destretch goals. 
-		- `"d"`: pure-octave destretched
-		- `"c"`: pure-octave constrained
-		- `"xoc"`: \[weighter type\]-ones constrained
-		- `"none"`: no enforcement (disregard the following parameters)
-	- `cons_monzo_list`: *optional*, *only works if type is "custom"*. Constrains this list of monzos to pure. Default is empty. 
-	- `des_monzo`: *optional*, *only works if type is "custom"*. Destretches this monzo to pure. Default is empty. 
+	- `enforce`: *optional*. A shortcut to specify constraints and destretch targets, so you don't need to enter monzos. Default is empty. To add an enforcement, use `c` or `d` followed by the subgroup index. For example, if the subgroup is the prime harmonics: 
+		- `c` or `"c1"`: pure-2 constrained
+		- `d` or `"d1"`: pure-2 destretched
+		- `"c1c2"`: pure-2.3 constrained
+		- `"c0"`: a special indicator meaning \[weighter type\]-ones constrained
+	- `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. Overrides `enforce`. 
+	- `des_monzo`: *optional*. Destretches this monzo to pure. Default is empty. Overrides `enforce`. 
+	- `optimizer`: *optional*. Specifies the optimizer. `"main"`: calls `optimizer_main`. `"sym"`: calls `symbolic`. Default is `"main"`. 
 - `temperament_measures`: shows the complexity, error, and badness (simple and logflat). Parameters: 
 	- `ntype`: *optional*. Specifies the averaging method. Has `"breed"` (default), `"smith"` and `"l2"`. 
 	- `wtype`: *optional*. Specifies the weighter. See above. 
@@ -82,4 +90,4 @@ Use `et_sequence` to iterate through all GPVs. Parameters:
 
 Not fully functional yet. Currently able to find the complexity spectrum from the temperament map. 
 
-Requires `te_common`. 
+Requires `te_common` and `te_temperament_measures`. 

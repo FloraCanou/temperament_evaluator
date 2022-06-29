@@ -1,36 +1,34 @@
-# © 2020-2022 Flora Canou | Version 0.19.1
+# © 2020-2022 Flora Canou | Version 0.20.0
 # This work is licensed under the GNU General Public License version 3.
 
 import math
 import numpy as np
 from scipy import linalg
 import te_common as te
+import te_temperament_measures as te_tm
 np.set_printoptions (suppress = True, linewidth = 256)
 
-def find_temperamental_norm (map, monzo, subgroup = None, wtype = "tenney", oe = False, show = True):
-    map, subgroup = te.subgroup_normalize (map, subgroup, axis = "row")
-    monzo, subgroup = te.subgroup_normalize (monzo, subgroup, axis = "vec")
+class TemperamentLattice (te_tm.Temperament):
+    def find_temperamental_norm (self, monzo, wtype = "tenney", oe = False, show = True):
+        # octave equivalence
+        map_copy = self.map[1:] if oe else self.map
+        projection_w = linalg.pinv (self.weighted (map_copy, wtype = wtype) @ self.weighted (map_copy, wtype = wtype).T)
+        tmonzo = map_copy @ monzo
+        norm = np.sqrt (tmonzo.T @ projection_w @ tmonzo)
+        if show:
+            ratio = te.monzo2ratio (monzo, self.subgroup)
+            print (f"{ratio[0]}/{ratio[1]}\t {norm}")
+        return norm
 
-    if oe: #octave equivalence
-        map = map[1:]
-    projection_w = linalg.pinv (te.weighted (map, subgroup, wtype = wtype) @ te.weighted (map, subgroup, wtype = wtype).T)
-    tmonzo = map @ monzo
-    norm = np.sqrt (tmonzo.T @ projection_w @ tmonzo)
-    if show:
-        ratio = te.monzo2ratio (monzo, subgroup)
-        print (f"{ratio[0]}/{ratio[1]}\t {norm}")
-    return norm
+    def find_spectrum (self, monzo_list, wtype = "tenney", oe = True):
+        monzo_list, _ = te.get_subgroup (monzo_list, self.subgroup, axis = te.COL)
 
-def find_spectrum (map, monzo_list, subgroup = None, wtype = "tenney", oe = True):
-    map, subgroup = te.subgroup_normalize (map, subgroup, axis = "row")
-    monzo_list, subgroup = te.subgroup_normalize (monzo_list, subgroup, axis = "col")
-
-    spectrum = [[monzo_list[:, i], find_temperamental_norm (map, monzo_list[:, i], subgroup = subgroup, wtype = wtype, oe = oe, show = False)] for i in range (monzo_list.shape[1])]
-    spectrum.sort (key = lambda k: k[1])
-    print ("\nComplexity spectrum: ")
-    for entry in spectrum:
-        ratio = te.monzo2ratio (entry[0], subgroup)
-        print (f"{ratio[0]}/{ratio[1]}\t{entry[1]:.4f}")
+        spectrum = [[monzo_list[:, i], self.find_temperamental_norm (monzo_list[:, i], wtype = wtype, oe = oe, show = False)] for i in range (monzo_list.shape[1])]
+        spectrum.sort (key = lambda k: k[1])
+        print ("\nComplexity spectrum: ")
+        for entry in spectrum:
+            ratio = te.monzo2ratio (entry[0], self.subgroup)
+            print (f"{ratio[0]}/{ratio[1]}\t{entry[1]:.4f}")
 
 # octave-reduce the ratio in [num, den] form
 def ratio_8ve_reduction (ratio):
