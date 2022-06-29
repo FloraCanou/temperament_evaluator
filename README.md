@@ -35,6 +35,12 @@ Solves tunings symbolically. *It is recommended to use `te_temperament_measures`
 
 Requires `te_common`. 
 
+Use `symbolic` to optimize. Parameters: 
+- `map`: *first positional*, *required*. The map of the temperament. 
+- `subgroup`: *optional*. Specifies a custom subgroup for the map. Default is prime harmonics. 
+- `wtype`: *optional*. Specifies the weighter. Has `"frobenius"` (default) and `"benedetti"`. 
+- `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. 
+
 ## `te_temperament_measures.py`
 
 Analyses tunings and computes temperament measures from the temperament map. 
@@ -46,8 +52,8 @@ Use `Temperament` to construct a temperament object. Methods:
 	- `wtype`: *optional*, *only works if type is "custom"*. Specifies the weighter. See above. 
 	- `order`: *optional*, *only works if type is "custom"*. Specifies the order of the norm to be minimized. See above. 
 	- `enforce`: *optional*. A shortcut to specify constraints and destretch targets, so you don't need to enter monzos. Default is empty. To add an enforcement, use `c` or `d` followed by the subgroup index. For example, if the subgroup is the prime harmonics: 
-		- `c` or `"c1"`: pure-2 constrained
-		- `d` or `"d1"`: pure-2 destretched
+		- `"c"` or `"c1"`: pure-2 constrained
+		- `"d"` or `"d1"`: pure-2 destretched
 		- `"c1c2"`: pure-2.3 constrained
 		- `"c0"`: a special indicator meaning \[weighter type\]-ones constrained
 	- `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. Overrides `enforce`. 
