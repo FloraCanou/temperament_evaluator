@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.21.0
+# © 2020-2022 Flora Canou | Version 0.21.1
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -47,12 +47,15 @@ class Temperament:
                 return Matrix ([1 if i == enforce_index - 1 else 0 for i, _ in enumerate (self.subgroup)])
 
     # this mean rejects the extra dimension from the denominator
-    # such that when skew = 0, introducing the extra dimension doesn't change the same result
+    # such that when skew = 0, introducing the extra dimension doesn't change the result
     def __mean (self, main):
         return np.sum (main)/len (self.subgroup)
 
     def __power_mean_norm (self, main, order):
-        return np.power (self.__mean (np.power (np.abs (main), order)), np.reciprocal (float (order)))
+        if order == np.inf:
+            return np.max (main)
+        else:
+            return np.power (self.__mean (np.power (np.abs (main), order)), np.reciprocal (float (order)))
 
     def tune (self, optimizer = "main", wtype = "tenney", skew = 0, order = 2,
             enforce = "", cons_monzo_list = None, des_monzo = None): #in cents
