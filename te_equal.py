@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.20.0
+# © 2020-2022 Flora Canou | Version 0.21.0
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -17,7 +17,7 @@ def et_construct (et_list, subgroup, alt_val = 0):
 # Finds et sequence from comma list. Can be used to find optimal patent vals
 # Comma list should be entered as column vectors
 def et_sequence (monzo_list = None, subgroup = None, cond = "error",
-        ntype = "breed", wtype = "tenney", pv = False, prog = True, threshold = 20, search_range = 1200, *, k = 0.5, verbose = False):
+        ntype = "breed", wtype = "tenney", skew = 0, pv = False, prog = True, threshold = 20, search_range = 1200):
     if monzo_list is None:
         if subgroup is None:
             raise ValueError ("please specify a monzo list or a subgroup. ")
@@ -31,27 +31,23 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error",
     while (gpv_infra := gpv_roll (gpv_infra, subgroup))[0] == 0: #skip zero-equave vals
         gpv = gpv_infra
     while (gpv := gpv_roll (gpv, subgroup))[0] <= search_range:
-        if (pv and not is_pv (gpv, subgroup = subgroup) # non-patent val if pv is set
+        if (pv and not is_pv (gpv, subgroup) # non-patent val if pv is set
             or np.gcd.reduce (gpv) > 1 #enfactored
             or np.any ([gpv] @ monzo_list)): #not tempering out the commas
                 continue
 
         et = te_tm.Temperament ([gpv], subgroup)
         if cond == "error":
-            current = et.error (ntype = ntype, wtype = wtype, k = k)
+            current = et.error (ntype, wtype, skew)
         elif cond == "badness":
-            current = et.badness (ntype = ntype, wtype = wtype, k = k)
+            current = et.badness (ntype, wtype, skew)
         else:
             current = threshold
         if current <= threshold:
             if prog:
                 threshold = current
-            if verbose:
-                warnings.warn ("\"verbose\" is deprecated. ", FutureWarning)
-                et.temperament_measures (ntype = ntype, wtype = wtype, k = k)
-            else:
-                gpv_str = "<" + " ".join (map (str, np.trim_zeros (gpv, trim = "b"))) + "]"
-                print (f"{gpv_str} ({val2warts (gpv, subgroup = subgroup)})")
+            gpv_str = "<" + " ".join (map (str, np.trim_zeros (gpv, trim = "b"))) + "]"
+            print (f"{gpv_str} ({val2warts (gpv, subgroup = subgroup)})")
 
 et_sequence_error = et_sequence
 

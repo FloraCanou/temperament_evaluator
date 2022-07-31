@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.20.0
+# © 2020-2022 Flora Canou | Version 0.21.0
 # This work is licensed under the GNU General Public License version 3.
 
 import math
@@ -9,21 +9,21 @@ import te_temperament_measures as te_tm
 np.set_printoptions (suppress = True, linewidth = 256)
 
 class TemperamentLattice (te_tm.Temperament):
-    def find_temperamental_norm (self, monzo, wtype = "tenney", oe = False, show = True):
+    def find_temperamental_norm (self, monzo, wtype = "tenney", skew = 0, oe = False, show = True):
         # octave equivalence
         map_copy = self.map[1:] if oe else self.map
-        projection_w = linalg.pinv (self.weighted (map_copy, wtype = wtype) @ self.weighted (map_copy, wtype = wtype).T)
-        tmonzo = map_copy @ monzo
-        norm = np.sqrt (tmonzo.T @ projection_w @ tmonzo)
+        projection_wx = linalg.pinv (self.weightskewed (map_copy, wtype, skew)) @ self.weightskewed (map_copy, wtype, skew)
+        norm = np.sqrt (monzo.T @ projection_wx @ monzo)
         if show:
             ratio = te.monzo2ratio (monzo, self.subgroup)
             print (f"{ratio[0]}/{ratio[1]}\t {norm}")
         return norm
 
-    def find_spectrum (self, monzo_list, wtype = "tenney", oe = True):
+    def find_spectrum (self, monzo_list, wtype = "tenney", skew = 0, oe = True):
         monzo_list, _ = te.get_subgroup (monzo_list, self.subgroup, axis = te.COL)
 
-        spectrum = [[monzo_list[:, i], self.find_temperamental_norm (monzo_list[:, i], wtype = wtype, oe = oe, show = False)] for i in range (monzo_list.shape[1])]
+        spectrum = [[monzo_list[:, i], self.find_temperamental_norm (
+            monzo_list[:, i], wtype, skew, oe = oe, show = False)] for i in range (monzo_list.shape[1])]
         spectrum.sort (key = lambda k: k[1])
         print ("\nComplexity spectrum: ")
         for entry in spectrum:

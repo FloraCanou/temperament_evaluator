@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.20.0
+# © 2020-2022 Flora Canou | Version 0.21.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -9,6 +9,8 @@ from sympy.matrices import Matrix, normalforms
 ROW, COL, VEC = 0, 1, 2
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
 SCALAR = 1200 #could be in octave, but for precision reason
+RATIONAL_WEIGHT_LIST = ["frobenius", "benedetti"]
+ALGEBRAIC_WEIGHT_LIST = RATIONAL_WEIGHT_LIST
 
 def as_list (a):
     return a if isinstance (a, list) else [a]
@@ -23,7 +25,7 @@ def normalize (main, axis = ROW):
     elif axis == COL:
         return np.flip (hnf (np.flip (main).T)).T if main.shape[1] > 1 else main
 
-# Gets the subgroup and tries to match the dimensions
+# gets the subgroup and tries to match the dimensions
 def get_subgroup (main, subgroup, axis):
     if axis == ROW:
         length_main = main.shape[1]
@@ -47,23 +49,31 @@ def get_subgroup (main, subgroup, axis):
 
     return main, subgroup
 
-def get_weight (subgroup, wtype = "tenney", *, k = 0.5):
+def get_weight (subgroup, wtype = "tenney"):
     if wtype == "tenney":
         return np.diag (1/np.log2 (subgroup))
     elif wtype == "frobenius":
         return np.eye (len (subgroup))
-    elif wtype == "inverse tenney":
-        return np.diag (np.log2 (subgroup))
     elif wtype == "benedetti":
         return np.diag (1/np.array (subgroup))
-    elif wtype == "weil":
-        return linalg.pinv (np.append ((1 - k)*np.diag (np.log2 (subgroup)), [k*np.log2 (subgroup)], axis = 0))
     else:
         warnings.warn ("weighter type not supported, using default (\"tenney\")")
         return get_weight (subgroup, wtype = "tenney")
 
-def weighted (main, subgroup, wtype = "tenney", *, k = 0.5):
-    return main @ get_weight (subgroup, wtype = wtype, k = k)
+def get_skew (subgroup, skew = 0, order = 2):
+    if skew == 0:
+        return np.eye (len (subgroup))
+    elif order == 2:
+        r = skew/(len (subgroup)*skew**2 + 1)
+        return np.append (np.eye (len (subgroup)) - skew*r*np.ones ((len (subgroup), len (subgroup))),
+            r*np.ones ((len (subgroup), 1)), axis = 1)
+    else:
+        raise NotImplementedError ("Weil skew only works with Euclidean norm as of now.")
+
+def weightskewed (main, subgroup, wtype = "tenney", skew = 0, order = 2):
+    return main @ get_weight (subgroup, wtype) @ get_skew (subgroup, skew, order)
+
+weighted = weightskewed
 
 # takes a monzo, returns the ratio in [num, den] form
 # doesn't validate the basis

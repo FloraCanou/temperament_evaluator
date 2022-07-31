@@ -13,7 +13,7 @@ import te_lattice as te_la
 #     parameters:
 #       wtype: specifies the weighter. "tenney", "frobenius", "inverse tenney", "benedetti" and "weil"
 #       order: specifies the order of the norm to be minimized
-#       enforce: "d", "c", "xoc", "none", "custom"
+#       enforce: specifies constraints and destretch targets. try "c", "d", "c1c2", "c0" and see readme for more examples
 #       cons_monzo_list: constrains this list of monzos to pure
 #       des_monzo: destretches this monzo to pure
 #   temperament_measures: gives the temperament measures
@@ -24,8 +24,9 @@ import te_lattice as te_la
 #   comma_basis: gives the comma basis
 
 A = te_tm.Temperament ([[1, 0, 2, -1], [0, 5, 1, 12]])
-A.tune (enforce = "c") # septimal magic in cte tuning
+A.tune (skew = 1, enforce = "c") # septimal magic in ctwe tuning
 A.temperament_measures (ntype = "smith")
+A.wedgie (wtype = "frobenius")
 A.comma_basis ()
 
 # et_construct

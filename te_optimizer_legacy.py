@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.20.0
+# © 2020-2022 Flora Canou | Version 0.21.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -19,45 +19,51 @@ def get_subgroup (main, subgroup):
         subgroup = subgroup[:dim]
     return main, subgroup
 
-def get_weight (subgroup, wtype = "tenney", *, k = 0.5):
+def get_weight (subgroup, wtype = "tenney"):
     if wtype == "tenney":
         return np.diag (1/np.log2 (subgroup))
     elif wtype == "frobenius":
         return np.eye (len (subgroup))
-    elif wtype == "inverse tenney":
-        return np.diag (np.log2 (subgroup))
     elif wtype == "benedetti":
         return np.diag (1/np.array (subgroup))
-    elif wtype == "weil":
-        return linalg.pinv (np.append ((1 - k)*np.diag (np.log2 (subgroup)), [k*np.log2 (subgroup)], axis = 0))
     else:
         warnings.warn ("weighter type not supported, using default (\"tenney\")")
         return get_weight (subgroup, wtype = "tenney")
 
-def weighted (main, subgroup, wtype = "tenney", *, k = 0.5):
-    return main @ get_weight (subgroup, wtype = wtype, k = k)
+def get_skew (subgroup, skew = 0, order = 2):
+    if skew == 0:
+        return np.eye (len (subgroup))
+    elif order == 2:
+        r = skew/(len (subgroup)*skew**2 + 1)
+        return np.append (np.eye (len (subgroup)) - skew*r*np.ones ((len (subgroup), len (subgroup))),
+            r*np.ones ((len (subgroup), 1)), axis = 1)
+    else:
+        raise NotImplementedError ("Weil skew only works with Euclidean norm as of now.")
 
-def error (gen, map, jip, order = 2):
+def weightskewed (main, subgroup, wtype = "tenney", skew = 0, order = 2):
+    return main @ get_weight (subgroup, wtype) @ get_skew (subgroup, skew, order)
+
+weighted = weightskewed
+
+def error (gen, map, jip, order):
     return linalg.norm (gen @ map - jip, ord = order)
 
-def optimizer_main (map, subgroup = None, wtype = "tenney", order = 2,
-        cons_monzo_list = None, des_monzo = None, show = True, *, k = 0.5):
+def optimizer_main (map, subgroup = None, wtype = "tenney", skew = 0, order = 2,
+        cons_monzo_list = None, des_monzo = None, show = True):
     map, subgroup = get_subgroup (np.array (map), subgroup)
 
-    if wtype == "weil" and order != 2:
-        warnings.warn ("The weil weighter as of now is only meant to be used for L2.")
-
     jip = np.log2 (subgroup)*SCALAR
-    map_w = weighted (map, subgroup, wtype = wtype, k = k)
-    jip_w = weighted (jip, subgroup, wtype = wtype, k = k)
+    map_wx = weighted (map, subgroup, wtype, skew, order)
+    jip_wx = weighted (jip, subgroup, wtype, skew, order)
     if order == 2 and cons_monzo_list is None: #te with no constraints, simply use lstsq for better performance
-        res = linalg.lstsq (map_w.T, jip_w)
+        res = linalg.lstsq (map_w.T, jip_wx)
         gen = res[0]
         print ("L2 tuning without constraints, solved using lstsq. ")
     else:
         gen0 = [SCALAR]*map.shape[0] #initial guess
         cons = () if cons_monzo_list is None else {'type': 'eq', 'fun': lambda gen: (gen @ map - jip) @ cons_monzo_list}
-        res = optimize.minimize (error, gen0, args = (map_w, jip_w, order), method = "SLSQP", constraints = cons)
+        res = optimize.minimize (error, gen0, args = (map_wx, jip_wx, order), method = "SLSQP",
+            options = {'ftol': 1e-9}, constraints = cons)
         print (res.message)
         if res.success:
             gen = res.x
