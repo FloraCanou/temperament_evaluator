@@ -3,7 +3,9 @@
 ## Dependencies
 
 - [SciPy](https://scipy.org/)
+	- various tasks including optimization, temperament measures, wedgie, etc. 
 - [SymPy](https://www.sympy.org/en/index.html)
+	- various tasks including symbolic solution, mapping normalization, comma basis, etc. 
 
 ## `te_common.py`
 
@@ -15,10 +17,11 @@ Optimizes tunings. Custom norm order, constraints and stretches are supported. *
 
 Requires `te_common`. 
 
-Use `optimizer_main` to optimize. Parameters: 
+Use `optimizer_main` to optimize a temperament. Parameters: 
 - `map`: *first positional*, *required*. The map of the temperament. 
 - `subgroup`: *optional*. Specifies a custom subgroup for the map. Default is prime harmonics. 
-- `wtype`: *optional*. Specifies the weighter. Has `"tenney"` (default), `"frobenius"`, `"inverse tenney"`, `"benedetti"` and `"weil"`. 
+- `wtype`: *optional*. Specifies the weight. Has `"tenney"` (default), `"frobenius"`, and `"benedetti"`. 
+- `skew`: *optional*. Specifies the skew. This is Mike Battaglia's *k*. Default is `0`, meaning no skew. For **Weil**, use `1`. 
 - `order`: *optional*. Specifies the order of the norm to be minimized. Default is `2`, meaning **Euclidean**. For **TOP tuning**, use `np.inf`. 
 - `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. 
 - `des_monzo`: *optional*. Destretches this monzo to pure. Default is empty. 
@@ -31,14 +34,15 @@ Legacy single-file edition (doesn't require `te_common.py`).
 
 ## `te_symbolic.py`
 
-Solves tunings symbolically. *It is recommended to use `te_temperament_measures` instead since it calls this module and it has a more accessible interface.*
+Solves Euclidean tunings symbolically. *It is recommended to use `te_temperament_measures` instead since it calls this module and it has a more accessible interface.*
 
 Requires `te_common`. 
 
-Use `symbolic` to optimize. Parameters: 
+Use `symbolic` to solve for a Euclidean tuning of a temperament. Parameters: 
 - `map`: *first positional*, *required*. The map of the temperament. 
 - `subgroup`: *optional*. Specifies a custom subgroup for the map. Default is prime harmonics. 
-- `wtype`: *optional*. Specifies the weighter. Has `"frobenius"` (default) and `"benedetti"`. 
+- `wtype`: *optional*. Specifies the weight. Has `"tenney"` (default), `"frobenius"`, and `"benedetti"`. 
+- `skew`: *optional*. Specifies the skew. This is Mike Battaglia's *k*. Default is `0`, meaning no skew. For **Weil**, use `1`. 
 - `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. 
 
 ## `te_temperament_measures.py`
@@ -49,8 +53,10 @@ Requires `te_common`, `te_optimizer`, and optionally `te_symbolic`.
 
 Use `Temperament` to construct a temperament object. Methods: 
 - `tune`: calls `optimizer_main`/`symbolic` and shows the generator, tuning map, mistuning map, tuning error, and tuning bias. Parameters: 
-	- `wtype`: *optional*, *only works if type is "custom"*. Specifies the weighter. See above. 
-	- `order`: *optional*, *only works if type is "custom"*. Specifies the order of the norm to be minimized. See above. 
+	- `optimizer`: *optional*. Specifies the optimizer. `"main"`: calls `optimizer_main`. `"sym"`: calls `symbolic`. Default is `"main"`. 
+	- `wtype`: *optional*, Specifies the weight. See above. 
+	- `skew`:  *optional*, Specifies the skew. See above. 
+	- `order`: *optional*, Specifies the order of the norm to be minimized. See above. 
 	- `enforce`: *optional*. A shortcut to specify constraints and destretch targets, so you don't need to enter monzos. Default is empty. To add an enforcement, use `c` or `d` followed by the subgroup index. For example, if the subgroup is the prime harmonics: 
 		- `"c"` or `"c1"`: pure-2 constrained
 		- `"d"` or `"d1"`: pure-2 destretched
@@ -58,11 +64,12 @@ Use `Temperament` to construct a temperament object. Methods:
 		- `"c0"`: a special indicator meaning \[weighter type\]-ones constrained
 	- `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. Overrides `enforce`. 
 	- `des_monzo`: *optional*. Destretches this monzo to pure. Default is empty. Overrides `enforce`. 
-	- `optimizer`: *optional*. Specifies the optimizer. `"main"`: calls `optimizer_main`. `"sym"`: calls `symbolic`. Default is `"main"`. 
 - `temperament_measures`: shows the complexity, error, and badness (simple and logflat). Parameters: 
 	- `ntype`: *optional*. Specifies the averaging method. Has `"breed"` (default), `"smith"` and `"l2"`. 
-	- `wtype`: *optional*. Specifies the weighter. See above. 
-	- `badness_scale`: *optional*. Scales the badness, literally. Default is `100`. 
+	- `wtype`: *optional*. Specifies the weight. See above. 
+	- `skew`: *optional*. Specifies the skew. See above. 
+	- `badness_scale`: *optional*. Scales the badness, literally. Default is `1000`. 
+- `wedgie`: returns and shows the wedgie of the temperament. 
 - `comma_basis`: returns and shows the comma basis of the temperament. 
 
 **Important: a single monzo should be entered as a vector. A monzo list should be entered as composed by column vectors.** 
@@ -84,7 +91,8 @@ Use `et_sequence` to iterate through all GPVs. Parameters:
 	- \* At least one of the above must be specified, for the script to know the dimension. 
 - `cond`: *optional*. Either `"error"` or `"badness"`. Default is `"error"`. 
 - `ntype`: *optional*. Specifies the averaging method. See above. 
-- `wtype`: *optional*. Specifies the weighter. See above. 
+- `wtype`: *optional*. Specifies the weight. See above. 
+- `skew`: *optional*. Specifies the skew. See above. 
 - `pv`: *optional*. If `True`, only patent vals will be considered. Default is `False`. 
 - `prog`: *optional*. If `True`, threshold will be updated. Default is `True`. 
 - `threshold`: *optional*. Temperaments failing this will not be shown. Default is `20`. 
