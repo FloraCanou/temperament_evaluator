@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.21.2
+# © 2020-2022 Flora Canou | Version 0.21.3
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -34,15 +34,17 @@ class Temperament:
         return True
 
     # interprets the enforce specification as a monzo
-    def __get_enforce_vec (self, enforce_index, wtype, optimizer):
+    def __get_enforce_vec (self, enforce_index, wtype, skew, order, optimizer):
         if optimizer == "main":
             if enforce_index == 0:
-                return self.weightskewed (np.ones (len (self.subgroup)), wtype)
+                weightskew = self.weightskewed (np.eye (len (self.subgroup)), wtype, skew, order)
+                return weightskew @ np.ones (weightskew.shape[1])
             else:
                 return np.array ([1 if i == enforce_index - 1 else 0 for i, _ in enumerate (self.subgroup)])
         elif optimizer == "sym":
             if enforce_index == 0:
-                return te_sym.get_weight_sym (self.subgroup, wtype) @ Matrix.ones (len (self.subgroup), 1)
+                weightskew = te_sym.get_weight_sym (self.subgroup, wtype) @ te_sym.get_skew_sym (self.subgroup, skew)
+                return weightskew @ Matrix.ones (weightskew.shape[1], 1)
             else:
                 return Matrix ([1 if i == enforce_index - 1 else 0 for i, _ in enumerate (self.subgroup)])
 
@@ -74,10 +76,10 @@ class Temperament:
                 cons_monzo_list, des_monzo, cons_text, des_text = ([] for _ in range (4))
                 for entry in enforce_spec_list:
                     if entry[0] == "c":
-                        cons_monzo_list.append (self.__get_enforce_vec (int (entry[1:]), wtype, optimizer))
+                        cons_monzo_list.append (self.__get_enforce_vec (int (entry[1:]), wtype, skew, order, optimizer))
                         cons_text.append ("Wj" if entry[1:] == "0" else f"{self.subgroup[int (entry[1:]) - 1]}")
                     else:
-                        des_monzo.append (self.__get_enforce_vec (int (entry[1:]), wtype, optimizer))
+                        des_monzo.append (self.__get_enforce_vec (int (entry[1:]), wtype, skew, order, optimizer))
                         des_text.append ("Wj" if entry[1:] == "0" else f"{self.subgroup[int (entry[1:]) - 1]}")
                 if optimizer == "main":
                     cons_monzo_list = np.column_stack (cons_monzo_list) if cons_monzo_list else None

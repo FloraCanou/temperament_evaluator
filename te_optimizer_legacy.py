@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.21.2
+# © 2020-2022 Flora Canou | Version 0.21.3
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -51,8 +51,8 @@ def optimizer_main (map, subgroup = None, wtype = "tenney", skew = 0, order = 2,
     map, subgroup = get_subgroup (np.array (map), subgroup)
 
     jip = np.log2 (subgroup)*SCALAR
-    map_wx = weighted (map, subgroup, wtype, skew, order)
-    jip_wx = weighted (jip, subgroup, wtype, skew, order)
+    map_wx = weightskewed (map, subgroup, wtype, skew, order)
+    jip_wx = weightskewed (jip, subgroup, wtype, skew, order)
     if order == 2 and cons_monzo_list is None: #te with no constraints, simply use lstsq for better performance
         res = linalg.lstsq (map_w.T, jip_wx)
         gen = res[0]
