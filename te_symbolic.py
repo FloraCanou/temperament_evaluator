@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.21.0
+# © 2020-2022 Flora Canou | Version 0.21.2
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -80,6 +80,7 @@ def symbolic (map, subgroup = None, wtype = "frobenius", skew = 0,
     tuning_map = np.array (jip @ projection, dtype = float).squeeze ()
     misprojection = projection - Matrix.eye (len (subgroup))
     mistuning_map = np.array (jip @ misprojection, dtype = float).squeeze ()
+
     if show:
         print (f"Generators: {gen} (¢)",
             f"Tuning map: {tuning_map} (¢)",
@@ -89,6 +90,9 @@ def symbolic (map, subgroup = None, wtype = "frobenius", skew = 0,
             pprint (projection)
             print ("Misprojection map: ")
             pprint (misprojection)
+            print ("Eigenmonzos: ")
+            eigenmonzo_list = projection.eigenvects ()[-1][-1]
+            te.show_monzo_list (eigenmonzo_list, subgroup)
         else:
             print ("Transcendental projection map and misprojection map not shown. ")
 

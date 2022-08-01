@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.21.1
+# © 2020-2022 Flora Canou | Version 0.21.2
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -211,12 +211,5 @@ class Temperament:
             print (f"\nSubgroup: {'.'.join (map (str, self.subgroup))}",
                 f"Mapping: \n{self.map}",
                 "Comma basis: ", sep = "\n")
-            for i in range (comma_basis.shape[1]):
-                monzo = comma_basis[:, i]
-                ratio = te.monzo2ratio (monzo, self.subgroup)
-                monzo_str = "[" + " ".join (map (str, np.trim_zeros (monzo, trim = "b"))) + ">"
-                if ratio[0] < 10e7:
-                    print (monzo_str, f"({ratio[0]}/{ratio[1]})")
-                else:
-                    print (monzo_str)
+            te.show_monzo_list (comma_basis_frac, self.subgroup)
         return comma_basis

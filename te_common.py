@@ -1,10 +1,10 @@
-# © 2020-2022 Flora Canou | Version 0.21.0
+# © 2020-2022 Flora Canou | Version 0.21.2
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
 import numpy as np
-from scipy import linalg
 from sympy.matrices import Matrix, normalforms
+from sympy import gcd
 
 ROW, COL, VEC = 0, 1, 2
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
@@ -73,8 +73,6 @@ def get_skew (subgroup, skew = 0, order = 2):
 def weightskewed (main, subgroup, wtype = "tenney", skew = 0, order = 2):
     return main @ get_weight (subgroup, wtype) @ get_skew (subgroup, skew, order)
 
-weighted = weightskewed
-
 # takes a monzo, returns the ratio in [num, den] form
 # doesn't validate the basis
 # ratio[0]: num, ratio[1]: den
@@ -109,3 +107,15 @@ def ratio2monzo (ratio, subgroup = None):
         raise ValueError ("improper subgroup. ")
 
     return np.trim_zeros (monzo, trim = "b") if trim else np.array (monzo)
+
+# takes a list (python list) of monzos (sympy matrices) and show them in a readable manner
+# used for comma basis and eigenmonzo basis
+def show_monzo_list (monzo_list, subgroup):
+    for entry in monzo_list:
+        monzo = np.squeeze (entry/gcd (tuple (entry)))
+        ratio = monzo2ratio (monzo, subgroup)
+        monzo_str = "[" + " ".join (map (str, np.trim_zeros (monzo, trim = "b"))) + ">"
+        if all (entry < 10e7 for entry in ratio):
+            print (monzo_str, f"({ratio[0]}/{ratio[1]})")
+        else:
+            print (monzo_str)

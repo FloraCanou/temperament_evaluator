@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.21.0
+# © 2020-2022 Flora Canou | Version 0.21.2
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -42,8 +42,6 @@ def get_skew (subgroup, skew = 0, order = 2):
 
 def weightskewed (main, subgroup, wtype = "tenney", skew = 0, order = 2):
     return main @ get_weight (subgroup, wtype) @ get_skew (subgroup, skew, order)
-
-weighted = weightskewed
 
 def error (gen, map, jip, order):
     return linalg.norm (gen @ map - jip, ord = order)
