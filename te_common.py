@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.21.2
+# © 2020-2022 Flora Canou | Version 0.21.3
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -112,10 +112,10 @@ def ratio2monzo (ratio, subgroup = None):
 # used for comma basis and eigenmonzo basis
 def show_monzo_list (monzo_list, subgroup):
     for entry in monzo_list:
-        monzo = np.squeeze (entry/gcd (tuple (entry)))
-        ratio = monzo2ratio (monzo, subgroup)
+        monzo = np.array (entry/gcd (tuple (entry))).squeeze ()
         monzo_str = "[" + " ".join (map (str, np.trim_zeros (monzo, trim = "b"))) + ">"
-        if all (entry < 10e7 for entry in ratio):
+        if np.log2 (subgroup) @ np.abs (monzo) < 53: # shows the ratio for those < ~1e16
+            ratio = monzo2ratio (monzo, subgroup)
             print (monzo_str, f"({ratio[0]}/{ratio[1]})")
         else:
             print (monzo_str)
