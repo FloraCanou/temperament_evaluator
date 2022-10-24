@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.21.0
+# © 2020-2022 Flora Canou | Version 0.22.0
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -17,7 +17,8 @@ def et_construct (et_list, subgroup, alt_val = 0):
 # Finds et sequence from comma list. Can be used to find optimal patent vals
 # Comma list should be entered as column vectors
 def et_sequence (monzo_list = None, subgroup = None, cond = "error",
-        ntype = "breed", wtype = "tenney", skew = 0, pv = False, prog = True, threshold = 20, search_range = 1200):
+        ntype = "breed", wtype = "tenney", wamount = 1, skew = 0,
+        pv = False, prog = True, threshold = 20, search_range = 1200):
     if monzo_list is None:
         if subgroup is None:
             raise ValueError ("please specify a monzo list or a subgroup. ")
@@ -38,9 +39,9 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error",
 
         et = te_tm.Temperament ([gpv], subgroup)
         if cond == "error":
-            current = et.error (ntype, wtype, skew)
+            current = et.error (ntype, wtype, wamount, skew)
         elif cond == "badness":
-            current = et.badness (ntype, wtype, skew)
+            current = et.badness (ntype, wtype, wamount, skew)
         else:
             current = threshold
         if current <= threshold:
@@ -61,7 +62,7 @@ def is_gpv (val, subgroup = None):
 # Checks if a val is a patent val
 def is_pv (val, subgroup = None):
     val, subgroup = te.get_subgroup (val, subgroup, axis = te.VEC)
-    return all (val == np.round (val[0]*np.log2 (subgroup)/np.log2 (subgroup[0])))
+    return all (val == np.rint (val[0]*np.log2 (subgroup)/np.log2 (subgroup[0])))
 
 # Enter a GPV, finds the n-th next GPV
 # Doesn't handle some nontrivial subgroups
@@ -69,17 +70,19 @@ def gpv_roll (val, subgroup = None, n = 1):
     val, subgroup = te.get_subgroup (val, subgroup, axis = te.VEC)
     if not is_gpv (val, subgroup): #verify input
         raise ValueError ("input is not a GPV. ")
-    if not isinstance (n, int):
+    if not isinstance (n, (int, np.integer)):
         raise TypeError ("n must be an integer. ")
+    return __gpv_roll (val, subgroup, n)
 
+def __gpv_roll (val, subgroup, n):
     if n == 0:
         return val
     else:
         for i in range (1, len (subgroup) + 1):
             val_copy = list.copy (val)
-            val_copy[-i] += int (np.copysign (1, n))
+            val_copy[-i] += np.copysign (1, n).astype (int)
             if is_gpv (val_copy, subgroup):
-                return gpv_roll (val_copy, subgroup, n - int (np.copysign (1, n)))
+                return __gpv_roll (val_copy, subgroup, n - np.copysign (1, n).astype (int))
         else:
             raise NotImplementedError ("this nontrivial subgroup cannot be processed. ")
 
@@ -101,8 +104,8 @@ def val2warts (val, subgroup = None):
         postfix = ""
     elif all (entry in te.PRIME_LIST for entry in subgroup): #nonpatent val in prime subgroup
         jip_n = val[0]*np.log2 (subgroup)/np.log2 (subgroup[0]) #jip in edostep numbers
-        pv = np.round (jip_n) #corresponding patent val
-        warts_number_list = (2*np.abs (val - pv) + (np.copysign (1, (val - pv)*(pv - jip_n)) - 1)/2).astype ("int")
+        pv = np.rint (jip_n) #corresponding patent val
+        warts_number_list = (2*np.abs (val - pv) + (np.copysign (1, (val - pv)*(pv - jip_n)) - 1)/2).astype (int)
         postfix = ""
         for i, si in enumerate (subgroup):
             postfix += warts_number_list[i]*str (WARTS_LIST[te.PRIME_LIST.index (si)])
@@ -122,7 +125,7 @@ def warts2val (warts, subgroup):
     wart_equave = te.PRIME_LIST[WARTS_LIST.index (match.group (1))] if match.group (1) else 2
     warts_number_list = np.array ([len (re.findall (WARTS_LIST[te.PRIME_LIST.index (entry)], match.group (3))) for entry in subgroup])
     jip_n = int (match.group (2))*np.log (subgroup)/np.log (wart_equave) #jip in edostep numbers
-    pv = np.round (jip_n) #corresponding patent val
+    pv = np.rint (jip_n) #corresponding patent val
     alt_val = np.copysign (np.ceil (warts_number_list/2), (1 - 2*(warts_number_list % 2))*(pv - jip_n))
 
-    return (pv + alt_val).astype ("int")
+    return (pv + alt_val).astype (int)

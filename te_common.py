@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.21.3
+# © 2020-2022 Flora Canou | Version 0.22.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -9,8 +9,8 @@ from sympy import gcd
 ROW, COL, VEC = 0, 1, 2
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
 SCALAR = 1200 #could be in octave, but for precision reason
-RATIONAL_WEIGHT_LIST = ["frobenius", "benedetti"]
-ALGEBRAIC_WEIGHT_LIST = RATIONAL_WEIGHT_LIST
+RATIONAL_WEIGHT_LIST = ["frobenius"]
+ALGEBRAIC_WEIGHT_LIST = RATIONAL_WEIGHT_LIST + ["benedetti"]
 
 def as_list (a):
     return a if isinstance (a, list) else [a]
@@ -49,29 +49,33 @@ def get_subgroup (main, subgroup, axis):
 
     return main, subgroup
 
-def get_weight (subgroup, wtype = "tenney"):
+def get_weight (subgroup, wtype = "tenney", wamount = 1):
     if wtype == "tenney":
-        return np.diag (1/np.log2 (subgroup))
-    elif wtype == "frobenius":
-        return np.eye (len (subgroup))
+        weight_vec = np.reciprocal (np.log2 (np.array (subgroup, dtype = float)))
     elif wtype == "benedetti":
-        return np.diag (1/np.array (subgroup))
+        weight_vec = np.reciprocal (np.array (subgroup, dtype = float))
+    elif wtype == "frobenius":
+        weight_vec = np.ones (len (subgroup))
     else:
         warnings.warn ("weighter type not supported, using default (\"tenney\")")
-        return get_weight (subgroup, wtype = "tenney")
+        return get_weight (subgroup, wtype = "tenney", wamount = wamount)
+    return np.diag (weight_vec**wamount)
 
 def get_skew (subgroup, skew = 0, order = 2):
     if skew == 0:
         return np.eye (len (subgroup))
+    elif skew == np.inf:
+        return np.eye (len (subgroup)) - np.ones ((len (subgroup), len (subgroup)))/len(subgroup)
     elif order == 2:
         r = skew/(len (subgroup)*skew**2 + 1)
-        return np.append (np.eye (len (subgroup)) - skew*r*np.ones ((len (subgroup), len (subgroup))),
+        return np.append (
+            np.eye (len (subgroup)) - skew*r*np.ones ((len (subgroup), len (subgroup))),
             r*np.ones ((len (subgroup), 1)), axis = 1)
     else:
         raise NotImplementedError ("Weil skew only works with Euclidean norm as of now.")
 
-def weightskewed (main, subgroup, wtype = "tenney", skew = 0, order = 2):
-    return main @ get_weight (subgroup, wtype) @ get_skew (subgroup, skew, order)
+def weightskewed (main, subgroup, wtype = "tenney", wamount = 1, skew = 0, order = 2):
+    return main @ get_weight (subgroup, wtype, wamount) @ get_skew (subgroup, skew, order)
 
 # takes a monzo, returns the ratio in [num, den] form
 # doesn't validate the basis
@@ -88,7 +92,7 @@ def monzo2ratio (monzo, subgroup = None):
 
 # takes a ratio in [num, den] form, returns the monzo
 def ratio2monzo (ratio, subgroup = None):
-    if not all (isinstance (entry, int) for entry in ratio) or any (entry < 1 for entry in ratio):
+    if not all (isinstance (entry, (int, np.integer)) for entry in ratio) or any (entry < 1 for entry in ratio):
         raise ValueError ("numerator and denominator should be positive integers. ")
     if trim := (subgroup is None):
         subgroup = PRIME_LIST

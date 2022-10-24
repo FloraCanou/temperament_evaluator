@@ -1,39 +1,39 @@
-# © 2020-2022 Flora Canou | Version 0.21.2
+# © 2020-2022 Flora Canou | Version 0.22.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
 import numpy as np
 from sympy.matrices import Matrix, BlockMatrix
-from sympy import Rational, log, pprint, simplify
+from sympy import Rational, log, floor, Pow, pprint, simplify
 import te_common as te
 np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
 # specialized weight-skew matrices for symbolic calculations
-def get_weight_sym (subgroup, wtype = "tenney"):
+def get_weight_sym (subgroup, wtype = "tenney", wamount = 1):
+    wamount = Rational (wamount).limit_denominator (1e3)
     if wtype == "tenney":
         warnings.warn ("transcendental weight can be slow. Main optimizer recommended. ")
-        return Matrix (len (subgroup), len (subgroup),
-            lambda i, j: 1/log (subgroup[i], 2) if i == j else 0)
-    elif wtype == "frobenius":
-        return Matrix.eye (len (subgroup))
+        weight_vec = Matrix (subgroup).applyfunc (lambda si: 1/log (si, 2))
     elif wtype == "benedetti":
-        return Matrix (len (subgroup), len (subgroup),
-            lambda i, j: 1/Rational (subgroup[i]) if i == j else 0)
+        weight_vec = Matrix (subgroup).applyfunc (lambda si: 1/si)
+    elif wtype == "frobenius":
+        weight_vec = Matrix.ones (len (subgroup), 1)
     else:
         warnings.warn ("weighter type not supported, using default (\"tenney\")")
         return get_weight_sym (subgroup, wtype = "tenney")
+    return Matrix.diag (*weight_vec.applyfunc (lambda wi: Pow (wi, wamount)))
 
 def get_skew_sym (subgroup, skew):
     skew = Rational (skew).limit_denominator (1e3)
     return (Matrix.eye (len (subgroup)) - (skew**2/(len (subgroup)*skew**2 + 1))*Matrix.ones (len (subgroup), len (subgroup))).row_join (
         (skew/(len (subgroup)*skew**2 + 1))*Matrix.ones (len (subgroup), 1))
 
-def symbolic (map, subgroup = None, wtype = "frobenius", skew = 0,
+def symbolic (map, subgroup = None, wtype = "frobenius", wamount = 1, skew = 0,
         cons_monzo_list = None, des_monzo = None, show = True):
     map, subgroup = te.get_subgroup (np.array (map), subgroup, axis = te.ROW)
 
     jip = Matrix ([subgroup]).applyfunc (lambda si: log (si, 2))*te.SCALAR
-    weightskew = get_weight_sym (subgroup, wtype) @ get_skew_sym (subgroup, skew)
+    weightskew = get_weight_sym (subgroup, wtype, wamount) @ get_skew_sym (subgroup, skew)
     map_copy = Matrix (map)
     map_wx = map_copy @ weightskew
 

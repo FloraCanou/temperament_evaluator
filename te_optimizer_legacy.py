@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.21.3
+# © 2020-2022 Flora Canou | Version 0.22.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -33,28 +33,31 @@ def get_weight (subgroup, wtype = "tenney"):
 def get_skew (subgroup, skew = 0, order = 2):
     if skew == 0:
         return np.eye (len (subgroup))
+    elif skew == np.inf:
+        return np.eye (len (subgroup)) - np.ones ((len (subgroup), len (subgroup)))/len(subgroup)
     elif order == 2:
         r = skew/(len (subgroup)*skew**2 + 1)
-        return np.append (np.eye (len (subgroup)) - skew*r*np.ones ((len (subgroup), len (subgroup))),
+        return np.append (
+            np.eye (len (subgroup)) - skew*r*np.ones ((len (subgroup), len (subgroup))),
             r*np.ones ((len (subgroup), 1)), axis = 1)
     else:
         raise NotImplementedError ("Weil skew only works with Euclidean norm as of now.")
 
-def weightskewed (main, subgroup, wtype = "tenney", skew = 0, order = 2):
-    return main @ get_weight (subgroup, wtype) @ get_skew (subgroup, skew, order)
+def weightskewed (main, subgroup, wtype = "tenney", wamount = 1, skew = 0, order = 2):
+    return main @ get_weight (subgroup, wtype, wamount) @ get_skew (subgroup, skew, order)
 
 def error (gen, map, jip, order):
     return linalg.norm (gen @ map - jip, ord = order)
 
-def optimizer_main (map, subgroup = None, wtype = "tenney", skew = 0, order = 2,
+def optimizer_main (map, subgroup = None, wtype = "tenney", wamount = 1, skew = 0, order = 2,
         cons_monzo_list = None, des_monzo = None, show = True):
     map, subgroup = get_subgroup (np.array (map), subgroup)
 
     jip = np.log2 (subgroup)*SCALAR
-    map_wx = weightskewed (map, subgroup, wtype, skew, order)
-    jip_wx = weightskewed (jip, subgroup, wtype, skew, order)
+    map_wx = weightskewed (map, subgroup, wtype, wamount, skew, order)
+    jip_wx = weightskewed (jip, subgroup, wtype, wamount, skew, order)
     if order == 2 and cons_monzo_list is None: #te with no constraints, simply use lstsq for better performance
-        res = linalg.lstsq (map_w.T, jip_wx)
+        res = linalg.lstsq (map_wx.T, jip_wx)
         gen = res[0]
         print ("L2 tuning without constraints, solved using lstsq. ")
     else:

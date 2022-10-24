@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.21.3
+# © 2020-2022 Flora Canou | Version 0.22.0
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -16,8 +16,8 @@ class Temperament:
         self.jip = np.log2 (self.subgroup)*te.SCALAR
         self.map = te.normalize (np.rint (map).astype (np.int), axis = te.ROW) if normalize else map
 
-    def weightskewed (self, main, wtype = "tenney", skew = 0, order = 2):
-        return te.weightskewed (main, self.subgroup, wtype, skew, order)
+    def weightskewed (self, main, wtype = "tenney", wamount = 1, skew = 0, order = 2):
+        return te.weightskewed (main, self.subgroup, wtype, wamount, skew, order)
 
     # checks availability of the symbolic solver
     def __check_sym (self, order):
@@ -34,16 +34,16 @@ class Temperament:
         return True
 
     # interprets the enforce specification as a monzo
-    def __get_enforce_vec (self, enforce_index, wtype, skew, order, optimizer):
+    def __get_enforce_vec (self, enforce_index, wtype, wamount, skew, order, optimizer):
         if optimizer == "main":
             if enforce_index == 0:
-                weightskew = self.weightskewed (np.eye (len (self.subgroup)), wtype, skew, order)
+                weightskew = self.weightskewed (np.eye (len (self.subgroup)), wtype, wamount, skew, order)
                 return weightskew @ np.ones (weightskew.shape[1])
             else:
                 return np.array ([1 if i == enforce_index - 1 else 0 for i, _ in enumerate (self.subgroup)])
         elif optimizer == "sym":
             if enforce_index == 0:
-                weightskew = te_sym.get_weight_sym (self.subgroup, wtype) @ te_sym.get_skew_sym (self.subgroup, skew)
+                weightskew = te_sym.get_weight_sym (self.subgroup, wtype, wamount) @ te_sym.get_skew_sym (self.subgroup, skew)
                 return weightskew @ Matrix.ones (weightskew.shape[1], 1)
             else:
                 return Matrix ([1 if i == enforce_index - 1 else 0 for i, _ in enumerate (self.subgroup)])
@@ -59,7 +59,7 @@ class Temperament:
         else:
             return np.power (self.__mean (np.power (np.abs (main), order)), np.reciprocal (float (order)))
 
-    def tune (self, optimizer = "main", wtype = "tenney", skew = 0, order = 2,
+    def tune (self, optimizer = "main", wtype = "tenney", wamount = 1, skew = 0, order = 2,
             enforce = "", cons_monzo_list = None, des_monzo = None): #in cents
         # checks optimizer availability
         if optimizer == "sym" and not self.__check_sym (order):
@@ -76,10 +76,10 @@ class Temperament:
                 cons_monzo_list, des_monzo, cons_text, des_text = ([] for _ in range (4))
                 for entry in enforce_spec_list:
                     if entry[0] == "c":
-                        cons_monzo_list.append (self.__get_enforce_vec (int (entry[1:]), wtype, skew, order, optimizer))
+                        cons_monzo_list.append (self.__get_enforce_vec (int (entry[1:]), wtype, wamount, skew, order, optimizer))
                         cons_text.append ("Wj" if entry[1:] == "0" else f"{self.subgroup[int (entry[1:]) - 1]}")
                     else:
-                        des_monzo.append (self.__get_enforce_vec (int (entry[1:]), wtype, skew, order, optimizer))
+                        des_monzo.append (self.__get_enforce_vec (int (entry[1:]), wtype, wamount, skew, order, optimizer))
                         des_text.append ("Wj" if entry[1:] == "0" else f"{self.subgroup[int (entry[1:]) - 1]}")
                 if optimizer == "main":
                     cons_monzo_list = np.column_stack (cons_monzo_list) if cons_monzo_list else None
@@ -114,14 +114,16 @@ class Temperament:
         if optimizer == "main":
             import te_optimizer as te_opt
             gen, tuning_map, mistuning_map = te_opt.optimizer_main (self.map, subgroup = self.subgroup,
-                wtype = wtype, skew = skew, order = order, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
+                wtype = wtype, wamount = wamount, skew = skew, order = order,
+                cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
         elif optimizer == "sym":
             gen, tuning_map, mistuning_map = te_sym.symbolic (self.map, subgroup = self.subgroup,
-                wtype = wtype, skew = skew, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
+                wtype = wtype, wamount = wamount, skew = skew,
+                cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
 
         # error and bias
-        tuning_map_wx = self.weightskewed (tuning_map, wtype, skew, order)
-        mistuning_map_wx = self.weightskewed (mistuning_map, wtype, skew, order)
+        tuning_map_wx = self.weightskewed (tuning_map, wtype, wamount, skew, order)
+        mistuning_map_wx = self.weightskewed (mistuning_map, wtype, wamount, skew, order)
         error = self.__power_mean_norm (mistuning_map_wx, order)
         bias = np.mean (mistuning_map_wx)
         print (f"Tuning error: {error:.6f} (¢)",
@@ -133,9 +135,9 @@ class Temperament:
     analyze = tune
     analyse = tune
 
-    def wedgie (self, wtype = "tenney", skew = 0, show = True):
+    def wedgie (self, wtype = "tenney", wamount = 1, skew = 0, show = True):
         combination_list = itertools.combinations (range (self.map.shape[1]), self.map.shape[0])
-        wedgie = np.array ([linalg.det (self.weightskewed (self.map, wtype, skew)[:, entry]) for entry in combination_list])
+        wedgie = np.array ([linalg.det (self.weightskewed (self.map, wtype, wamount, skew)[:, entry]) for entry in combination_list])
         wedgie *= np.copysign (1, wedgie[0])
         if show:
             print (f"\nSubgroup: {'.'.join (map (str, self.subgroup))}",
@@ -143,10 +145,12 @@ class Temperament:
                 f"Wedgie: {wedgie}", sep = "\n")
         return wedgie
 
-    def complexity (self, ntype = "breed", wtype = "tenney", skew = 0):
+    def complexity (self, ntype = "breed", wtype = "tenney", wamount = 1, skew = 0):
         # standard L2 complexity
-        complexity = np.sqrt (linalg.det (self.weightskewed (self.map, wtype, skew) @ self.weightskewed (self.map, wtype, skew).T))
-        # complexity = linalg.norm (self.wedgie (wtype = wtype)) #same
+        complexity = np.sqrt (linalg.det (
+            self.weightskewed (self.map, wtype, wamount, skew)
+            @ self.weightskewed (self.map, wtype, wamount, skew).T))
+        # complexity = linalg.norm (self.wedgie (wtype, wamount, skew)) #same
         if ntype == "breed": #Graham Breed's RMS (default)
             complexity *= 1/np.sqrt (self.map.shape[1]**self.map.shape[0])
         elif ntype == "smith": #Gene Ward Smith's RMS
@@ -155,16 +159,16 @@ class Temperament:
             pass
         else:
             warnings.warn ("norm type not supported, using default (\"breed\")")
-            return self.complexity (ntype = "breed", wtype = wtype, skew = skew)
+            return self.complexity (ntype = "breed", wtype = wtype, wamount = wamount, skew = skew)
         return complexity
 
-    def error (self, ntype = "breed", wtype = "tenney", skew = 0): #in cents
+    def error (self, ntype = "breed", wtype = "tenney", wamount = 1, skew = 0): #in cents
         # standard L2 error
         error = linalg.norm (
-            self.weightskewed (self.jip, wtype, skew)
-            @ linalg.pinv (self.weightskewed (self.map, wtype, skew))
-            @ self.weightskewed (self.map, wtype, skew)
-            - self.weightskewed (self.jip, wtype, skew))
+            self.weightskewed (self.jip, wtype, wamount, skew)
+            @ linalg.pinv (self.weightskewed (self.map, wtype, wamount, skew))
+            @ self.weightskewed (self.map, wtype, wamount, skew)
+            - self.weightskewed (self.jip, wtype, wamount, skew))
         if ntype == "breed": #Graham Breed's RMS (default)
             error *= 1/np.sqrt (self.map.shape[1])
         elif ntype == "smith": #Gene Ward Smith's RMS
@@ -176,31 +180,31 @@ class Temperament:
             pass
         else:
             warnings.warn ("norm type not supported, using default (\"breed\")")
-            return self.error (ntype = "breed", wtype = wtype, skew = skew)
+            return self.error (ntype = "breed", wtype = wtype, wamount = wamount, skew = skew)
         return error
 
-    def badness (self, ntype = "breed", wtype = "tenney", skew = 0): #in octaves
-        return (self.error (ntype, wtype, skew)
-            * self.complexity (ntype, wtype, skew)
+    def badness (self, ntype = "breed", wtype = "tenney", wamount = 1, skew = 0): #in octaves
+        return (self.error (ntype, wtype, wamount, skew)
+            * self.complexity (ntype, wtype, wamount, skew)
             / te.SCALAR)
 
-    def badness_logflat (self, ntype = "breed", wtype = "tenney", skew = 0): #in octaves
+    def badness_logflat (self, ntype = "breed", wtype = "tenney", wamount = 1, skew = 0): #in octaves
         try:
-            return (self.error (ntype, wtype, skew)
-                * self.complexity (ntype, wtype, skew)**((self.map.shape[0])/(self.map.shape[1] - self.map.shape[0]) + 1)
+            return (self.error (ntype, wtype, wamount, skew)
+                * self.complexity (ntype, wtype, wamount, skew)**((self.map.shape[0])/(self.map.shape[1] - self.map.shape[0]) + 1)
                 / te.SCALAR)
         except ZeroDivisionError:
             return np.nan
 
-    def temperament_measures (self, ntype = "breed", wtype = "tenney", skew = 0, badness_scale = 1000):
+    def temperament_measures (self, ntype = "breed", wtype = "tenney", wamount = 1, skew = 0, badness_scale = 1000):
         print (f"\nSubgroup: {'.'.join (map (str, self.subgroup))}",
             f"Mapping: \n{self.map}",
             f"Norm: {ntype}. Weighter: {wtype}", sep = "\n")
 
-        error = self.error (ntype, wtype, skew)
-        complexity = self.complexity (ntype, wtype, skew)
-        badness = self.badness (ntype, wtype, skew) * badness_scale
-        badness_logflat = self.badness_logflat (ntype, wtype, skew) * badness_scale
+        error = self.error (ntype, wtype, wamount, skew)
+        complexity = self.complexity (ntype, wtype, wamount, skew)
+        badness = self.badness (ntype, wtype, wamount, skew) * badness_scale
+        badness_logflat = self.badness_logflat (ntype, wtype, wamount, skew) * badness_scale
         print (f"Complexity: {complexity:.6f}",
             f"Error: {error:.6f} (¢)",
             f"Badness (simple): {badness:.6f} ({badness_scale}oct)",
