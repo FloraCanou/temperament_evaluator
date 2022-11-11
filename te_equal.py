@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.22.0
+# © 2020-2022 Flora Canou | Version 0.22.1
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -29,9 +29,9 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error",
 
     print ("\nOptimal GPV sequence: ")
     gpv_infra = [0]*len (subgroup) #initialize with the all-zeroes val
-    while (gpv_infra := gpv_roll (gpv_infra, subgroup))[0] == 0: #skip zero-equave vals
+    while (gpv_infra := __gpv_roll (gpv_infra, subgroup, 1))[0] == 0: #skip zero-equave vals
         gpv = gpv_infra
-    while (gpv := gpv_roll (gpv, subgroup))[0] <= search_range:
+    while (gpv := __gpv_roll (gpv, subgroup, 1))[0] <= search_range:
         if (pv and not is_pv (gpv, subgroup) # non-patent val if pv is set
             or np.gcd.reduce (gpv) > 1 #enfactored
             or np.any ([gpv] @ monzo_list)): #not tempering out the commas
