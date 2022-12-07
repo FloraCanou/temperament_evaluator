@@ -20,7 +20,8 @@ Requires `te_common`.
 Use `optimizer_main` to optimize a temperament. Parameters: 
 - `map`: *first positional*, *required*. The map of the temperament. 
 - `subgroup`: *optional*. Specifies a custom subgroup for the map. Default is prime harmonics. 
-- `wtype`: *optional*. Specifies the weight. Has `"tenney"` (default), `"frobenius"`, and `"benedetti"`. 
+- `wtype`: *optional*. Specifies the weight. Has `"tenney"` (default), `"equilateral"`, and `"wilson"`/`"benedetti"`. 
+- `wamount`: *optional*. Scales the weight specified above. 
 - `skew`: *optional*. Specifies the skew. This is Mike Battaglia's *k*. Default is `0`, meaning no skew. For **Weil**, use `1`. 
 - `order`: *optional*. Specifies the order of the norm to be minimized. Default is `2`, meaning **Euclidean**. For **TOP tuning**, use `np.inf`. 
 - `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. 
@@ -41,7 +42,8 @@ Requires `te_common`.
 Use `symbolic` to solve for a Euclidean tuning of a temperament. Parameters: 
 - `map`: *first positional*, *required*. The map of the temperament. 
 - `subgroup`: *optional*. Specifies a custom subgroup for the map. Default is prime harmonics. 
-- `wtype`: *optional*. Specifies the weight. Has `"tenney"` (default), `"frobenius"`, and `"benedetti"`. 
+- `wtype`: *optional*. Specifies the weight. Has `"tenney"` (default), `"equilateral"`, and `"wilson"`/`"benedetti"`. 
+- `wamount`: *optional*. Scales the weight specified above. 
 - `skew`: *optional*. Specifies the skew. This is Mike Battaglia's *k*. Default is `0`, meaning no skew. For **Weil**, use `1`. 
 - `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. 
 
@@ -55,6 +57,7 @@ Use `Temperament` to construct a temperament object. Methods:
 - `tune`: calls `optimizer_main`/`symbolic` and shows the generator, tuning map, mistuning map, tuning error, and tuning bias. Parameters: 
 	- `optimizer`: *optional*. Specifies the optimizer. `"main"`: calls `optimizer_main`. `"sym"`: calls `symbolic`. Default is `"main"`. 
 	- `wtype`: *optional*, Specifies the weight. See above. 
+	- `wamount`: *optional*. Scales the weight. See above. 
 	- `skew`:  *optional*, Specifies the skew. See above. 
 	- `order`: *optional*, Specifies the order of the norm to be minimized. See above. 
 	- `enforce`: *optional*. A shortcut to specify constraints and destretch targets, so you don't need to enter monzos. Default is empty. To add an enforcement, use `c` or `d` followed by the subgroup index. For example, if the subgroup is the prime harmonics: 
@@ -67,6 +70,7 @@ Use `Temperament` to construct a temperament object. Methods:
 - `temperament_measures`: shows the complexity, error, and badness (simple and logflat). Parameters: 
 	- `ntype`: *optional*. Specifies the averaging method. Has `"breed"` (default), `"smith"` and `"l2"`. 
 	- `wtype`: *optional*. Specifies the weight. See above. 
+	- `wamount`: *optional*. Scales the weight. See above. 
 	- `skew`: *optional*. Specifies the skew. See above. 
 	- `badness_scale`: *optional*. Scales the badness, literally. Default is `1000`. 
 - `wedgie`: returns and shows the wedgie of the temperament. 
@@ -92,6 +96,7 @@ Use `et_sequence` to iterate through all GPVs. Parameters:
 - `cond`: *optional*. Either `"error"` or `"badness"`. Default is `"error"`. 
 - `ntype`: *optional*. Specifies the averaging method. See above. 
 - `wtype`: *optional*. Specifies the weight. See above. 
+- `wamount`: *optional*. Scales the weight. See above. 
 - `skew`: *optional*. Specifies the skew. See above. 
 - `pv`: *optional*. If `True`, only patent vals will be considered. Default is `False`. 
 - `prog`: *optional*. If `True`, threshold will be updated. Default is `True`. 
