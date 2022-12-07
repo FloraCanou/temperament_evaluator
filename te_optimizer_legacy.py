@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.22.0
+# © 2020-2022 Flora Canou | Version 0.22.1
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -19,16 +19,20 @@ def get_subgroup (main, subgroup):
         subgroup = subgroup[:dim]
     return main, subgroup
 
-def get_weight (subgroup, wtype = "tenney"):
+def get_weight (subgroup, wtype = "tenney", wamount = 1):
     if wtype == "tenney":
-        return np.diag (1/np.log2 (subgroup))
+        weight_vec = np.reciprocal (np.log2 (np.array (subgroup, dtype = float)))
+    elif wtype == "wilson" or wtype == "benedetti":
+        weight_vec = np.reciprocal (np.array (subgroup, dtype = float))
+    elif wtype == "equilateral":
+        weight_vec = np.ones (len (subgroup))
     elif wtype == "frobenius":
-        return np.eye (len (subgroup))
-    elif wtype == "benedetti":
-        return np.diag (1/np.array (subgroup))
+        warnings.warn ("\"frobenius\" is deprecated. Use \"equilateral\" instead. ")
+        weight_vec = np.ones (len (subgroup))
     else:
         warnings.warn ("weighter type not supported, using default (\"tenney\")")
-        return get_weight (subgroup, wtype = "tenney")
+        return get_weight (subgroup, wtype = "tenney", wamount = wamount)
+    return np.diag (weight_vec**wamount)
 
 def get_skew (subgroup, skew = 0, order = 2):
     if skew == 0:

@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.22.0
+# © 2020-2022 Flora Canou | Version 0.22.1
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -14,9 +14,12 @@ def get_weight_sym (subgroup, wtype = "tenney", wamount = 1):
     if wtype == "tenney":
         warnings.warn ("transcendental weight can be slow. Main optimizer recommended. ")
         weight_vec = Matrix (subgroup).applyfunc (lambda si: 1/log (si, 2))
-    elif wtype == "benedetti":
+    elif wtype == "wilson" or wtype == "benedetti":
         weight_vec = Matrix (subgroup).applyfunc (lambda si: 1/si)
+    elif wtype == "equilateral":
+        weight_vec = Matrix.ones (len (subgroup), 1)
     elif wtype == "frobenius":
+        warnings.warn ("\"frobenius\" is deprecated. Use \"equilateral\" instead. ")
         weight_vec = Matrix.ones (len (subgroup), 1)
     else:
         warnings.warn ("weighter type not supported, using default (\"tenney\")")
@@ -28,7 +31,7 @@ def get_skew_sym (subgroup, skew):
     return (Matrix.eye (len (subgroup)) - (skew**2/(len (subgroup)*skew**2 + 1))*Matrix.ones (len (subgroup), len (subgroup))).row_join (
         (skew/(len (subgroup)*skew**2 + 1))*Matrix.ones (len (subgroup), 1))
 
-def symbolic (map, subgroup = None, wtype = "frobenius", wamount = 1, skew = 0,
+def symbolic (map, subgroup = None, wtype = "equilateral", wamount = 1, skew = 0,
         cons_monzo_list = None, des_monzo = None, show = True):
     map, subgroup = te.get_subgroup (np.array (map), subgroup, axis = te.ROW)
 

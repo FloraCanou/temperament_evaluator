@@ -11,7 +11,9 @@ import te_lattice as te_la
 # methods:
 #   tune: gives the tuning
 #     parameters:
-#       wtype: specifies the weighter. "tenney", "frobenius", "inverse tenney", "benedetti" and "weil"
+#       wtype: specifies the weight. "tenney", "equilateral" and "wilson"/"benedetti"
+#       wamount: scales the weight specified above
+#       skew: specifies the skew
 #       order: specifies the order of the norm to be minimized
 #       enforce: specifies constraints and destretch targets. try "c", "d", "c1c2", "c0" and see readme for more examples
 #       cons_monzo_list: constrains this list of monzos to pure
@@ -19,14 +21,16 @@ import te_lattice as te_la
 #   temperament_measures: gives the temperament measures
 #     parameters:
 #       ntype: specifies the averaging method. "breed", "smith", or "l2"
-#       wtype: specifies the weighter. "tenney", "frobenius", "inverse tenney", and "benedetti"
+#       wtype: specifies the weighter. "tenney", "equilateral" and "wilson"/"benedetti"
+#       wamount: scales the weight specified above
+#       skew: specifies the skew
 #       badness_scale: scales the badnesses, literally
 #   comma_basis: gives the comma basis
 
 A = te_tm.Temperament ([[1, 0, 2, -1], [0, 5, 1, 12]])
 A.tune (skew = 1, enforce = "c") # septimal magic in ctwe tuning
 A.temperament_measures (ntype = "smith")
-A.wedgie (wtype = "frobenius")
+A.wedgie (wtype = "equilateral")
 A.comma_basis ()
 
 # et_construct
@@ -41,7 +45,9 @@ A.temperament_measures (badness_scale = 100) # 17edo in 17c val
 # parameters:
 #   subgroup: specifies a custom ji subgroup
 #   ntype: specifies the averaging method. "breed", "smith", or "l2"
-#   wtype: specifies the weighter. "tenney", "frobenius", "inverse tenney", and "benedetti"
+#   wtype: specifies the weighter. "tenney", "equilateral" and "wilson"/"benedetti"
+#   wamount: scales the weight specified above
+#   skew: specifies the skew
 #   cond: "error" or "badness"
 #   threshold: temperaments failing this will not be shown
 #   prog: if true, threshold will be updated
@@ -52,5 +58,5 @@ A = te_tm.Temperament ([[1, 0, -4, -13], [0, 1, 4, 10]])
 te_et.et_sequence (A.comma_basis (show = False), cond = "error", search_range = 300) # septimal meantone
 
 # find_spectrum
-A = te_la.TemperamentLattice ([[1, 2, 0, 0, 1, 2], [0, 6, 0, -7, -2, 9], [0, 0, 1, 1, 1, 1]])
-A.find_spectrum (te_la.odd_limit_monzo_list_gen (15))
+A = te_la.TemperamentLattice ([[1, 2, 0, 0, 1, 2], [0, 6, 0, -7, -2, 9], [0, 0, 1, 1, 1, 1]]) # history
+A.find_spectrum (te_la.odd_limit_monzo_list_gen (15), wtype = "equilateral")

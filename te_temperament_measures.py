@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.22.0
+# © 2020-2022 Flora Canou | Version 0.22.1
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -77,10 +77,10 @@ class Temperament:
                 for entry in enforce_spec_list:
                     if entry[0] == "c":
                         cons_monzo_list.append (self.__get_enforce_vec (int (entry[1:]), wtype, wamount, skew, order, optimizer))
-                        cons_text.append ("Wj" if entry[1:] == "0" else f"{self.subgroup[int (entry[1:]) - 1]}")
+                        cons_text.append ("WXj" if entry[1:] == "0" else f"{self.subgroup[int (entry[1:]) - 1]}")
                     else:
                         des_monzo.append (self.__get_enforce_vec (int (entry[1:]), wtype, wamount, skew, order, optimizer))
-                        des_text.append ("Wj" if entry[1:] == "0" else f"{self.subgroup[int (entry[1:]) - 1]}")
+                        des_text.append ("WXj" if entry[1:] == "0" else f"{self.subgroup[int (entry[1:]) - 1]}")
                 if optimizer == "main":
                     cons_monzo_list = np.column_stack (cons_monzo_list) if cons_monzo_list else None
                     des_monzo = np.column_stack (des_monzo) if des_monzo else None
@@ -96,7 +96,7 @@ class Temperament:
             enforce_text = "custom"
 
         # header
-        order_dict = {1: "-chebyshevian", 2: "-euclidean", np.inf: "-minkowskian"}
+        order_dict = {1: "-chebyshevian", 2: "-euclidean", np.inf: "-manhattan"}
         try:
             order_text = order_dict[order]
         except KeyError:
@@ -126,6 +126,7 @@ class Temperament:
         mistuning_map_wx = self.weightskewed (mistuning_map, wtype, wamount, skew, order)
         error = self.__power_mean_norm (mistuning_map_wx, order)
         bias = np.mean (mistuning_map_wx)
+        # print (mistuning_map_wx) #debug
         print (f"Tuning error: {error:.6f} (¢)",
             f"Tuning bias: {bias:.6f} (¢)", sep = "\n")
         return gen, tuning_map, mistuning_map

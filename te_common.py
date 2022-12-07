@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.22.0
+# © 2020-2022 Flora Canou | Version 0.22.1
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -9,8 +9,8 @@ from sympy import gcd
 ROW, COL, VEC = 0, 1, 2
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
 SCALAR = 1200 #could be in octave, but for precision reason
-RATIONAL_WEIGHT_LIST = ["frobenius"]
-ALGEBRAIC_WEIGHT_LIST = RATIONAL_WEIGHT_LIST + ["benedetti"]
+RATIONAL_WEIGHT_LIST = ["equilateral", "frobenius"]
+ALGEBRAIC_WEIGHT_LIST = RATIONAL_WEIGHT_LIST + ["wilson", "benedetti"]
 
 def as_list (a):
     return a if isinstance (a, list) else [a]
@@ -52,9 +52,12 @@ def get_subgroup (main, subgroup, axis):
 def get_weight (subgroup, wtype = "tenney", wamount = 1):
     if wtype == "tenney":
         weight_vec = np.reciprocal (np.log2 (np.array (subgroup, dtype = float)))
-    elif wtype == "benedetti":
+    elif wtype == "wilson" or wtype == "benedetti":
         weight_vec = np.reciprocal (np.array (subgroup, dtype = float))
+    elif wtype == "equilateral":
+        weight_vec = np.ones (len (subgroup))
     elif wtype == "frobenius":
+        warnings.warn ("\"frobenius\" is deprecated. Use \"equilateral\" instead. ")
         weight_vec = np.ones (len (subgroup))
     else:
         warnings.warn ("weighter type not supported, using default (\"tenney\")")
