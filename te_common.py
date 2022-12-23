@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.22.1
+# © 2020-2022 Flora Canou | Version 0.22.2
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -67,15 +67,18 @@ def get_weight (subgroup, wtype = "tenney", wamount = 1):
 def get_skew (subgroup, skew = 0, order = 2):
     if skew == 0:
         return np.eye (len (subgroup))
-    elif skew == np.inf:
-        return np.eye (len (subgroup)) - np.ones ((len (subgroup), len (subgroup)))/len(subgroup)
     elif order == 2:
-        r = skew/(len (subgroup)*skew**2 + 1)
-        return np.append (
-            np.eye (len (subgroup)) - skew*r*np.ones ((len (subgroup), len (subgroup))),
-            r*np.ones ((len (subgroup), 1)), axis = 1)
+        if not skew == np.inf:
+            r = skew/(len (subgroup)*skew**2 + 1)
+            kr = skew*r
+        else:
+            r = 0
+            kr = 1/len (subgroup)
     else:
-        raise NotImplementedError ("Weil skew only works with Euclidean norm as of now.")
+        raise NotImplementedError ("Skew only works with Euclidean norm as of now.")
+    return np.append (
+        np.eye (len (subgroup)) - kr*np.ones ((len (subgroup), len (subgroup))),
+        r*np.ones ((len (subgroup), 1)), axis = 1)
 
 def weightskewed (main, subgroup, wtype = "tenney", wamount = 1, skew = 0, order = 2):
     return main @ get_weight (subgroup, wtype, wamount) @ get_skew (subgroup, skew, order)
@@ -113,7 +116,7 @@ def ratio2monzo (ratio, subgroup = None):
     else:
         raise ValueError ("improper subgroup. ")
 
-    return np.trim_zeros (monzo, trim = "b") if trim else np.array (monzo)
+    return np.array (np.trim_zeros (monzo, trim = "b") if trim else monzo)
 
 # takes a list (python list) of monzos (sympy matrices) and show them in a readable manner
 # used for comma basis and eigenmonzo basis

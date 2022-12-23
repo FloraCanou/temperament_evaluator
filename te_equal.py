@@ -1,7 +1,7 @@
-# © 2020-2022 Flora Canou | Version 0.22.1
+# © 2020-2022 Flora Canou | Version 0.22.2
 # This work is licensed under the GNU General Public License version 3.
 
-import re, warnings
+import re
 import numpy as np
 import te_common as te
 import te_temperament_measures as te_tm
