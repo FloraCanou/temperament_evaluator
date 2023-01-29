@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.22.1
+# © 2020-2022 Flora Canou | Version 0.22.2
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -14,7 +14,7 @@ class Temperament:
         map, subgroup = te.get_subgroup (np.array (map), subgroup, axis = te.ROW)
         self.subgroup = subgroup
         self.jip = np.log2 (self.subgroup)*te.SCALAR
-        self.map = te.normalize (np.rint (map).astype (np.int), axis = te.ROW) if normalize else map
+        self.map = te.normalize (np.rint (map).astype (int), axis = te.ROW) if normalize else map
 
     def weightskewed (self, main, wtype = "tenney", wamount = 1, skew = 0, order = 2):
         return te.weightskewed (main, self.subgroup, wtype, wamount, skew, order)
