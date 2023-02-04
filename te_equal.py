@@ -1,8 +1,9 @@
-# © 2020-2022 Flora Canou | Version 0.22.2
+# © 2020-2023 Flora Canou | Version 0.23.0
 # This work is licensed under the GNU General Public License version 3.
 
 import re
 import numpy as np
+from sympy import Matrix
 import te_common as te
 import te_temperament_measures as te_tm
 
@@ -10,9 +11,16 @@ WARTS_LIST = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "
 
 # Temperament construction function from ets
 def et_construct (et_list, subgroup, alt_val = 0):
-    map = (np.array ([warts2val (n, subgroup) for n in te.as_list (et_list)])
+    val_list = (np.array ([warts2val (n, subgroup) for n in te.as_list (et_list)])
         + np.resize (alt_val, (len (te.as_list (et_list)), len (subgroup))))
-    return te_tm.Temperament (map, subgroup)
+    return te_tm.Temperament (val_list, subgroup)
+
+# Temperament construction function from commas
+def comma_construct (comma_list, subgroup = None):
+    comma_list, subgroup = te.get_subgroup (comma_list, subgroup, axis = te.COL)
+    val_list_frac = Matrix (np.flip (comma_list.T)).nullspace ()
+    val_list = np.flip (np.row_stack ([te.matrix2array (entry) for entry in val_list_frac]))
+    return te_tm.Temperament (val_list, subgroup)
 
 # Finds et sequence from comma list. Can be used to find optimal patent vals
 # Comma list should be entered as column vectors
@@ -37,7 +45,7 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error",
             or np.any ([gpv] @ monzo_list)): #not tempering out the commas
                 continue
 
-        et = te_tm.Temperament ([gpv], subgroup)
+        et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
         if cond == "error":
             current = et.error (ntype, wtype, wamount, skew)
         elif cond == "badness":
@@ -47,10 +55,14 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error",
         if current <= threshold:
             if prog:
                 threshold = current
-            gpv_str = "<" + " ".join (map (str, np.trim_zeros (gpv, trim = "b"))) + "]"
-            print (f"{gpv_str} ({val2warts (gpv, subgroup = subgroup)})")
+            gpv_str = te.bra (gpv)
+            print (f"{gpv_str} ({val2warts (gpv, subgroup)})")
 
-et_sequence_error = et_sequence
+### Deprecated name
+def et_sequence_error (*args, **kwargs):
+    import warnings
+    warnings.warn ("\"et_sequence_error\" is deprecated. Use \"et_sequence\" instead. ", FutureWarning)
+    return et_sequence (*args, **kwargs)
 
 # Checks if a val is a GPV
 def is_gpv (val, subgroup = None):

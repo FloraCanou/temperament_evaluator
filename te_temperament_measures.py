@@ -1,4 +1,4 @@
-# © 2020-2022 Flora Canou | Version 0.22.2
+# © 2020-2023 Flora Canou | Version 0.23.0
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -10,11 +10,11 @@ import te_common as te
 np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
 class Temperament:
-    def __init__ (self, map, subgroup = None, normalize = True):
-        map, subgroup = te.get_subgroup (np.array (map), subgroup, axis = te.ROW)
+    def __init__ (self, val_list, subgroup = None, saturate = True, normalize = True):
+        val_list, subgroup = te.get_subgroup (val_list, subgroup, axis = te.ROW)
         self.subgroup = subgroup
         self.jip = np.log2 (self.subgroup)*te.SCALAR
-        self.map = te.normalize (np.rint (map).astype (int), axis = te.ROW) if normalize else map
+        self.map = te.canonicalize (np.rint (val_list).astype (int), saturate, normalize)
 
     def weightskewed (self, main, wtype = "tenney", wamount = 1, skew = 0, order = 2):
         return te.weightskewed (main, self.subgroup, wtype, wamount, skew, order)
@@ -213,7 +213,7 @@ class Temperament:
 
     def comma_basis (self, show = True):
         comma_basis_frac = Matrix (self.map).nullspace ()
-        comma_basis = np.transpose ([np.squeeze (entry/gcd (tuple (entry))) for entry in comma_basis_frac])
+        comma_basis = np.column_stack ([te.matrix2array (entry) for entry in comma_basis_frac])
         if show:
             print (f"\nSubgroup: {'.'.join (map (str, self.subgroup))}",
                 f"Mapping: \n{self.map}",

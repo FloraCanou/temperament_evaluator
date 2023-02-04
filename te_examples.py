@@ -1,4 +1,5 @@
 import numpy as np
+import te_common as te
 import te_temperament_measures as te_tm
 import te_equal as te_et
 import te_lattice as te_la
@@ -27,9 +28,9 @@ import te_lattice as te_la
 #       badness_scale: scales the badnesses, literally
 #   comma_basis: gives the comma basis
 
-A = te_tm.Temperament ([[1, 0, 2, -1], [0, 5, 1, 12]])
-A.tune (skew = 1, enforce = "c") # septimal magic in ctwe tuning
-A.temperament_measures (ntype = "smith")
+A = te_tm.Temperament ([[1, 0, 2, -1], [0, 5, 1, 12]]) # septimal magic
+A.tune (skew = 1, enforce = "c") # ctwe tuning
+A.temperament_measures (ntype = "smith", badness_scale = 1)
 A.wedgie (wtype = "equilateral")
 A.comma_basis ()
 
@@ -38,8 +39,18 @@ A.comma_basis ()
 #   subgroup: specifies a custom ji subgroup
 #   alt_val: alters the val by this matrix
 
-A = te_et.et_construct (["17c"], [2, 3, 5, 7, 11, 13])
-A.temperament_measures (badness_scale = 100) # 17edo in 17c val
+A = te_et.et_construct (["14c", "17c"], [2, 3, 5, 7]) # squares
+A.temperament_measures (ntype = "smith", badness_scale = 1)
+
+# comma_construct
+# parameters:
+#   subgroup: specifies a custom ji subgroup
+
+A = te_et.comma_construct (np.column_stack ([
+    te.ratio2monzo ([126, 125]), 
+    te.ratio2monzo ([245, 243])
+    ])) # septimal sensi
+A.temperament_measures (ntype = "smith", badness_scale = 1)
 
 # et_sequence
 # parameters:
@@ -54,8 +65,8 @@ A.temperament_measures (badness_scale = 100) # 17edo in 17c val
 #   pv: if true, only patent vals will be considered
 #   search_range: specifies the upper bound where to stop searching
 
-A = te_tm.Temperament ([[1, 0, -4, -13], [0, 1, 4, 10]])
-te_et.et_sequence (A.comma_basis (show = False), cond = "error", search_range = 300) # septimal meantone
+A = te_tm.Temperament ([[1, 0, -4, -13], [0, 1, 4, 10]]) # septimal meantone
+te_et.et_sequence (A.comma_basis (show = False), cond = "error", search_range = 300)
 
 # find_spectrum
 A = te_la.TemperamentLattice ([[1, 2, 0, 0, 1, 2], [0, 6, 0, -7, -2, 9], [0, 0, 1, 1, 1, 1]]) # history
