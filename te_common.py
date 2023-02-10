@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.23.0
+# © 2020-2023 Flora Canou | Version 0.23.1
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -23,7 +23,7 @@ def __hnf (main):
 # saturates the matrix, pernet--stein method
 def __sat (main):
     r = Matrix (main).rank ()
-    return (linalg.inv (__hnf (main.T)[:r].T) @ main).astype (int)
+    return np.rint (linalg.inv (__hnf (main.T)[:r].T) @ main).astype (int)
 
 # saturation & normalization
 # normalization only checks multirank matrices
