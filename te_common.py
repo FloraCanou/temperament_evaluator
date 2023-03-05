@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.23.1
+# © 2020-2023 Flora Canou | Version 0.24.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -8,22 +8,27 @@ from sympy.matrices import Matrix, normalforms
 from sympy import gcd
 
 ROW, COL, VEC = 0, 1, 2
-PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
+PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89]
 SCALAR = 1200 #could be in octave, but for precision reason
-RATIONAL_WEIGHT_LIST = ["equilateral", "frobenius"]
+RATIONAL_WEIGHT_LIST = ["equilateral"]
 ALGEBRAIC_WEIGHT_LIST = RATIONAL_WEIGHT_LIST + ["wilson", "benedetti"]
 
 def as_list (a):
     return a if isinstance (a, list) else [a]
 
 # normalizes the matrix to HNF
-def __hnf (main):
-    return np.flip (np.array (normalforms.hermite_normal_form (Matrix (np.flip (main)).T).T, dtype = int))
+def __hnf (main, mode = ROW):
+    if mode == ROW:
+        return np.flip (np.array (normalforms.hermite_normal_form (Matrix (np.flip (main)).T).T, dtype = int))
+    elif mode == COL:
+        return np.flip (np.array (normalforms.hermite_normal_form (Matrix (np.flip (main))), dtype = int))
 
 # saturates the matrix, pernet--stein method
 def __sat (main):
     r = Matrix (main).rank ()
-    return np.rint (linalg.inv (__hnf (main.T)[:r].T) @ main).astype (int)
+    return np.rint (
+        linalg.inv (__hnf (main, mode = COL)[:, :r]) @ main
+        ).astype (int)
 
 # saturation & normalization
 # normalization only checks multirank matrices
@@ -70,9 +75,6 @@ def get_weight (subgroup, wtype = "tenney", wamount = 1):
         weight_vec = np.reciprocal (np.array (subgroup, dtype = float))
     elif wtype == "equilateral":
         weight_vec = np.ones (len (subgroup))
-    elif wtype == "frobenius":
-        warnings.warn ("\"frobenius\" is deprecated. Use \"equilateral\" instead. ", FutureWarning)
-        weight_vec = np.ones (len (subgroup))
     else:
         warnings.warn ("weighter type not supported, using default (\"tenney\")")
         return get_weight (subgroup, wtype = "tenney", wamount = wamount)
@@ -111,7 +113,8 @@ def monzo2ratio (monzo, subgroup = None):
 
 # takes a ratio in [num, den] form, returns the monzo
 def ratio2monzo (ratio, subgroup = None):
-    if not all (isinstance (entry, (int, np.integer)) for entry in ratio) or any (entry < 1 for entry in ratio):
+    if (not all (isinstance (entry, (int, np.integer)) for entry in ratio)
+        or any (entry < 1 for entry in ratio)):
         raise ValueError ("numerator and denominator should be positive integers. ")
     if trim := (subgroup is None):
         subgroup = PRIME_LIST

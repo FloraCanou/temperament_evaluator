@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.23.0
+# © 2020-2023 Flora Canou | Version 0.24.0
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -16,6 +16,13 @@ class Temperament:
         self.jip = np.log2 (self.subgroup)*te.SCALAR
         self.map = te.canonicalize (np.rint (val_list).astype (int), saturate, normalize)
 
+    class __Norm: 
+        def __init__ (self, wtype = "tenney", wamount = 1, skew = 0, order = 2):
+            self.wtype = wtype
+            self.wamount = wamount
+            self.skew = skew
+            self.order = order
+
     def weightskewed (self, main, wtype = "tenney", wamount = 1, skew = 0, order = 2):
         return te.weightskewed (main, self.subgroup, wtype, wamount, skew, order)
 
@@ -23,8 +30,8 @@ class Temperament:
     def __check_sym (self, order):
         if order == 2:
             try:
-                import te_symbolic as te_sym
                 global te_sym
+                import te_symbolic as te_sym
             except ImportError:
                 warnings.warn ("Module te_symbolic.py not found. Using main optimizer. ")
                 return False
@@ -59,12 +66,40 @@ class Temperament:
         else:
             return np.power (self.__mean (np.power (np.abs (main), order)), np.reciprocal (float (order)))
 
+    def __show_header (self, norm = None, enforce_text = None, ntype = None):
+        print (f"\nSubgroup: {'.'.join (map (str, self.subgroup))}",
+            f"Mapping: \n{self.map}", sep = "\n")
+
+        if norm: 
+            weight_text = norm.wtype
+            if norm.wamount != 1:
+                weight_text += f"[{norm.wamount}]"
+
+            skew_text = ""
+            if norm.skew != 0:
+                skew_text += "-weil"
+                if norm.skew != 1:
+                    skew_text += f"[{norm.skew}]"
+
+            order_dict = {1: "-chebyshevian", 2: "-euclidean", np.inf: "-manhattan"}
+            try:
+                order_text = order_dict[norm.order]
+            except KeyError:
+                order_text = f"-L{norm.order}"
+
+            print (f"Norm: {weight_text}{skew_text}{order_text}")
+        if enforce_text:
+            print (f"Enforcement: {enforce_text}")
+        if ntype:
+            print (f"Normalizer: {ntype}")
+        return
+
     def tune (self, optimizer = "main", wtype = "tenney", wamount = 1, skew = 0, order = 2,
             enforce = "", cons_monzo_list = None, des_monzo = None): #in cents
         # checks optimizer availability
         if optimizer == "sym" and not self.__check_sym (order):
-            return self.tune (optimizer = "main", wtype = wtype, order = order,
-                enforce = enforce, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo, skew = skew)
+            return self.tune (optimizer = "main", wtype = wtype, wamount = wamount, skew = skew, order = order,
+                enforce = enforce, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
 
         # gets the enforcements
         if enforce == "c": #default to octave-constrained
@@ -95,20 +130,8 @@ class Temperament:
         else:
             enforce_text = "custom"
 
-        # header
-        order_dict = {1: "-chebyshevian", 2: "-euclidean", np.inf: "-manhattan"}
-        try:
-            order_text = order_dict[order]
-        except KeyError:
-            order_text = f"-L{order}"
-        skew_dict = {0: "", 1: "-weil"}
-        try:
-            skew_text = skew_dict[skew]
-        except KeyError:
-            skew_text = f"-{skew}"
-        print (f"\nSubgroup: {'.'.join (map (str, self.subgroup))}",
-            f"Mapping: \n{self.map}",
-            f"Norm: {wtype}{skew_text}{order_text}. Enforcement: {enforce_text}", sep = "\n")
+        # shows the header
+        self.__show_header (norm = self.__Norm (wtype, wamount, skew, order), enforce_text = enforce_text)
 
         # optimization
         if optimizer == "main":
@@ -141,9 +164,8 @@ class Temperament:
         wedgie = np.array ([linalg.det (self.weightskewed (self.map, wtype, wamount, skew)[:, entry]) for entry in combination_list])
         wedgie *= np.copysign (1, wedgie[0])
         if show:
-            print (f"\nSubgroup: {'.'.join (map (str, self.subgroup))}",
-                f"Mapping: \n{self.map}",
-                f"Wedgie: {wedgie}", sep = "\n")
+            self.__show_header ()
+            print (f"Wedgie: {wedgie}", sep = "\n")
         return wedgie
 
     def complexity (self, ntype = "breed", wtype = "tenney", wamount = 1, skew = 0):
@@ -159,7 +181,7 @@ class Temperament:
         elif ntype == "l2":
             pass
         else:
-            warnings.warn ("norm type not supported, using default (\"breed\")")
+            warnings.warn ("average type not supported, using default (\"breed\")")
             return self.complexity (ntype = "breed", wtype = wtype, wamount = wamount, skew = skew)
         return complexity
 
@@ -180,7 +202,7 @@ class Temperament:
         elif ntype == "l2":
             pass
         else:
-            warnings.warn ("norm type not supported, using default (\"breed\")")
+            warnings.warn ("average type not supported, using default (\"breed\")")
             return self.error (ntype = "breed", wtype = wtype, wamount = wamount, skew = skew)
         return error
 
@@ -198,10 +220,10 @@ class Temperament:
             return np.nan
 
     def temperament_measures (self, ntype = "breed", wtype = "tenney", wamount = 1, skew = 0, badness_scale = 1000):
-        print (f"\nSubgroup: {'.'.join (map (str, self.subgroup))}",
-            f"Mapping: \n{self.map}",
-            f"Norm: {ntype}. Weighter: {wtype}", sep = "\n")
+        # shows the header
+        self.__show_header (norm = self.__Norm (wtype, wamount, skew, 2), ntype = ntype)
 
+        # shows the temperament measures
         error = self.error (ntype, wtype, wamount, skew)
         complexity = self.complexity (ntype, wtype, wamount, skew)
         badness = self.badness (ntype, wtype, wamount, skew) * badness_scale
@@ -215,8 +237,7 @@ class Temperament:
         comma_basis_frac = Matrix (self.map).nullspace ()
         comma_basis = np.column_stack ([te.matrix2array (entry) for entry in comma_basis_frac])
         if show:
-            print (f"\nSubgroup: {'.'.join (map (str, self.subgroup))}",
-                f"Mapping: \n{self.map}",
-                "Comma basis: ", sep = "\n")
+            self.__show_header ()
+            print ("Comma basis: ")
             te.show_monzo_list (comma_basis_frac, self.subgroup)
         return comma_basis

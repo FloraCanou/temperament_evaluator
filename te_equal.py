@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.23.0
+# © 2020-2023 Flora Canou | Version 0.24.0
 # This work is licensed under the GNU General Public License version 3.
 
 import re
@@ -7,7 +7,7 @@ from sympy import Matrix
 import te_common as te
 import te_temperament_measures as te_tm
 
-WARTS_LIST = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r"]
+WARTS_LIST = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x"]
 
 # Temperament construction function from ets
 def et_construct (et_list, subgroup, alt_val = 0):
@@ -37,9 +37,15 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error",
 
     print ("\nOptimal GPV sequence: ")
     gpv_infra = [0]*len (subgroup) #initialize with the all-zeroes val
+    search_flag = 1
     while (gpv_infra := __gpv_roll (gpv_infra, subgroup, 1))[0] == 0: #skip zero-equave vals
         gpv = gpv_infra
     while (gpv := __gpv_roll (gpv, subgroup, 1))[0] <= search_range:
+        # notification at multiples of 1200
+        if gpv[0] % te.SCALAR == 0 and gpv[0] / te.SCALAR == search_flag: 
+            print (f"Currently searching: {gpv[0]}")
+            search_flag += 1
+        # condition of further analysis
         if (pv and not is_pv (gpv, subgroup) # non-patent val if pv is set
             or np.gcd.reduce (gpv) > 1 #enfactored
             or np.any ([gpv] @ monzo_list)): #not tempering out the commas
@@ -55,14 +61,8 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error",
         if current <= threshold:
             if prog:
                 threshold = current
-            gpv_str = te.bra (gpv)
-            print (f"{gpv_str} ({val2warts (gpv, subgroup)})")
-
-### Deprecated name
-def et_sequence_error (*args, **kwargs):
-    import warnings
-    warnings.warn ("\"et_sequence_error\" is deprecated. Use \"et_sequence\" instead. ", FutureWarning)
-    return et_sequence (*args, **kwargs)
+            print (f"{te.bra (gpv)} ({val2warts (gpv, subgroup)})")
+    print ("Search complete. ")
 
 # Checks if a val is a GPV
 def is_gpv (val, subgroup = None):
