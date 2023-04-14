@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.24.0
+# © 2020-2023 Flora Canou | Version 0.24.1
 # This work is licensed under the GNU General Public License version 3.
 
 import re
@@ -67,8 +67,8 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error",
 # Checks if a val is a GPV
 def is_gpv (val, subgroup = None):
     val, subgroup = te.get_subgroup (val, subgroup, axis = te.VEC)
-    lower_bounds = (np.array (val) - 0.5) / np.log2 (subgroup)
-    upper_bounds = (np.array (val) + 0.5) / np.log2 (subgroup)
+    lower_bounds = (np.asarray (val) - 0.5) / np.log2 (subgroup)
+    upper_bounds = (np.asarray (val) + 0.5) / np.log2 (subgroup)
     return max (lower_bounds) < min (upper_bounds)
 
 # Checks if a val is a patent val
@@ -130,12 +130,15 @@ def val2warts (val, subgroup = None):
 # Presence of the same letter in the prefix and postfix is considered invalid
 # Equave is the octave regardless of the subgroup unless specified explicitly
 def warts2val (warts, subgroup):
-    match = re.match ("(^[a-r]?)(\d+)([a-r]*)", str (warts))
+    match = re.match ("(^[a-x]?)(\d+)([a-x]*)", str (warts))
     if not match or (match.group (1) and re.match (match.group (1), match.group (3))):
         raise ValueError ("Invalid wart notation. ")
 
     wart_equave = te.PRIME_LIST[WARTS_LIST.index (match.group (1))] if match.group (1) else 2
-    warts_number_list = np.array ([len (re.findall (WARTS_LIST[te.PRIME_LIST.index (entry)], match.group (3))) for entry in subgroup])
+    warts_number_list = np.zeros (len (subgroup))
+    for i, si in enumerate (subgroup):
+        if si in te.PRIME_LIST:
+            warts_number_list[i] = len (re.findall (WARTS_LIST[te.PRIME_LIST.index (si)], match.group (3)))
     jip_n = int (match.group (2))*np.log (subgroup)/np.log (wart_equave) #jip in edostep numbers
     pv = np.rint (jip_n) #corresponding patent val
     alt_val = np.copysign (np.ceil (warts_number_list/2), (1 - 2*(warts_number_list % 2))*(pv - jip_n))
