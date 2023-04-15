@@ -1,7 +1,7 @@
-# © 2020-2022 Flora Canou | Version 0.22.0
+# © 2020-2023 Flora Canou | Version 0.25.0
 # This work is licensed under the GNU General Public License version 3.
 
-import math
+import math, warnings
 import numpy as np
 from scipy import linalg
 import te_common as te
@@ -9,23 +9,42 @@ import te_temperament_measures as te_tm
 np.set_printoptions (suppress = True, linewidth = 256)
 
 class TemperamentLattice (te_tm.Temperament):
-    def find_temperamental_norm (self, monzo, wtype = "tenney", wamount = 1, skew = 0,
-            oe = False, show = True):
+    def find_temperamental_norm (self, monzo, norm = te.Norm (), oe = False, show = True, 
+            *, wtype = None, wamount = None, skew = None, order = None):
+
+        # DEPRECATION WARNING
+        if any ((wtype, wamount, skew, order)): 
+            warnings.warn ("\"wtype\", \"wamount\", \"skew\", and \"order\" are deprecated. Use the Norm class instead. ")
+            if wtype: norm.wtype = wtype
+            if wamount: norm.wamount = wamount
+            if skew: norm.skew = skew
+            if order: norm.order = order
+
         # octave equivalence
         map_copy = self.map[1:] if oe else self.map
-        map_wx = self.weightskewed (map_copy, wtype, wamount, skew)
+        map_wx = self.weightskewed (map_copy, norm)
         projection_wx = linalg.pinv (map_wx) @ map_wx
-        norm = np.sqrt (monzo.T @ projection_wx @ monzo)
+        interval_temperamental_norm = np.sqrt (monzo.T @ projection_wx @ monzo)
         if show:
             ratio = te.monzo2ratio (monzo, self.subgroup)
-            print (f"{ratio[0]}/{ratio[1]}\t {norm}")
-        return norm
+            print (f"{ratio[0]}/{ratio[1]}\t {interval_temperamental_norm}")
+        return interval_temperamental_norm
 
-    def find_spectrum (self, monzo_list, wtype = "tenney", wamount = 1, skew = 0, oe = True):
+    def find_spectrum (self, monzo_list, norm = te.Norm (), oe = True, 
+        *, wtype = None, wamount = None, skew = None, order = None):
         monzo_list, _ = te.get_subgroup (monzo_list, self.subgroup, axis = te.COL)
 
+        # DEPRECATION WARNING
+        if any ((wtype, wamount, skew, order)): 
+            warnings.warn ("\"wtype\", \"wamount\", \"skew\", and \"order\" are deprecated. Use the Norm class instead. ")
+            if wtype: norm.wtype = wtype
+            if wamount: norm.wamount = wamount
+            if skew: norm.skew = skew
+            if order: norm.order = order
+
         spectrum = [[monzo_list[:, i], self.find_temperamental_norm (
-            monzo_list[:, i], wtype, wamount, skew, oe, show = False)] for i in range (monzo_list.shape[1])]
+            monzo_list[:, i], norm, oe, show = False
+            )] for i in range (monzo_list.shape[1])]
         spectrum.sort (key = lambda k: k[1])
         print ("\nComplexity spectrum: ")
         for entry in spectrum:

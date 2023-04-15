@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.24.0
+# © 2020-2023 Flora Canou | Version 0.25.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -15,6 +15,14 @@ ALGEBRAIC_WEIGHT_LIST = RATIONAL_WEIGHT_LIST + ["wilson", "benedetti"]
 
 def as_list (a):
     return a if isinstance (a, list) else [a]
+
+# norm profile for the tuning space
+class Norm: 
+    def __init__ (self, wtype = "tenney", wamount = 1, skew = 0, order = 2):
+        self.wtype = wtype
+        self.wamount = wamount
+        self.skew = skew
+        self.order = order
 
 # normalizes the matrix to HNF
 def __hnf (main, mode = ROW):
@@ -68,7 +76,7 @@ def get_subgroup (main, subgroup, axis):
 
     return main, subgroup
 
-def get_weight (subgroup, wtype = "tenney", wamount = 1):
+def __get_weight (subgroup, wtype = "tenney", wamount = 1):
     if wtype == "tenney":
         weight_vec = np.reciprocal (np.log2 (np.array (subgroup, dtype = float)))
     elif wtype == "wilson" or wtype == "benedetti":
@@ -80,7 +88,7 @@ def get_weight (subgroup, wtype = "tenney", wamount = 1):
         return get_weight (subgroup, wtype = "tenney", wamount = wamount)
     return np.diag (weight_vec**wamount)
 
-def get_skew (subgroup, skew = 0, order = 2):
+def __get_skew (subgroup, skew = 0, order = 2):
     if skew == 0:
         return np.eye (len (subgroup))
     elif order == 2:
@@ -96,8 +104,10 @@ def get_skew (subgroup, skew = 0, order = 2):
         np.eye (len (subgroup)) - kr*np.ones ((len (subgroup), len (subgroup))),
         r*np.ones ((len (subgroup), 1)), axis = 1)
 
-def weightskewed (main, subgroup, wtype = "tenney", wamount = 1, skew = 0, order = 2):
-    return main @ get_weight (subgroup, wtype, wamount) @ get_skew (subgroup, skew, order)
+def weightskewed (main, subgroup, norm):
+    return (main
+        @ __get_weight (subgroup, norm.wtype, norm.wamount) 
+        @ __get_skew (subgroup, norm.skew, norm.order))
 
 # takes a monzo, returns the ratio in [num, den] form
 # ratio[0]: num, ratio[1]: den

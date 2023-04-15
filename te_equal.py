@@ -1,7 +1,7 @@
-# © 2020-2023 Flora Canou | Version 0.24.1
+# © 2020-2023 Flora Canou | Version 0.25.0
 # This work is licensed under the GNU General Public License version 3.
 
-import re
+import re, warnings
 import numpy as np
 from sympy import Matrix
 import te_common as te
@@ -24,9 +24,9 @@ def comma_construct (comma_list, subgroup = None):
 
 # Finds et sequence from comma list. Can be used to find optimal patent vals
 # Comma list should be entered as column vectors
-def et_sequence (monzo_list = None, subgroup = None, cond = "error",
-        ntype = "breed", wtype = "tenney", wamount = 1, skew = 0,
-        pv = False, prog = True, threshold = 20, search_range = 1200):
+def et_sequence (monzo_list = None, subgroup = None, cond = "error", ntype = "breed", norm = te.Norm (), 
+        pv = False, prog = True, threshold = 20, search_range = 1200, 
+        *, wtype = None, wamount = None, skew = None, order = None):
     if monzo_list is None:
         if subgroup is None:
             raise ValueError ("please specify a monzo list or a subgroup. ")
@@ -34,6 +34,14 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error",
             monzo_list = np.zeros ((len (subgroup), 1))
     else:
         monzo_list, subgroup = te.get_subgroup (monzo_list, subgroup, axis = te.COL)
+
+    # DEPRECATION WARNING
+    if wtype or wamount or skew or order: 
+        warnings.warn ("\"wtype\", \"wamount\", \"skew\", and \"order\" are deprecated. Use the Norm class instead. ")
+        norm.wtype = wtype
+        norm.wamount = wamount
+        norm.skew = skew
+        norm.order = order
 
     print ("\nOptimal GPV sequence: ")
     gpv_infra = [0]*len (subgroup) #initialize with the all-zeroes val
@@ -53,9 +61,9 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error",
 
         et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
         if cond == "error":
-            current = et.error (ntype, wtype, wamount, skew)
+            current = et.error (ntype, norm)
         elif cond == "badness":
-            current = et.badness (ntype, wtype, wamount, skew)
+            current = et.badness (ntype, norm)
         else:
             current = threshold
         if current <= threshold:

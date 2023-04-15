@@ -11,19 +11,22 @@
 
 Common functions. Required by virtually all subsequent modules. 
 
+Use the `Norm` class to create a norm profile for the tuning space. Parameters: 
+- `wtype`: Weight method. Has `"tenney"` (default), `"equilateral"`, and `"wilson"`/`"benedetti"`. 
+- `wamount`: Weight scaling factor. Default is `1`. 
+- `skew`: Skew. This is Mike Battaglia's *k*. Default is `0`, meaning no skew. For **Weil**, use `1`. 
+- `order`: Order. Default is `2`, meaning **Euclidean**. For **XOP tuning**, use `np.inf`. 
+
 ## `te_optimizer.py`
 
-Optimizes tunings. Custom norm order, constraints and stretches are supported. *It is recommended to use `te_temperament_measures` instead since it calls this module and it has a more accessible interface.*
+Optimizes tunings. Custom norm profile, constraints and destretch are supported. *It is recommended to use `te_temperament_measures` instead since it calls this module and it has a more accessible interface.*
 
 Requires `te_common`. 
 
 Use `optimizer_main` to optimize a temperament. Parameters: 
-- `map`: *first positional*, *required*. The map of the temperament. 
+- `vals`: *first positional*, *required*. The map of the temperament. 
 - `subgroup`: *optional*. Specifies a custom subgroup for the map. Default is prime harmonics. 
-- `wtype`: *optional*. Specifies the weight. Has `"tenney"` (default), `"equilateral"`, and `"wilson"`/`"benedetti"`. 
-- `wamount`: *optional*. Scales the weight specified above. 
-- `skew`: *optional*. Specifies the skew. This is Mike Battaglia's *k*. Default is `0`, meaning no skew. For **Weil**, use `1`. 
-- `order`: *optional*. Specifies the order of the norm to be minimized. Default is `2`, meaning **Euclidean**. For **TOP tuning**, use `np.inf`. 
+- `norm`: *optional*. Specifies the norm profile for the tuning space. See above. 
 - `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. 
 - `des_monzo`: *optional*. Destretches this monzo to pure. Default is empty. 
 
@@ -40,12 +43,11 @@ Solves Euclidean tunings symbolically. *It is recommended to use `te_temperament
 Requires `te_common`. 
 
 Use `symbolic` to solve for a Euclidean tuning of a temperament. Parameters: 
-- `map`: *first positional*, *required*. The map of the temperament. 
+- `vals`: *first positional*, *required*. The map of the temperament. 
 - `subgroup`: *optional*. Specifies a custom subgroup for the map. Default is prime harmonics. 
-- `wtype`: *optional*. Specifies the weight. Has `"tenney"` (default), `"equilateral"`, and `"wilson"`/`"benedetti"`. 
-- `wamount`: *optional*. Scales the weight specified above. 
-- `skew`: *optional*. Specifies the skew. This is Mike Battaglia's *k*. Default is `0`, meaning no skew. For **Weil**, use `1`. 
+- `norm`: *optional*. Specifies the norm profile for the tuning space. See above. 
 - `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. 
+- `des_monzo`: *optional*. Destretches this monzo to pure. Default is empty. 
 
 ## `te_temperament_measures.py`
 
@@ -56,22 +58,17 @@ Requires `te_common`, `te_optimizer`, and optionally `te_symbolic`.
 Use `Temperament` to construct a temperament object. Methods: 
 - `tune`: calls `optimizer_main`/`symbolic` and shows the generator, tuning map, mistuning map, tuning error, and tuning bias. Parameters: 
 	- `optimizer`: *optional*. Specifies the optimizer. `"main"`: calls `optimizer_main`. `"sym"`: calls `symbolic`. Default is `"main"`. 
-	- `wtype`: *optional*, Specifies the weight. See above. 
-	- `wamount`: *optional*. Scales the weight. See above. 
-	- `skew`:  *optional*, Specifies the skew. See above. 
-	- `order`: *optional*, Specifies the order of the norm to be minimized. See above. 
+	- `norm`: *optional*. Specifies the norm profile for the tuning space. See above. 
 	- `enforce`: *optional*. A shortcut to specify constraints and destretch targets, so you don't need to enter monzos. Default is empty. To add an enforcement, use `c` or `d` followed by the subgroup index. For example, if the subgroup is the prime harmonics: 
 		- `"c"` or `"c1"`: pure-2 constrained
 		- `"d"` or `"d1"`: pure-2 destretched
 		- `"c1c2"`: pure-2.3 constrained
-		- `"c0"`: a special indicator meaning \[weighter type\]-ones constrained
+		- `"c0"`: a special indicator meaning weight-skewed-ones constrained
 	- `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. Overrides `enforce`. 
 	- `des_monzo`: *optional*. Destretches this monzo to pure. Default is empty. Overrides `enforce`. 
 - `temperament_measures`: shows the complexity, error, and badness (simple and logflat). Parameters: 
-	- `ntype`: *optional*. Specifies the averaging method. Has `"breed"` (default), `"smith"` and `"l2"`. 
-	- `wtype`: *optional*. Specifies the weight. See above. 
-	- `wamount`: *optional*. Scales the weight. See above. 
-	- `skew`: *optional*. Specifies the skew. See above. 
+	- `ntype`: *optional*. Specifies the averaging normalizer. Has `"breed"` (default), `"smith"` and `"none"`. 
+	- `norm`: *optional*. Specifies the norm profile for the tuning space. See above. 
 	- `badness_scale`: *optional*. Scales the badness, literally. Default is `1000`. 
 - `wedgie`: returns and shows the wedgie of the temperament. 
 - `comma_basis`: returns and shows the comma basis of the temperament. 
@@ -94,10 +91,8 @@ Use `et_sequence` to iterate through all GPVs. Parameters:
 - `subgroup`: *optional\**. Specifies a custom subgroup for the map. Default is prime harmonics. 
 	- \* At least one of the above must be specified, for the script to know the dimension. 
 - `cond`: *optional*. Either `"error"` or `"badness"`. Default is `"error"`. 
-- `ntype`: *optional*. Specifies the averaging method. See above. 
-- `wtype`: *optional*. Specifies the weight. See above. 
-- `wamount`: *optional*. Scales the weight. See above. 
-- `skew`: *optional*. Specifies the skew. See above. 
+- `ntype`: *optional*. Specifies the averaging normalizer. See above. 
+- `norm`: *optional*. Specifies the norm profile for the tuning space. See above. 
 - `pv`: *optional*. If `True`, only patent vals will be considered. Default is `False`. 
 - `prog`: *optional*. If `True`, threshold will be updated. Default is `True`. 
 - `threshold`: *optional*. Temperaments failing this will not be shown. Default is `20`. 
