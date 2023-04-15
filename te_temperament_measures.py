@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.25.0
+# © 2020-2023 Flora Canou | Version 0.25.1
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -142,12 +142,10 @@ class Temperament:
         if optimizer == "main":
             import te_optimizer as te_opt
             gen, tuning_map, mistuning_map = te_opt.optimizer_main (self.map, subgroup = self.subgroup,
-                wtype = wtype, wamount = wamount, skew = skew, order = order,
-                cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
+                norm = norm, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
         elif optimizer == "sym":
             gen, tuning_map, mistuning_map = te_sym.symbolic (self.map, subgroup = self.subgroup,
-                wtype = wtype, wamount = wamount, skew = skew,
-                cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
+                norm = norm, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
 
         # error and bias
         tuning_map_wx = self.weightskewed (tuning_map, norm)
