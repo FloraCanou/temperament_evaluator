@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.25.0
+# © 2020-2023 Flora Canou | Version 0.26.0
 # This work is licensed under the GNU General Public License version 3.
 
 import math, warnings
@@ -9,39 +9,18 @@ import te_temperament_measures as te_tm
 np.set_printoptions (suppress = True, linewidth = 256)
 
 class TemperamentLattice (te_tm.Temperament):
-    def find_temperamental_norm (self, monzo, norm = te.Norm (), oe = False, show = True, 
-            *, wtype = None, wamount = None, skew = None, order = None):
-
-        # DEPRECATION WARNING
-        if any ((wtype, wamount, skew, order)): 
-            warnings.warn ("\"wtype\", \"wamount\", \"skew\", and \"order\" are deprecated. Use the Norm class instead. ")
-            if wtype: norm.wtype = wtype
-            if wamount: norm.wamount = wamount
-            if skew: norm.skew = skew
-            if order: norm.order = order
-
-        # octave equivalence
-        map_copy = self.map[1:] if oe else self.map
-        map_wx = self.weightskewed (map_copy, norm)
-        projection_wx = linalg.pinv (map_wx) @ map_wx
+    def find_temperamental_norm (self, monzo, norm = te.Norm (), oe = False, show = True):
+        vals_copy = self.vals[1:] if oe else self.vals # octave equivalence
+        vals_wx = self.weightskewed (vals_copy, norm)
+        projection_wx = linalg.pinv (vals_wx) @ vals_wx
         interval_temperamental_norm = np.sqrt (monzo.T @ projection_wx @ monzo)
         if show:
             ratio = te.monzo2ratio (monzo, self.subgroup)
             print (f"{ratio[0]}/{ratio[1]}\t {interval_temperamental_norm}")
         return interval_temperamental_norm
 
-    def find_spectrum (self, monzo_list, norm = te.Norm (), oe = True, 
-        *, wtype = None, wamount = None, skew = None, order = None):
+    def find_complexity_spectrum (self, monzo_list, norm = te.Norm (), oe = True):
         monzo_list, _ = te.get_subgroup (monzo_list, self.subgroup, axis = te.COL)
-
-        # DEPRECATION WARNING
-        if any ((wtype, wamount, skew, order)): 
-            warnings.warn ("\"wtype\", \"wamount\", \"skew\", and \"order\" are deprecated. Use the Norm class instead. ")
-            if wtype: norm.wtype = wtype
-            if wamount: norm.wamount = wamount
-            if skew: norm.skew = skew
-            if order: norm.order = order
-
         spectrum = [[monzo_list[:, i], self.find_temperamental_norm (
             monzo_list[:, i], norm, oe, show = False
             )] for i in range (monzo_list.shape[1])]
@@ -50,6 +29,8 @@ class TemperamentLattice (te_tm.Temperament):
         for entry in spectrum:
             ratio = te.monzo2ratio (entry[0], self.subgroup)
             print (f"{ratio[0]}/{ratio[1]}\t{entry[1]:.4f}")
+
+    find_spectrum = find_complexity_spectrum
 
 # octave-reduce the ratio in [num, den] form
 def ratio_8ve_reduction (ratio):

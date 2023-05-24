@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.25.0
+# © 2020-2023 Flora Canou | Version 0.26.0
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -25,8 +25,7 @@ def comma_construct (comma_list, subgroup = None):
 # Finds et sequence from comma list. Can be used to find optimal patent vals
 # Comma list should be entered as column vectors
 def et_sequence (monzo_list = None, subgroup = None, cond = "error", ntype = "breed", norm = te.Norm (), 
-        pv = False, prog = True, threshold = 20, search_range = 1200, 
-        *, wtype = None, wamount = None, skew = None, order = None):
+        pv = False, prog = True, threshold = 20, search_range = 1200):
     if monzo_list is None:
         if subgroup is None:
             raise ValueError ("please specify a monzo list or a subgroup. ")
@@ -34,14 +33,6 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error", ntype = "br
             monzo_list = np.zeros ((len (subgroup), 1))
     else:
         monzo_list, subgroup = te.get_subgroup (monzo_list, subgroup, axis = te.COL)
-
-    # DEPRECATION WARNING
-    if wtype or wamount or skew or order: 
-        warnings.warn ("\"wtype\", \"wamount\", \"skew\", and \"order\" are deprecated. Use the Norm class instead. ")
-        norm.wtype = wtype
-        norm.wamount = wamount
-        norm.skew = skew
-        norm.order = order
 
     print ("\nOptimal GPV sequence: ")
     gpv_infra = [0]*len (subgroup) #initialize with the all-zeroes val

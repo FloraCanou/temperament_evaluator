@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.25.0
+# © 2020-2023 Flora Canou | Version 0.26.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -11,21 +11,12 @@ def __error (gen, vals, jip, order):
     return linalg.norm (gen @ vals - jip, ord = order)
 
 def optimizer_main (vals, subgroup = None, norm = te.Norm (), #"map" is a reserved word
-        cons_monzo_list = None, des_monzo = None, show = True, 
-        *, wtype = None, wamount = None, skew = None, order = None): 
+        cons_monzo_list = None, des_monzo = None, show = True): 
     vals, subgroup = te.get_subgroup (vals, subgroup, axis = te.ROW)
 
-    # DEPRECATION WARNING
-    if any ((wtype, wamount, skew, order)): 
-        warnings.warn ("\"wtype\", \"wamount\", \"skew\", and \"order\" are deprecated. Use the Norm class instead. ")
-        if wtype: norm.wtype = wtype
-        if wamount: norm.wamount = wamount
-        if skew: norm.skew = skew
-        if order: norm.order = order
-
     jip = np.log2 (subgroup)*te.SCALAR
-    vals_wx = te.weightskewed (vals, subgroup, norm)
-    jip_wx = te.weightskewed (jip, subgroup, norm)
+    vals_wx = norm.weightskewed (vals, subgroup)
+    jip_wx = norm.weightskewed (jip, subgroup)
     if norm.order == 2 and cons_monzo_list is None: #simply using lstsq for better performance
         res = linalg.lstsq (vals_wx.T, jip_wx)
         gen = res[0]

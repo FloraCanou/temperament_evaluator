@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.25.1
+# © 2020-2023 Flora Canou | Version 0.26.0
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -10,14 +10,14 @@ import te_common as te
 np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
 class Temperament:
-    def __init__ (self, vals, subgroup = None, saturate = True, normalize = True):
+    def __init__ (self, vals, subgroup = None, saturate = True, normalize = True): #"map" is a reserved word
         vals, subgroup = te.get_subgroup (vals, subgroup, axis = te.ROW)
         self.subgroup = subgroup
         self.jip = np.log2 (self.subgroup)*te.SCALAR
-        self.map = te.canonicalize (np.rint (vals).astype (int), saturate, normalize)
+        self.vals = te.canonicalize (np.rint (vals).astype (int), saturate, normalize)
 
     def weightskewed (self, main, norm):
-        return te.weightskewed (main, self.subgroup, norm)
+        return norm.weightskewed (main, self.subgroup)
 
     # checks availability of the symbolic solver
     def __check_sym (self, order):
@@ -43,9 +43,8 @@ class Temperament:
                 return np.array ([1 if i == enforce_index - 1 else 0 for i, _ in enumerate (self.subgroup)])
         elif optimizer == "sym":
             if enforce_index == 0:
-                weightskew = (
-                    te_sym.__get_weight_sym (self.subgroup, norm.wtype, norm.wamount)
-                    @ te_sym.__get_skew_sym (self.subgroup, norm.skew, norm.order))
+                norm = te_sym.NormSym ()
+                weightskew = norm.get_weight_sym (self.subgroup) @ te_sym.get_skew_sym (self.subgroup)
                 return weightskew @ Matrix.ones (weightskew.shape[1], 1)
             else:
                 return Matrix ([1 if i == enforce_index - 1 else 0 for i, _ in enumerate (self.subgroup)])
@@ -63,7 +62,7 @@ class Temperament:
 
     def __show_header (self, norm = None, enforce_text = None, ntype = None):
         print (f"\nSubgroup: {'.'.join (map (str, self.subgroup))}",
-            f"Mapping: \n{self.map}", sep = "\n")
+            f"Mapping: \n{self.vals}", sep = "\n")
 
         if norm: 
             weight_text = norm.wtype
@@ -90,17 +89,7 @@ class Temperament:
         return
 
     def tune (self, optimizer = "main", norm = te.Norm (), 
-            enforce = "", cons_monzo_list = None, des_monzo = None, 
-            *, wtype = None, wamount = None, skew = None, order = None): #in cents
-
-        # DEPRECATION WARNING
-        if any ((wtype, wamount, skew, order)): 
-            warnings.warn ("\"wtype\", \"wamount\", \"skew\", and \"order\" are deprecated. Use the Norm class instead. ")
-            if wtype: norm.wtype = wtype
-            if wamount: norm.wamount = wamount
-            if skew: norm.skew = skew
-            if order: norm.order = order
-        
+            enforce = "", cons_monzo_list = None, des_monzo = None): #in cents
         # checks optimizer availability
         if optimizer == "sym" and not self.__check_sym (norm.order):
             return self.tune (optimizer = "main", norm = norm,
@@ -141,11 +130,11 @@ class Temperament:
         # optimization
         if optimizer == "main":
             import te_optimizer as te_opt
-            gen, tuning_map, mistuning_map = te_opt.optimizer_main (self.map, subgroup = self.subgroup,
+            gen, tuning_map, mistuning_map = te_opt.optimizer_main (self.vals, subgroup = self.subgroup,
                 norm = norm, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
         elif optimizer == "sym":
-            gen, tuning_map, mistuning_map = te_sym.symbolic (self.map, subgroup = self.subgroup,
-                norm = norm, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
+            gen, tuning_map, mistuning_map = te_sym.symbolic (self.vals, subgroup = self.subgroup,
+                norm = te_sym.NormSym (norm), cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
 
         # error and bias
         tuning_map_wx = self.weightskewed (tuning_map, norm)
@@ -162,136 +151,73 @@ class Temperament:
     analyze = tune
     analyse = tune
 
-    def wedgie (self, norm = te.Norm (), show = True, 
-            *, wtype = None, wamount = None, skew = None, order = None):
-
-        # DEPRECATION WARNING
-        if any ((wtype, wamount, skew, order)): 
-            warnings.warn ("\"wtype\", \"wamount\", \"skew\", and \"order\" are deprecated. Use the Norm class instead. ")
-            if wtype: norm.wtype = wtype
-            if wamount: norm.wamount = wamount
-            if skew: norm.skew = skew
-            if order: norm.order = order
-
-        combination_list = itertools.combinations (range (self.map.shape[1]), self.map.shape[0])
-        wedgie = np.array ([linalg.det (self.weightskewed (self.map, norm)[:, entry]) for entry in combination_list])
+    def wedgie (self, norm = te.Norm (), show = True):
+        combination_list = itertools.combinations (range (self.vals.shape[1]), self.vals.shape[0])
+        wedgie = np.array ([linalg.det (self.weightskewed (self.vals, norm)[:, entry]) for entry in combination_list])
         wedgie *= np.copysign (1, wedgie[0])
         if show:
             self.__show_header ()
             print (f"Wedgie: {wedgie}", sep = "\n")
         return wedgie
 
-    def complexity (self, ntype = "breed", norm = te.Norm (), 
-            *, wtype = None, wamount = None, skew = None, order = None):
+    def complexity (self, ntype = "breed", norm = te.Norm ()):
         if norm.order != 2:
-            raise NotImplementedError ("order must be 2. ")
+            raise NotImplementedError ("temperament measures only work for Euclidean norm as of now. ")
         
-        # DEPRECATION WARNING
-        if any ((wtype, wamount, skew, order)): 
-            warnings.warn ("\"wtype\", \"wamount\", \"skew\", and \"order\" are deprecated. Use the Norm class instead. ")
-            if wtype: norm.wtype = wtype
-            if wamount: norm.wamount = wamount
-            if skew: norm.skew = skew
-            if order: norm.order = order
-
         # standard L2 complexity
         complexity = np.sqrt (linalg.det (
-            self.weightskewed (self.map, norm)
-            @ self.weightskewed (self.map, norm).T))
+            self.weightskewed (self.vals, norm)
+            @ self.weightskewed (self.vals, norm).T))
         # complexity = linalg.norm (self.wedgie (norm = norm, show = False)) #same
         if ntype == "breed": #Graham Breed's RMS (default)
-            complexity *= 1/np.sqrt (self.map.shape[1]**self.map.shape[0])
+            complexity *= 1/np.sqrt (self.vals.shape[1]**self.vals.shape[0])
         elif ntype == "smith": #Gene Ward Smith's RMS
-            complexity *= 1/np.sqrt (len (tuple (itertools.combinations (range (self.map.shape[1]), self.map.shape[0]))))
+            complexity *= 1/np.sqrt (len (tuple (itertools.combinations (range (self.vals.shape[1]), self.vals.shape[0]))))
         elif ntype == "none":
             pass
-        elif ntype == "l2":
-            warnings.warn ("\"l2\" is deprecated. Use \"none\" instead. ")
         else:
             warnings.warn ("normalizer not supported, using default (\"breed\")")
             return self.complexity (ntype = "breed", norm = norm)
         return complexity
 
-    def error (self, ntype = "breed", norm = te.Norm (), 
-            *, wtype = None, wamount = None, skew = None, order = None): #in cents
+    def error (self, ntype = "breed", norm = te.Norm ()): #in cents
         if norm.order != 2:
-            raise NotImplementedError ("order must be 2. ")
+            raise NotImplementedError ("temperament measures only work for Euclidean norm as of now. ")
 
-        # DEPRECATION WARNING
-        if any ((wtype, wamount, skew, order)): 
-            warnings.warn ("\"wtype\", \"wamount\", \"skew\", and \"order\" are deprecated. Use the Norm class instead. ")
-            if wtype: norm.wtype = wtype
-            if wamount: norm.wamount = wamount
-            if skew: norm.skew = skew
-            if order: norm.order = order
-        
         # standard L2 error
         error = linalg.norm (
             self.weightskewed (self.jip, norm)
-            @ linalg.pinv (self.weightskewed (self.map, norm))
-            @ self.weightskewed (self.map, norm)
+            @ linalg.pinv (self.weightskewed (self.vals, norm))
+            @ self.weightskewed (self.vals, norm)
             - self.weightskewed (self.jip, norm))
         if ntype == "breed": #Graham Breed's RMS (default)
-            error *= 1/np.sqrt (self.map.shape[1])
+            error *= 1/np.sqrt (self.vals.shape[1])
         elif ntype == "smith": #Gene Ward Smith's RMS
             try:
-                error *= np.sqrt ((self.map.shape[0] + 1) / (self.map.shape[1] - self.map.shape[0]))
+                error *= np.sqrt ((self.vals.shape[0] + 1) / (self.vals.shape[1] - self.vals.shape[0]))
             except ZeroDivisionError:
                 error = np.nan
         elif ntype == "none":
             pass
-        elif ntype == "l2":
-            warnings.warn ("\"l2\" is deprecated. Use \"none\" instead. ")
         else:
             warnings.warn ("normalizer not supported, using default (\"breed\")")
             return self.error (ntype = "breed", norm = norm)
         return error
 
-    def badness (self, ntype = "breed", norm = te.Norm (), 
-            *, wtype = None, wamount = None, skew = None, order = None): #in octaves
-
-        # DEPRECATION WARNING
-        if any ((wtype, wamount, skew, order)): 
-            warnings.warn ("\"wtype\", \"wamount\", \"skew\", and \"order\" are deprecated. Use the Norm class instead. ")
-            if wtype: norm.wtype = wtype
-            if wamount: norm.wamount = wamount
-            if skew: norm.skew = skew
-            if order: norm.order = order
-
+    def badness (self, ntype = "breed", norm = te.Norm ()): #in octaves
         return (self.error (ntype, norm)
             * self.complexity (ntype, norm)
             / te.SCALAR)
 
-    def badness_logflat (self, ntype = "breed", norm = te.Norm (), 
-            *, wtype = None, wamount = None, skew = None, order = None): #in octaves
-
-        # DEPRECATION WARNING
-        if any ((wtype, wamount, skew, order)): 
-            warnings.warn ("\"wtype\", \"wamount\", \"skew\", and \"order\" are deprecated. Use the Norm class instead. ")
-            if wtype: norm.wtype = wtype
-            if wamount: norm.wamount = wamount
-            if skew: norm.skew = skew
-            if order: norm.order = order
-
+    def badness_logflat (self, ntype = "breed", norm = te.Norm ()): #in octaves
         try:
             return (self.error (ntype, norm)
-                * self.complexity (ntype, norm)**((self.map.shape[0])/(self.map.shape[1] - self.map.shape[0]) + 1)
+                * self.complexity (ntype, norm)**((self.vals.shape[0])/(self.vals.shape[1] - self.vals.shape[0]) + 1)
                 / te.SCALAR)
         except ZeroDivisionError:
             return np.nan
 
-    def temperament_measures (self, ntype = "breed", norm = te.Norm (), badness_scale = 1000, 
-            *, wtype = None, wamount = None, skew = None, order = None):
-
-        # DEPRECATION WARNING
-        if any ((wtype, wamount, skew, order)): 
-            warnings.warn ("\"wtype\", \"wamount\", \"skew\", and \"order\" are deprecated. Use the Norm class instead. ")
-            if wtype: norm.wtype = wtype
-            if wamount: norm.wamount = wamount
-            if skew: norm.skew = skew
-            if order: norm.order = order
-
-        # shows the header
+    def temperament_measures (self, ntype = "breed", norm = te.Norm (), badness_scale = 1000):
         self.__show_header (norm = norm, ntype = ntype)
 
         # shows the temperament measures
@@ -305,7 +231,7 @@ class Temperament:
             f"Badness (logflat): {badness_logflat:.6f} ({badness_scale}oct)", sep = "\n")
 
     def comma_basis (self, show = True):
-        comma_basis_frac = Matrix (self.map).nullspace ()
+        comma_basis_frac = Matrix (self.vals).nullspace ()
         comma_basis = np.column_stack ([te.matrix2array (entry) for entry in comma_basis_frac])
         if show:
             self.__show_header ()

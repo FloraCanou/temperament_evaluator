@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.25.0
+# © 2020-2023 Flora Canou | Version 0.26.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -23,6 +23,38 @@ class Norm:
         self.wamount = wamount
         self.skew = skew
         self.order = order
+
+    def __get_weight (self, subgroup):
+        if self.wtype == "tenney":
+            weight_vec = np.reciprocal (np.log2 (np.array (subgroup, dtype = float)))
+        elif self.wtype == "wilson" or self.wtype == "benedetti":
+            weight_vec = np.reciprocal (np.array (subgroup, dtype = float))
+        elif self.wtype == "equilateral":
+            weight_vec = np.ones (len (subgroup))
+        else:
+            warnings.warn ("weighter type not supported, using default (\"tenney\")")
+            self.wtype = "tenney"
+            return self.__get_weight (subgroup)
+        return np.diag (weight_vec**self.wamount)
+
+    def __get_skew (self, subgroup):
+        if self.skew == 0:
+            return np.eye (len (subgroup))
+        elif self.order == 2:
+            if self.skew != np.inf:
+                r = self.skew/(len (subgroup)*self.skew**2 + 1)
+                kr = self.skew*r
+            else:
+                r = 0
+                kr = 1/len (subgroup)
+        else:
+            raise NotImplementedError ("Skew only works with Euclidean norm as of now.")
+        return np.append (
+            np.eye (len (subgroup)) - kr*np.ones ((len (subgroup), len (subgroup))),
+            r*np.ones ((len (subgroup), 1)), axis = 1)
+
+    def weightskewed (self, main, subgroup):
+        return main @ self.__get_weight (subgroup) @ self.__get_skew (subgroup)
 
 # normalizes the matrix to HNF
 def __hnf (main, mode = ROW):
@@ -75,39 +107,6 @@ def get_subgroup (main, subgroup, axis):
         subgroup = subgroup[:dim]
 
     return main, subgroup
-
-def __get_weight (subgroup, wtype = "tenney", wamount = 1):
-    if wtype == "tenney":
-        weight_vec = np.reciprocal (np.log2 (np.array (subgroup, dtype = float)))
-    elif wtype == "wilson" or wtype == "benedetti":
-        weight_vec = np.reciprocal (np.array (subgroup, dtype = float))
-    elif wtype == "equilateral":
-        weight_vec = np.ones (len (subgroup))
-    else:
-        warnings.warn ("weighter type not supported, using default (\"tenney\")")
-        return get_weight (subgroup, wtype = "tenney", wamount = wamount)
-    return np.diag (weight_vec**wamount)
-
-def __get_skew (subgroup, skew = 0, order = 2):
-    if skew == 0:
-        return np.eye (len (subgroup))
-    elif order == 2:
-        if not skew == np.inf:
-            r = skew/(len (subgroup)*skew**2 + 1)
-            kr = skew*r
-        else:
-            r = 0
-            kr = 1/len (subgroup)
-    else:
-        raise NotImplementedError ("Skew only works with Euclidean norm as of now.")
-    return np.append (
-        np.eye (len (subgroup)) - kr*np.ones ((len (subgroup), len (subgroup))),
-        r*np.ones ((len (subgroup), 1)), axis = 1)
-
-def weightskewed (main, subgroup, norm):
-    return (main
-        @ __get_weight (subgroup, norm.wtype, norm.wamount) 
-        @ __get_skew (subgroup, norm.skew, norm.order))
 
 # takes a monzo, returns the ratio in [num, den] form
 # ratio[0]: num, ratio[1]: den

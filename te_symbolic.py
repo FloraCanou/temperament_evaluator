@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.25.0
+# © 2020-2023 Flora Canou | Version 0.26.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -8,45 +8,41 @@ from sympy import Rational, log, floor, Pow, pprint, simplify
 import te_common as te
 np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
-# specialized weight-skew matrices for symbolic calculations
-def __get_weight_sym (subgroup, wtype = "tenney", wamount = 1):
-    wamount = Rational (wamount).limit_denominator (1e3)
-    if wtype == "tenney":
-        warnings.warn ("transcendental weight can be slow. Main optimizer recommended. ")
-        weight_vec = Matrix (subgroup).applyfunc (lambda si: 1/log (si, 2))
-    elif wtype == "wilson" or wtype == "benedetti":
-        weight_vec = Matrix (subgroup).applyfunc (lambda si: 1/si)
-    elif wtype == "equilateral":
-        weight_vec = Matrix.ones (len (subgroup), 1)
-    else:
-        warnings.warn ("weighter type not supported, using default (\"tenney\")")
-        return get_weight_sym (subgroup, wtype = "tenney")
-    return Matrix.diag (*weight_vec.applyfunc (lambda wi: Pow (wi, wamount)))
+# specialized class for symbolic calculations
+class NormSym (te.Norm):
+    def __init__ (self, norm):
+        super ().__init__ (norm.wtype, norm.wamount, norm.skew, norm.order)
 
-def __get_skew_sym (subgroup, skew, order):
-    skew = Rational (skew).limit_denominator (1e3)
-    return (Matrix.eye (len (subgroup)) 
-        - (skew**2/(len (subgroup)*skew**2 + 1))*Matrix.ones (len (subgroup), len (subgroup))).row_join (
-        (skew/(len (subgroup)*skew**2 + 1))*Matrix.ones (len (subgroup), 1))
+    def get_weight_sym (self, subgroup):
+        wamount = Rational (self.wamount).limit_denominator (1e3)
+        if self.wtype == "tenney":
+            warnings.warn ("transcendental weight can be slow. Main optimizer recommended. ")
+            weight_vec = Matrix (subgroup).applyfunc (lambda si: 1/log (si, 2))
+        elif self.wtype == "wilson" or self.wtype == "benedetti":
+            weight_vec = Matrix (subgroup).applyfunc (lambda si: 1/si)
+        elif self.wtype == "equilateral":
+            weight_vec = Matrix.ones (len (subgroup), 1)
+        else:
+            warnings.warn ("weighter type not supported, using default (\"tenney\")")
+            self.wtype = "tenney"
+            return self.get_weight_sym (subgroup)
+        return Matrix.diag (*weight_vec.applyfunc (lambda wi: Pow (wi, wamount)))
 
-def symbolic (vals, subgroup = None, norm = te.Norm (wtype = "equilateral"), #"map" is a reserved word
+    def get_skew_sym (self, subgroup):
+        skew = Rational (self.skew).limit_denominator (1e3)
+        return (Matrix.eye (len (subgroup)) 
+            - (skew**2/(len (subgroup)*skew**2 + 1))*Matrix.ones (len (subgroup), len (subgroup))).row_join (
+            (skew/(len (subgroup)*skew**2 + 1))*Matrix.ones (len (subgroup), 1))
+
+def symbolic (vals, subgroup = None, norm = te.Norm (), #"map" is a reserved word
         cons_monzo_list = None, des_monzo = None, show = True):
     vals, subgroup = te.get_subgroup (vals, subgroup, axis = te.ROW)
-
-    # DEPRECATION WARNING
-    if any ((wtype, wamount, skew, order)): 
-        warnings.warn ("\"wtype\", \"wamount\", \"skew\", and \"order\" are deprecated. Use the Norm class instead. ")
-        if wtype: norm.wtype = wtype
-        if wamount: norm.wamount = wamount
-        if skew: norm.skew = skew
-        if order: norm.order = order
-
-    if not norm.order == 2:
+    norm = NormSym (norm)
+    if norm.order != 2:
         raise ValueError ("Euclidean norm is required for symbolic solution. ")
 
     jip = Matrix ([subgroup]).applyfunc (lambda si: log (si, 2))*te.SCALAR
-    weightskew = (__get_weight_sym (subgroup, norm.wtype, norm.wamount) 
-        @ __get_skew_sym (subgroup, norm.skew, norm.order))
+    weightskew = norm.get_weight_sym (subgroup) @ norm.get_skew_sym (subgroup)
     vals_copy = Matrix (vals)
     vals_wx = vals_copy @ weightskew
 
@@ -75,7 +71,7 @@ def symbolic (vals, subgroup = None, norm = te.Norm (wtype = "equilateral"), #"m
         projection_wxs_minor = vals_wxs_minor.pinv () @ vals_wxs_minor
         # composes the inverse of weight-skewed constrained projection map in the working basis
         projection_wxs_inv = projection_wxs_eigen.row_join (
-            Matrix.zeros (r, map_wxs_minor.shape[1]).col_join (projection_wxs_minor))
+            Matrix.zeros (r, vals_wxs_minor.shape[1]).col_join (projection_wxs_minor))
         # weight-skewed constrained projection map in the working basis
         projection_wxs = projection_wxs_inv.pinv ()
         # removes weight-skew and basis transformation
