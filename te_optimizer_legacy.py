@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.0
+# © 2020-2023 Flora Canou | Version 0.26.1
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -46,7 +46,7 @@ class Norm:
             np.eye (len (subgroup)) - kr*np.ones ((len (subgroup), len (subgroup))),
             r*np.ones ((len (subgroup), 1)), axis = 1)
 
-    def weightskewed (main, subgroup):
+    def weightskewed (self, main, subgroup):
         return main @ self.__get_weight (subgroup) @ self.__get_skew (subgroup)
 
 def __get_subgroup (main, subgroup):
@@ -68,8 +68,8 @@ def optimizer_main (vals, subgroup = None, norm = Norm (), #"map" is a reserved 
     vals, subgroup = __get_subgroup (vals, subgroup)
 
     jip = np.log2 (subgroup)*SCALAR
-    vals_wx = weightskewed (vals, subgroup, norm)
-    jip_wx = weightskewed (jip, subgroup, norm)
+    vals_wx = norm.weightskewed (vals, subgroup)
+    jip_wx = norm.weightskewed (jip, subgroup)
     if norm.order == 2 and cons_monzo_list is None: #simply using lstsq for better performance
         res = linalg.lstsq (vals_wx.T, jip_wx)
         gen = res[0]
