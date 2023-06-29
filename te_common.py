@@ -1,7 +1,7 @@
-# © 2020-2023 Flora Canou | Version 0.26.0
+# © 2020-2023 Flora Canou | Version 0.26.1
 # This work is licensed under the GNU General Public License version 3.
 
-import warnings
+import functools, warnings
 import numpy as np
 from scipy import linalg
 from sympy.matrices import Matrix, normalforms
@@ -151,7 +151,7 @@ def ket (monzo):
 
 # takes a possibly fractional sympy matrix and converts it to an integer numpy array
 def matrix2array (main):
-    return np.array (main/gcd (tuple (main)), dtype = int).squeeze ()
+    return np.array (main/functools.reduce (gcd, tuple (main)), dtype = int).squeeze ()
 
 # takes a list (python list) of monzos (sympy matrices) and show them in a readable manner
 # used for comma basis and eigenmonzo basis
