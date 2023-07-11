@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.0
+# © 2020-2023 Flora Canou | Version 0.26.1
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -212,7 +212,7 @@ class Temperament:
     def badness_logflat (self, ntype = "breed", norm = te.Norm ()): #in octaves
         try:
             return (self.error (ntype, norm)
-                * self.complexity (ntype, norm)**((self.vals.shape[0])/(self.vals.shape[1] - self.vals.shape[0]) + 1)
+                * self.complexity (ntype, norm)**(self.vals.shape[1]/(self.vals.shape[1] - self.vals.shape[0]))
                 / te.SCALAR)
         except ZeroDivisionError:
             return np.nan
@@ -227,8 +227,8 @@ class Temperament:
         badness_logflat = self.badness_logflat (ntype, norm) * badness_scale
         print (f"Complexity: {complexity:.6f}",
             f"Error: {error:.6f} (¢)",
-            f"Badness (simple): {badness:.6f} ({badness_scale}oct)",
-            f"Badness (logflat): {badness_logflat:.6f} ({badness_scale}oct)", sep = "\n")
+            f"Badness (simple): {badness:.6f} (oct/{badness_scale})",
+            f"Badness (logflat): {badness_logflat:.6f} (oct/{badness_scale})", sep = "\n")
 
     def comma_basis (self, show = True):
         comma_basis_frac = Matrix (self.vals).nullspace ()
