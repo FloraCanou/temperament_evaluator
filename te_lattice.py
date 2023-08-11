@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.0
+# © 2020-2023 Flora Canou | Version 0.26.1
 # This work is licensed under the GNU General Public License version 3.
 
 import math, warnings
@@ -13,7 +13,8 @@ class TemperamentLattice (te_tm.Temperament):
         vals_copy = self.vals[1:] if oe else self.vals # octave equivalence
         vals_wx = self.weightskewed (vals_copy, norm)
         projection_wx = linalg.pinv (vals_wx) @ vals_wx
-        interval_temperamental_norm = np.sqrt (monzo.T @ projection_wx @ monzo)
+        monzo_wx = linalg.pinv (norm._Norm__get_weight (self.subgroup) @ norm._Norm__get_skew (self.subgroup)) @ monzo
+        interval_temperamental_norm = np.sqrt (monzo_wx.T @ projection_wx @ monzo_wx)
         if show:
             ratio = te.monzo2ratio (monzo, self.subgroup)
             print (f"{ratio[0]}/{ratio[1]}\t {interval_temperamental_norm}")

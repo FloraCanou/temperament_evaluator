@@ -77,7 +77,9 @@ Use `Temperament` to construct a temperament object. Methods:
 
 ## `te_equal.py`
 
-Tools related to equal temperaments. Constructs higher-rank temperaments using equal temperaments. Finds the GPVs from the comma list. 
+Tools related to equal temperaments. 
+- Constructs higher-rank temperaments using equal temperaments. 
+- Finds the GPVs from the comma list. 
 
 Requires `te_common`, `te_optimizer`, and `te_temperament_measures`. 
 
@@ -105,3 +107,7 @@ Use `et_sequence` to iterate through all GPVs. Parameters:
 Not fully functional yet. Currently able to find the complexity spectrum from the temperament map. 
 
 Requires `te_common` and `te_temperament_measures`. 
+
+Use `TemperamentLattice` to construct a temperament object. Methods: 
+- `find_temperamental_norm`: shows the temperamental complexity of an interval. 
+- `find_complexity_spectrum`: shows the odd-limit complexity spectrum of a temperament
