@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.0
+# © 2020-2023 Flora Canou | Version 0.26.2
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -114,9 +114,9 @@ def val2warts (val, subgroup = None):
     if is_pv (val, subgroup): #patent val
         postfix = ""
     elif all (entry in te.PRIME_LIST for entry in subgroup): #nonpatent val in prime subgroup
-        jip_n = val[0]*np.log2 (subgroup)/np.log2 (subgroup[0]) #jip in edostep numbers
-        pv = np.rint (jip_n) #corresponding patent val
-        warts_number_list = (2*np.abs (val - pv) + (np.copysign (1, (val - pv)*(pv - jip_n)) - 1)/2).astype (int)
+        just_tuning_map_n = val[0]*np.log2 (subgroup)/np.log2 (subgroup[0]) #just tuning map in edostep numbers
+        pv = np.rint (just_tuning_map_n) #corresponding patent val
+        warts_number_list = (2*np.abs (val - pv) + (np.copysign (1, (val - pv)*(pv - just_tuning_map_n)) - 1)/2).astype (int)
         postfix = ""
         for i, si in enumerate (subgroup):
             postfix += warts_number_list[i]*str (WARTS_LIST[te.PRIME_LIST.index (si)])
@@ -138,8 +138,8 @@ def warts2val (warts, subgroup):
     for i, si in enumerate (subgroup):
         if si in te.PRIME_LIST:
             warts_number_list[i] = len (re.findall (WARTS_LIST[te.PRIME_LIST.index (si)], match.group (3)))
-    jip_n = int (match.group (2))*np.log (subgroup)/np.log (wart_equave) #jip in edostep numbers
-    pv = np.rint (jip_n) #corresponding patent val
-    alt_val = np.copysign (np.ceil (warts_number_list/2), (1 - 2*(warts_number_list % 2))*(pv - jip_n))
+    just_tuning_map_n = int (match.group (2))*np.log (subgroup)/np.log (wart_equave) #just tuning map in edostep numbers
+    pv = np.rint (just_tuning_map_n) #corresponding patent val
+    alt_val = np.copysign (np.ceil (warts_number_list/2), (1 - 2*(warts_number_list % 2))*(pv - just_tuning_map_n))
 
     return (pv + alt_val).astype (int)

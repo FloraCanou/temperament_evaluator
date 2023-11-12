@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.0
+# © 2020-2023 Flora Canou | Version 0.26.2
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -17,11 +17,13 @@ class NormSym (te.Norm):
         wamount = Rational (self.wamount).limit_denominator (1e3)
         if self.wtype == "tenney":
             warnings.warn ("transcendental weight can be slow. Main optimizer recommended. ")
-            weight_vec = Matrix (subgroup).applyfunc (lambda si: 1/log (si, 2))
+            weight_vec = Matrix (subgroup).applyfunc (lambda si: log (2, si))
         elif self.wtype == "wilson" or self.wtype == "benedetti":
             weight_vec = Matrix (subgroup).applyfunc (lambda si: 1/si)
         elif self.wtype == "equilateral":
             weight_vec = Matrix.ones (len (subgroup), 1)
+        # elif self.wtype == "hahn24": #pending better implementation
+        #     weight_vec = Matrix (subgroup).applyfunc (lambda si: floor (log (24, si)))
         else:
             warnings.warn ("weighter type not supported, using default (\"tenney\")")
             self.wtype = "tenney"
@@ -34,68 +36,68 @@ class NormSym (te.Norm):
             - (skew**2/(len (subgroup)*skew**2 + 1))*Matrix.ones (len (subgroup), len (subgroup))).row_join (
             (skew/(len (subgroup)*skew**2 + 1))*Matrix.ones (len (subgroup), 1))
 
-def symbolic (vals, subgroup = None, norm = te.Norm (), #"map" is a reserved word
+def symbolic (vals, subgroup = None, norm = te.Norm (), #NOTE: "map" is a reserved word
         cons_monzo_list = None, des_monzo = None, show = True):
     vals, subgroup = te.get_subgroup (vals, subgroup, axis = te.ROW)
     norm = NormSym (norm)
     if norm.order != 2:
         raise ValueError ("Euclidean norm is required for symbolic solution. ")
 
-    jip = Matrix ([subgroup]).applyfunc (lambda si: log (si, 2))*te.SCALAR
+    just_tuning_map = Matrix ([subgroup]).applyfunc (lambda si: log (si, 2))*te.SCALAR
     weightskew = norm.get_weight_sym (subgroup) @ norm.get_skew_sym (subgroup)
     vals_copy = Matrix (vals)
-    vals_wx = vals_copy @ weightskew
+    vals_x = vals_copy @ weightskew
 
     if cons_monzo_list is None:
-        projection = weightskew @ vals_wx.pinv () @ vals_wx @ weightskew.pinv ()
+        projection = weightskew @ vals_x.pinv () @ vals_x @ weightskew.pinv ()
     else:
         cons_monzo_list_copy = Matrix (cons_monzo_list)
-        cons_monzo_list_wx = weightskew.pinv () @ cons_monzo_list_copy
+        cons_monzo_list_x = weightskew.pinv () @ cons_monzo_list_copy
         # orthonormal complement basis of the weight-skewed constraints
-        comp_monzo_list_wx = Matrix (BlockMatrix (Matrix.orthogonalize (
-            *cons_monzo_list_wx.T.nullspace (), normalize = True)))
+        comp_monzo_list_x = Matrix (BlockMatrix (Matrix.orthogonalize (
+            *cons_monzo_list_x.T.nullspace (), normalize = True)))
         # weight-skewed working subgroup basis in terms of monzo list, isomorphic to the original
         # joined by weight-skewed constraint and its orthonormal complement
-        subgroup_wx = cons_monzo_list_wx.row_join (comp_monzo_list_wx)
+        subgroup_x = cons_monzo_list_x.row_join (comp_monzo_list_x)
 
         # weight-skewed map and constraints in the working basis
-        vals_wxs = Matrix (vals_wx @ subgroup_wx).rref ()[0]
-        cons_monzo_list_wxs = subgroup_wx.inv () @ cons_monzo_list_wx
+        vals_xs = Matrix (vals_x @ subgroup_x).rref ()[0]
+        cons_monzo_list_xs = subgroup_x.inv () @ cons_monzo_list_x
         # gets the weight-skewed projection map in the working basis and copies the first r columns
-        projection_wxs = vals_wxs.pinv () @ vals_wxs
-        projection_wxs_eigen = projection_wxs @ cons_monzo_list_wxs
+        projection_xs = vals_xs.pinv () @ vals_xs
+        projection_xs_eigen = projection_xs @ cons_monzo_list_xs
 
         # finds the minor projection map
         r = cons_monzo_list_copy.rank ()
-        vals_wxs_minor = vals_wxs[r:, r:]
-        projection_wxs_minor = vals_wxs_minor.pinv () @ vals_wxs_minor
+        vals_xs_minor = vals_xs[r:, r:]
+        projection_xs_minor = vals_xs_minor.pinv () @ vals_xs_minor
         # composes the inverse of weight-skewed constrained projection map in the working basis
-        projection_wxs_inv = projection_wxs_eigen.row_join (
-            Matrix.zeros (r, vals_wxs_minor.shape[1]).col_join (projection_wxs_minor))
+        projection_xs_inv = projection_xs_eigen.row_join (
+            Matrix.zeros (r, vals_xs_minor.shape[1]).col_join (projection_xs_minor))
         # weight-skewed constrained projection map in the working basis
-        projection_wxs = projection_wxs_inv.pinv ()
+        projection_xs = projection_xs_inv.pinv ()
         # removes weight-skew and basis transformation
         projection = simplify (
-            weightskew @ subgroup_wx @ projection_wxs @ subgroup_wx.inv () @ weightskew.pinv ())
+            weightskew @ subgroup_x @ projection_xs @ subgroup_x.inv () @ weightskew.pinv ())
     print ("Solved. ")
 
     if not des_monzo is None:
         des_monzo_copy = Matrix (des_monzo)
         if des_monzo_copy.rank () > 1:
             raise IndexError ("only one destretch target is allowed. ")
-        elif (tempered_size := (jip @ projection @ des_monzo_copy).det ()) == 0:
+        elif (tempered_size := (just_tuning_map @ projection @ des_monzo_copy).det ()) == 0:
             raise ZeroDivisionError ("destretch target is in the nullspace. ")
         else:
-            projection *= (jip @ des_monzo_copy).det ()/tempered_size
+            projection *= (just_tuning_map @ des_monzo_copy).det ()/tempered_size
 
-    gen = np.array (jip @ projection @ vals_copy.pinv (), dtype = float).squeeze ()
-    tuning_map = np.array (jip @ projection, dtype = float).squeeze ()
+    gen = np.array (just_tuning_map @ projection @ vals_copy.pinv (), dtype = float).squeeze ()
+    tempered_tuning_map = np.array (just_tuning_map @ projection, dtype = float).squeeze ()
     misprojection = projection - Matrix.eye (len (subgroup))
-    mistuning_map = np.array (jip @ misprojection, dtype = float).squeeze ()
+    mistuning_map = np.array (just_tuning_map @ misprojection, dtype = float).squeeze ()
 
     if show:
         print (f"Generators: {gen} (¢)",
-            f"Tuning map: {tuning_map} (¢)",
+            f"Tuning map: {tempered_tuning_map} (¢)",
             f"Mistuning map: {mistuning_map} (¢)", sep = "\n")
         if norm.wtype in te.ALGEBRAIC_WEIGHT_LIST and des_monzo is None:
             print ("Projection map: ")
@@ -108,4 +110,4 @@ def symbolic (vals, subgroup = None, norm = te.Norm (), #"map" is a reserved wor
         else:
             print ("Transcendental projection map and misprojection map not shown. ")
 
-    return gen, tuning_map, mistuning_map
+    return gen, tempered_tuning_map, mistuning_map

@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.1
+# © 2020-2023 Flora Canou | Version 0.26.2
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -10,10 +10,10 @@ import te_common as te
 np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
 class Temperament:
-    def __init__ (self, vals, subgroup = None, saturate = True, normalize = True): #"map" is a reserved word
+    def __init__ (self, vals, subgroup = None, saturate = True, normalize = True): #NOTE: "map" is a reserved word
         vals, subgroup = te.get_subgroup (vals, subgroup, axis = te.ROW)
         self.subgroup = subgroup
-        self.jip = np.log2 (self.subgroup)*te.SCALAR
+        self.just_tuning_map = np.log2 (self.subgroup)*te.SCALAR
         self.vals = te.canonicalize (np.rint (vals).astype (int), saturate, normalize)
 
     def weightskewed (self, main, norm):
@@ -106,10 +106,10 @@ class Temperament:
                 for entry in enforce_spec_list:
                     if entry[0] == "c":
                         cons_monzo_list.append (self.__get_enforce_vec (int (entry[1:]), norm, optimizer))
-                        cons_text.append ("WXj" if entry[1:] == "0" else f"{self.subgroup[int (entry[1:]) - 1]}")
+                        cons_text.append ("Xj" if entry[1:] == "0" else f"{self.subgroup[int (entry[1:]) - 1]}")
                     else:
                         des_monzo.append (self.__get_enforce_vec (int (entry[1:]), norm, optimizer))
-                        des_text.append ("WXj" if entry[1:] == "0" else f"{self.subgroup[int (entry[1:]) - 1]}")
+                        des_text.append ("Xj" if entry[1:] == "0" else f"{self.subgroup[int (entry[1:]) - 1]}")
                 if optimizer == "main":
                     cons_monzo_list = np.column_stack (cons_monzo_list) if cons_monzo_list else None
                     des_monzo = np.column_stack (des_monzo) if des_monzo else None
@@ -130,21 +130,21 @@ class Temperament:
         # optimization
         if optimizer == "main":
             import te_optimizer as te_opt
-            gen, tuning_map, mistuning_map = te_opt.optimizer_main (self.vals, subgroup = self.subgroup,
+            gen, tempered_tuning_map, mistuning_map = te_opt.optimizer_main (self.vals, subgroup = self.subgroup,
                 norm = norm, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
         elif optimizer == "sym":
-            gen, tuning_map, mistuning_map = te_sym.symbolic (self.vals, subgroup = self.subgroup,
+            gen, tempered_tuning_map, mistuning_map = te_sym.symbolic (self.vals, subgroup = self.subgroup,
                 norm = te_sym.NormSym (norm), cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
 
         # error and bias
-        tuning_map_wx = self.weightskewed (tuning_map, norm)
-        mistuning_map_wx = self.weightskewed (mistuning_map, norm)
-        error = self.__power_mean_norm (mistuning_map_wx, norm.order)
-        bias = np.mean (mistuning_map_wx)
-        # print (mistuning_map_wx) #debug
+        tempered_tuning_map_x = self.weightskewed (tempered_tuning_map, norm)
+        mistuning_map_x = self.weightskewed (mistuning_map, norm)
+        error = self.__power_mean_norm (mistuning_map_x, norm.order)
+        bias = np.mean (mistuning_map_x)
+        # print (mistuning_map_x) #for debugging
         print (f"Tuning error: {error:.6f} (¢)",
             f"Tuning bias: {bias:.6f} (¢)", sep = "\n")
-        return gen, tuning_map, mistuning_map
+        return gen, tempered_tuning_map, mistuning_map
 
     optimise = tune
     optimize = tune
@@ -186,10 +186,10 @@ class Temperament:
 
         # standard L2 error
         error = linalg.norm (
-            self.weightskewed (self.jip, norm)
+            self.weightskewed (self.just_tuning_map, norm)
             @ linalg.pinv (self.weightskewed (self.vals, norm))
             @ self.weightskewed (self.vals, norm)
-            - self.weightskewed (self.jip, norm))
+            - self.weightskewed (self.just_tuning_map, norm))
         if ntype == "breed": #Graham Breed's RMS (default)
             error *= 1/np.sqrt (self.vals.shape[1])
         elif ntype == "smith": #Gene Ward Smith's RMS

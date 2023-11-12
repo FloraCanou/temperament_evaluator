@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.1
+# © 2020-2023 Flora Canou | Version 0.26.2
 # This work is licensed under the GNU General Public License version 3.
 
 import functools, warnings
@@ -31,6 +31,8 @@ class Norm:
             weight_vec = np.reciprocal (np.array (subgroup, dtype = float))
         elif self.wtype == "equilateral":
             weight_vec = np.ones (len (subgroup))
+        # elif self.wtype == "hahn24": #pending better implementation
+        #     weight_vec = np.floor (np.log2 (24)/np.log2 (np.array (subgroup, dtype = float)))
         else:
             warnings.warn ("weighter type not supported, using default (\"tenney\")")
             self.wtype = "tenney"
@@ -41,12 +43,8 @@ class Norm:
         if self.skew == 0:
             return np.eye (len (subgroup))
         elif self.order == 2:
-            if self.skew != np.inf:
-                r = self.skew/(len (subgroup)*self.skew**2 + 1)
-                kr = self.skew*r
-            else:
-                r = 0
-                kr = 1/len (subgroup)
+            r = 1/(len (subgroup)*self.skew + 1/self.skew)
+            kr = 1/(len (subgroup) + 1/self.skew**2)
         else:
             raise NotImplementedError ("Skew only works with Euclidean norm as of now.")
         return np.append (
