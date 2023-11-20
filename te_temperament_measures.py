@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.2
+# © 2020-2023 Flora Canou | Version 0.27.0
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -11,16 +11,15 @@ np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
 class Temperament:
     def __init__ (self, vals, subgroup = None, saturate = True, normalize = True): #NOTE: "map" is a reserved word
-        vals, subgroup = te.get_subgroup (vals, subgroup, axis = te.ROW)
+        vals, subgroup = te.get_subgroup (vals, subgroup, axis = te.AXIS.ROW)
         self.subgroup = subgroup
-        self.just_tuning_map = np.log2 (self.subgroup)*te.SCALAR
         self.vals = te.canonicalize (np.rint (vals).astype (int), saturate, normalize)
 
     def weightskewed (self, main, norm):
         return norm.weightskewed (main, self.subgroup)
 
-    # checks availability of the symbolic solver
     def __check_sym (self, order):
+        """Checks the availability of the symbolic solver."""
         if order == 2:
             try:
                 global te_sym
@@ -33,25 +32,24 @@ class Temperament:
             warnings.warn ("Condition for symbolic solution not met. Using main optimizer. ")
             return False
 
-    # interprets the enforce specification as a monzo
     def __get_enforce_vec (self, enforce_index, norm, optimizer):
+        """Interprets the enforce specification."""
         if optimizer == "main":
-            if enforce_index == 0:
-                weightskew = self.weightskewed (np.eye (len (self.subgroup)), norm)
-                return weightskew @ np.ones (weightskew.shape[1])
+            if enforce_index == 0: #pending implementation
+                raise ValueError ("this functionality is removed due to support for subgroup tuning. ")
             else:
-                return np.array ([1 if i == enforce_index - 1 else 0 for i, _ in enumerate (self.subgroup)])
+                return te.monzo2ratio (self.subgroup.basis_matrix.T[enforce_index - 1], self.subgroup)
         elif optimizer == "sym":
-            if enforce_index == 0:
-                norm = te_sym.NormSym ()
-                weightskew = norm.get_weight_sym (self.subgroup) @ te_sym.get_skew_sym (self.subgroup)
-                return weightskew @ Matrix.ones (weightskew.shape[1], 1)
+            if enforce_index == 0: #pending implementation
+                raise ValueError ("this functionality is removed due to support for subgroup tuning. ")
             else:
-                return Matrix ([1 if i == enforce_index - 1 else 0 for i, _ in enumerate (self.subgroup)])
+                return te.monzo2ratio (self.subgroup.basis_matrix.T[enforce_index - 1], self.subgroup)
 
-    # this mean rejects the extra dimension from the denominator
-    # such that when skew = 0, introducing the extra dimension doesn't change the result
     def __mean (self, main):
+        """
+        This mean rejects the extra dimension from the denominator
+        such that when skew = 0, introducing the extra dimension doesn't change the result.
+        """
         return np.sum (main)/len (self.subgroup)
 
     def __power_mean_norm (self, main, order):
@@ -61,7 +59,7 @@ class Temperament:
             return np.power (self.__mean (np.power (np.abs (main), order)), np.reciprocal (float (order)))
 
     def __show_header (self, norm = None, enforce_text = None, ntype = None):
-        print (f"\nSubgroup: {'.'.join (map (str, self.subgroup))}",
+        print (f"\nSubgroup: {self.subgroup}",
             f"Mapping: \n{self.vals}", sep = "\n")
 
         if norm: 
@@ -89,40 +87,43 @@ class Temperament:
         return
 
     def tune (self, optimizer = "main", norm = te.Norm (), 
-            enforce = "", cons_monzo_list = None, des_monzo = None): #in cents
+            constraint = None, destretch = None, *, 
+            enforce = None, cons_monzo_list = None, des_monzo = None): #deprecated parameters
+
+        if not enforce is None:
+            warnings.warn ("\"enforce\" is deprecated. Use \"constraint\" and/or \"destretch\" instead. ")
+            if enforce == "c": #default to octave-constrained
+                enforce = "c1"
+            elif enforce == "d": #default to octave-destretched
+                enforce = "d1"
+            if constraint is None and destretch is None:
+                if enforce_spec_list := re.findall ("[cd]\d+", str (enforce)): #separates the enforcements
+                    cons_ratios, des_ratios, cons_text, des_text = ([] for _ in range (4))
+                    for entry in enforce_spec_list:
+                        if entry[0] == "c":
+                            cons_ratios.append (self.__get_enforce_vec (int (entry[1:]), norm, optimizer))
+                        else:
+                            des_ratios.append (self.__get_enforce_vec (int (entry[1:]), norm, optimizer))
+                    
+                    constraint = te.Subgroup (cons_ratios) if cons_ratios else None
+                    destretch = te.as_ratio (*des_ratios) if des_ratios else None
+
+        if not cons_monzo_list is None:
+            constraint = te.Subgroup ([te.monzo2ratio (entry) for entry in cons_monzo_list.T])
+            warnings.warn ("\"cons_monzo_list\" is deprecated. Use \"constraint\" instead. ")
+        if not des_monzo is None:
+            destretch = te.monzo2ratio (des_monzo)
+            warnings.warn ("\"des_monzo\" is deprecated. Use \"destretch\" instead. ")
+
         # checks optimizer availability
         if optimizer == "sym" and not self.__check_sym (norm.order):
             return self.tune (optimizer = "main", norm = norm,
-                enforce = enforce, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
+                constraint = constraint, destretch = destretch)
 
-        # gets the enforcements
-        if enforce == "c": #default to octave-constrained
-            enforce = "c1"
-        elif enforce == "d": #default to octave-destretched
-            enforce = "d1"
-        if cons_monzo_list is None and des_monzo is None:
-            if enforce_spec_list := re.findall ("[cd]\d+", str (enforce)): #separates the enforcements
-                cons_monzo_list, des_monzo, cons_text, des_text = ([] for _ in range (4))
-                for entry in enforce_spec_list:
-                    if entry[0] == "c":
-                        cons_monzo_list.append (self.__get_enforce_vec (int (entry[1:]), norm, optimizer))
-                        cons_text.append ("Xj" if entry[1:] == "0" else f"{self.subgroup[int (entry[1:]) - 1]}")
-                    else:
-                        des_monzo.append (self.__get_enforce_vec (int (entry[1:]), norm, optimizer))
-                        des_text.append ("Xj" if entry[1:] == "0" else f"{self.subgroup[int (entry[1:]) - 1]}")
-                if optimizer == "main":
-                    cons_monzo_list = np.column_stack (cons_monzo_list) if cons_monzo_list else None
-                    des_monzo = np.column_stack (des_monzo) if des_monzo else None
-                elif optimizer == "sym":
-                    cons_monzo_list = Matrix (BlockMatrix (cons_monzo_list)) if cons_monzo_list else None
-                    des_monzo = Matrix (BlockMatrix (des_monzo)) if des_monzo else None
-                cons_text = ".".join (cons_text) + "-constrained" if cons_text else ""
-                des_text = ".".join (des_text) + "-destretched" if des_text else ""
-                enforce_text = " ".join ([cons_text, des_text])
-            else:
-                enforce_text = "none"
-        else:
-            enforce_text = "custom"
+        # gets the enforcement text
+        cons_text = constraint.__str__ () + "-constrained" if constraint else ""
+        des_text = destretch.__str__ () + "-destretched" if destretch else ""
+        enforce_text = " ".join ([cons_text, des_text]) if cons_text or des_text else "none"
 
         # shows the header
         self.__show_header (norm = norm, enforce_text = enforce_text)
@@ -130,11 +131,15 @@ class Temperament:
         # optimization
         if optimizer == "main":
             import te_optimizer as te_opt
-            gen, tempered_tuning_map, mistuning_map = te_opt.optimizer_main (self.vals, subgroup = self.subgroup,
-                norm = norm, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
+            gen, tempered_tuning_map, mistuning_map = te_opt.optimizer_main (
+                self.vals, target = self.subgroup, norm = norm, 
+                constraint = constraint, destretch = destretch
+            )
         elif optimizer == "sym":
-            gen, tempered_tuning_map, mistuning_map = te_sym.symbolic (self.vals, subgroup = self.subgroup,
-                norm = te_sym.NormSym (norm), cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
+            gen, tempered_tuning_map, mistuning_map = te_sym.symbolic (
+                self.vals, target = self.subgroup, norm = te_sym.NormSym (norm), 
+                constraint = constraint, destretch = destretch
+            )
 
         # error and bias
         tempered_tuning_map_x = self.weightskewed (tempered_tuning_map, norm)
@@ -180,16 +185,16 @@ class Temperament:
             return self.complexity (ntype = "breed", norm = norm)
         return complexity
 
-    def error (self, ntype = "breed", norm = te.Norm ()): #in cents
+    def error (self, ntype = "breed", norm = te.Norm (), scalar = te.SCALAR.CENT): #in cents by default
         if norm.order != 2:
             raise NotImplementedError ("temperament measures only work for Euclidean norm as of now. ")
 
         # standard L2 error
         error = linalg.norm (
-            self.weightskewed (self.just_tuning_map, norm)
+            self.weightskewed (self.subgroup.just_tuning_map (scalar), norm)
             @ linalg.pinv (self.weightskewed (self.vals, norm))
             @ self.weightskewed (self.vals, norm)
-            - self.weightskewed (self.just_tuning_map, norm))
+            - self.weightskewed (self.subgroup.just_tuning_map (scalar), norm))
         if ntype == "breed": #Graham Breed's RMS (default)
             error *= 1/np.sqrt (self.vals.shape[1])
         elif ntype == "smith": #Gene Ward Smith's RMS
@@ -204,16 +209,14 @@ class Temperament:
             return self.error (ntype = "breed", norm = norm)
         return error
 
-    def badness (self, ntype = "breed", norm = te.Norm ()): #in octaves
-        return (self.error (ntype, norm)
-            * self.complexity (ntype, norm)
-            / te.SCALAR)
+    def badness (self, ntype = "breed", norm = te.Norm (), scalar = te.SCALAR.OCTAVE): #in octaves by default
+        return (self.error (ntype, norm, scalar)
+            * self.complexity (ntype, norm))
 
-    def badness_logflat (self, ntype = "breed", norm = te.Norm ()): #in octaves
+    def badness_logflat (self, ntype = "breed", norm = te.Norm (), scalar = te.SCALAR.OCTAVE): #in octaves
         try:
-            return (self.error (ntype, norm)
-                * self.complexity (ntype, norm)**(self.vals.shape[1]/(self.vals.shape[1] - self.vals.shape[0]))
-                / te.SCALAR)
+            return (self.error (ntype, norm, scalar)
+                * self.complexity (ntype, norm)**(self.vals.shape[1]/(self.vals.shape[1] - self.vals.shape[0])))
         except ZeroDivisionError:
             return np.nan
 

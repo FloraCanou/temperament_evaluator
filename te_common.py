@@ -1,23 +1,135 @@
-# © 2020-2023 Flora Canou | Version 0.26.2
+# © 2020-2023 Flora Canou | Version 0.27.0
 # This work is licensed under the GNU General Public License version 3.
 
-import functools, warnings
+import re, functools, warnings
 import numpy as np
 from scipy import linalg
 from sympy.matrices import Matrix, normalforms
 from sympy import gcd
 
-ROW, COL, VEC = 0, 1, 2
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89]
-SCALAR = 1200 #could be in octave, but for precision reason
 RATIONAL_WEIGHT_LIST = ["equilateral"]
 ALGEBRAIC_WEIGHT_LIST = RATIONAL_WEIGHT_LIST + ["wilson", "benedetti"]
 
-def as_list (a):
-    return a if isinstance (a, list) else [a]
+class AXIS:
+    ROW, COL, VEC = 0, 1, 2
 
-# norm profile for the tuning space
+class SCALAR:
+    OCTAVE = 1
+    CENT = 1200
+
+def as_list (main):
+    if isinstance (main, list):
+        return main
+    else:
+        try:
+            return list (main)
+        except TypeError:
+            return [main]
+
+def vec_pad (vec, length):
+    """Pads a vector with zeros to a specified length."""
+    vec_copy = np.array (vec)
+    vec_copy.resize (length)
+    return vec_copy
+
+def column_stack_pad (vec_list, length = None):
+    """Column-stack with zero-padding."""
+    length = length or max (vec_list, key = len).__len__ () # finds the max length
+    return np.column_stack ([vec_pad (vec, length) for vec in vec_list])
+
+class Ratio:
+    """Ratio in fraction."""
+
+    def __init__ (self, num, den):
+        self.num = num
+        self.den = den
+        self.__reduce ()
+
+    def __reduce (self):
+        if isinstance (self.num, (int, np.integer)) and isinstance (self.den, (int, np.integer)):
+            gcd = np.gcd (self.num, self.den)
+            self.num = round (self.num/gcd)
+            self.den = round (self.den/gcd)
+        else:
+            self.num = np.divide (self.num, self.den)
+            self.den = 1
+
+    def value (self):
+        return self.num if self.den == 1 else np.divide (self.num, self.den)
+
+    def octave_reduce (self): #NOTE: "oct" is a reserved word
+        """Returns the octave-reduced ratio."""
+        num_oct = np.floor (np.log2 (self.value ())).astype (int)
+        if num_oct == 0:
+            return self
+        elif num_oct > 0:
+            return Ratio (self.num, self.den*2**num_oct)
+        elif num_oct < 0:
+            return Ratio (self.num*2**(-num_oct), self.den)
+
+    def __str__ (self):
+        return f"{self.num}" if self.den == 1 else f"{self.num}/{self.den}"
+
+    def __eq__ (self, other):
+        return self.value () == (other.value () if isinstance (other, Ratio) else other)
+
+def as_ratio (n):
+    """Returns a ratio object, fractional notation supported."""
+    if isinstance (n, Ratio):
+        return n
+    elif isinstance (n, str):
+        match = re.match ("^(\d*)\/?(\d*)$", n)
+        num = match.group (1) or "1"
+        den = match.group (2) or "1"
+        return Ratio (int (num), int (den))
+    elif np.asarray (n).size == 1: 
+        return Ratio (n, 1)
+    else:
+        raise IndexError ("only one value is allowed.")
+
+class Subgroup:
+    """Subgroup profile of ji."""
+
+    def __init__ (self, ratios, saturate = False, normalize = True):
+        self.basis_matrix = canonicalize (column_stack_pad (
+            [ratio2monzo (as_ratio (entry)) for entry in ratios]
+            ), saturate, normalize, axis = AXIS.COL
+        )
+
+    def basis_matrix_to (self, other):
+        """
+        Returns the basis matrix with respect to another subgroup.
+        Also useful for padding zeros.
+        """
+        result = (linalg.pinv (other.basis_matrix) 
+            @ column_stack_pad (self.basis_matrix.T, length = other.basis_matrix.shape[0]))
+        if all (entry.is_integer () for entry in result.flat):
+            return result.astype (int)
+        else:
+            warnings.warn ("improper subgroup.")
+            return result
+    
+    def ratios (self, evaluate = False):
+        """Returns a list of ratio objects or floats."""
+        return [monzo2ratio (entry).value () if evaluate else monzo2ratio (entry) for entry in self.basis_matrix.T]
+
+    def just_tuning_map (self, scalar = SCALAR.OCTAVE): #in octaves by default
+        return scalar*np.log2 (self.ratios (evaluate = True))
+
+    def __str__ (self):
+        return ".".join (entry.__str__ () for entry in self.ratios ())
+
+    def __len__ (self):
+        """Returns its own dimensionality."""
+        return self.basis_matrix.shape[1]
+
+    def __eq__ (self, other):
+        return np.array_equal (self.basis_matrix, other.basis_matrix) if isinstance (other, Subgroup) else False
+
 class Norm: 
+    """Norm profile for the tuning space."""
+
     def __init__ (self, wtype = "tenney", wamount = 1, skew = 0, order = 2):
         self.wtype = wtype
         self.wamount = wamount
@@ -25,18 +137,19 @@ class Norm:
         self.order = order
 
     def __get_weight (self, subgroup):
-        if self.wtype == "tenney":
-            weight_vec = np.reciprocal (np.log2 (np.array (subgroup, dtype = float)))
-        elif self.wtype == "wilson" or self.wtype == "benedetti":
-            weight_vec = np.reciprocal (np.array (subgroup, dtype = float))
-        elif self.wtype == "equilateral":
-            weight_vec = np.ones (len (subgroup))
-        # elif self.wtype == "hahn24": #pending better implementation
-        #     weight_vec = np.floor (np.log2 (24)/np.log2 (np.array (subgroup, dtype = float)))
-        else:
-            warnings.warn ("weighter type not supported, using default (\"tenney\")")
-            self.wtype = "tenney"
-            return self.__get_weight (subgroup)
+        match self.wtype:
+            case "tenney":
+                weight_vec = np.reciprocal (np.log2 (subgroup.ratios (evaluate = True)))
+            case "wilson" | "benedetti":
+                weight_vec = np.reciprocal (subgroup.ratios (evaluate = True))
+            case "equilateral":
+                weight_vec = np.ones (len (subgroup))
+            # case "hahn24": #pending better implementation
+            #     weight_vec = np.floor (np.log2 (24)/np.log2 (subgroup.ratios (evaluate = True)))
+            case _:
+                warnings.warn ("weighter type not supported, using default (\"tenney\")")
+                self.wtype = "tenney"
+                return self.__get_weight (subgroup)
         return np.diag (weight_vec**self.wamount)
 
     def __get_skew (self, subgroup):
@@ -54,92 +167,117 @@ class Norm:
     def weightskewed (self, main, subgroup):
         return main @ self.__get_weight (subgroup) @ self.__get_skew (subgroup)
 
-# normalizes the matrix to HNF
-def __hnf (main, mode = ROW):
-    if mode == ROW:
+def __hnf (main, mode = AXIS.ROW):
+    """Normalizes a matrix to HNF."""
+    if mode == AXIS.ROW:
         return np.flip (np.array (normalforms.hermite_normal_form (Matrix (np.flip (main)).T).T, dtype = int))
-    elif mode == COL:
+    elif mode == AXIS.COL:
         return np.flip (np.array (normalforms.hermite_normal_form (Matrix (np.flip (main))), dtype = int))
 
-# saturates the matrix, pernet--stein method
 def __sat (main):
+    """Saturates a matrix, pernet--stein method."""
     r = Matrix (main).rank ()
     return np.rint (
-        linalg.inv (__hnf (main, mode = COL)[:, :r]) @ main
+        linalg.inv (__hnf (main, mode = AXIS.COL)[:, :r]) @ main
         ).astype (int)
 
-# saturation & normalization
-# normalization only checks multirank matrices
-def canonicalize (main, saturate = True, normalize = True, axis = ROW):
-    if axis == ROW:
+def canonicalize (main, saturate = True, normalize = True, axis = AXIS.ROW):
+    """
+    Saturation & normalization.
+    Normalization only checks multirank matrices.
+    """
+    if axis == AXIS.ROW:
         main = __sat (main) if saturate else main
         main = __hnf (main) if normalize and main.shape[0] > 1 else main
-    elif axis == COL:
+    elif axis == AXIS.COL:
         main = np.flip (__sat (np.flip (main).T)).T if saturate else main
         main = np.flip (__hnf (np.flip (main).T)).T if normalize and main.shape[1] > 1 else main
     return main
 
 canonicalise = canonicalize
 
-# gets the subgroup and tries to match the dimensions
 def get_subgroup (main, subgroup, axis):
+    """Gets the subgroup and tries to match the dimensions."""
     main = np.asarray (main)
-    if axis == ROW:
-        length_main = main.shape[1]
-    elif axis == COL:
-        length_main = main.shape[0]
-    elif axis == VEC:
-        length_main = len (main)
+    match axis:
+        case AXIS.ROW:
+            length_main = main.shape[1]
+        case AXIS.COL:
+            length_main = main.shape[0]
+        case AXIS.VEC:
+            length_main = main.size
 
     if subgroup is None:
-        subgroup = PRIME_LIST[:length_main]
+        subgroup = Subgroup (PRIME_LIST[:length_main])
     elif length_main != len (subgroup):
         warnings.warn ("dimension does not match. Casting to the smaller dimension. ")
         dim = min (length_main, len (subgroup))
-        if axis == ROW:
-            main = main[:, :dim]
-        elif axis == COL:
-            main = main[:dim, :]
-        elif axis == VEC:
-            main = main[:dim]
-        subgroup = subgroup[:dim]
-
+        match axis:
+            case AXIS.ROW:
+                main = main[:, :dim]
+            case AXIS.COL:
+                main = main[:dim, :]
+            case AXIS.VEC:
+                main = main[:dim]
+        subgroup.basis_matrix = subgroup.basis_matrix[:, :dim]
     return main, subgroup
 
-# takes a monzo, returns the ratio in [num, den] form
-# ratio[0]: num, ratio[1]: den
 def monzo2ratio (monzo, subgroup = None):
-    monzo, subgroup = get_subgroup (monzo, subgroup, axis = VEC)
-    ratio = [1, 1]
+    """
+    Takes a monzo, returns the ratio object, 
+    subgroup monzo supported.
+    """
+    if subgroup is None: 
+        return __monzo2ratio (monzo)
+    else: 
+        return __monzo2ratio (subgroup.basis_matrix @ vec_pad (monzo, length = len (subgroup)))
+
+def __monzo2ratio (monzo):
+    group = PRIME_LIST
+    num, den = 1, 1
     for i, mi in enumerate (monzo):
         if mi > 0:
-            ratio[0] *= subgroup[i]**mi
+            num *= group[i]**mi
         elif mi < 0:
-            ratio[1] *= subgroup[i]**(-mi)
-    return ratio
+            den *= group[i]**(-mi)
+    return Ratio (num, den)
 
-# takes a ratio in [num, den] form, returns the monzo
 def ratio2monzo (ratio, subgroup = None):
-    if (not all (isinstance (entry, (int, np.integer)) for entry in ratio)
-        or any (entry < 1 for entry in ratio)):
-        raise ValueError ("numerator and denominator should be positive integers. ")
-    if trim := (subgroup is None):
-        subgroup = PRIME_LIST
+    """
+    Takes a ratio object, returns the monzo, 
+    subgroup monzo supported.
+    """
+    value = ratio.value ()
+    if value == np.inf or value == 0 or value == np.nan:
+        raise ValueError ("invalid ratio. ")
+    elif subgroup is None:
+        return __ratio2monzo (ratio)
+    else:
+        result = (linalg.pinv (subgroup.basis_matrix) 
+            @ vec_pad (__ratio2monzo (ratio), length = len (subgroup)))
+        if all (entry.is_integer for entry in result):
+            return result.astype (int)
+        else:
+            warnings.warn ("improper subgroup. ")
+            return result
 
-    monzo = [0]*len (subgroup)
-    for i, si in enumerate (subgroup):
-        while ratio[0] % si == 0:
-            monzo[i] += 1
-            ratio[0] /= si
-        while ratio[1] % si == 0:
-            monzo[i] -= 1
-            ratio[1] /= si
-        if all (entry == 1 for entry in ratio):
+def __ratio2monzo (ratio):
+    monzo = []
+    group = PRIME_LIST
+    for entry in group:
+        order = 0
+        while ratio.num % entry == 0:
+            order += 1
+            ratio.num /= entry
+        while ratio.den % entry == 0:
+            order -= 1
+            ratio.den /= entry
+        monzo.append (order)
+        if ratio.num == 1 and ratio.den == 1:
             break
     else:
         raise ValueError ("improper subgroup. ")
-
-    return np.trim_zeros (np.array (monzo), trim = "b") if trim else np.array (monzo)
+    return np.array (monzo)
 
 def bra (val):
     return "<" + " ".join (map (str, np.trim_zeros (val, trim = "b"))) + "]"
@@ -147,18 +285,20 @@ def bra (val):
 def ket (monzo):
     return "[" + " ".join (map (str, np.trim_zeros (monzo, trim = "b"))) + ">"
 
-# takes a possibly fractional sympy matrix and converts it to an integer numpy array
 def matrix2array (main):
+    """Takes a possibly fractional sympy matrix and converts it to an integer numpy array."""
     return np.array (main/functools.reduce (gcd, tuple (main)), dtype = int).squeeze ()
 
-# takes a list (python list) of monzos (sympy matrices) and show them in a readable manner
-# used for comma basis and eigenmonzo basis
 def show_monzo_list (monzo_list, subgroup):
+    """
+    Takes a list (python list) of monzos (sympy matrices) and show them in a readable manner. 
+    Used to display comma bases and eigenmonzo bases. 
+    """
     for entry in monzo_list:
         monzo = matrix2array (entry)
         monzo_str = ket (monzo)
-        if np.log2 (subgroup) @ np.abs (monzo) < 53: # shows the ratio for those < ~1e16
+        if subgroup.just_tuning_map () @ np.abs (monzo) < 53: # shows the ratio for those < ~1e16
             ratio = monzo2ratio (monzo, subgroup)
-            print (monzo_str, f"({ratio[0]}/{ratio[1]})")
+            print (monzo_str, "(" + ratio.__str__ () + ")")
         else:
             print (monzo_str)

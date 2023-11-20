@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.2
+# © 2020-2023 Flora Canou | Version 0.27.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -17,9 +17,9 @@ class NormSym (te.Norm):
         wamount = Rational (self.wamount).limit_denominator (1e3)
         if self.wtype == "tenney":
             warnings.warn ("transcendental weight can be slow. Main optimizer recommended. ")
-            weight_vec = Matrix (subgroup).applyfunc (lambda si: log (2, si))
+            weight_vec = Matrix (subgroup.ratios (evaluate = True)).applyfunc (lambda si: log (2, si))
         elif self.wtype == "wilson" or self.wtype == "benedetti":
-            weight_vec = Matrix (subgroup).applyfunc (lambda si: 1/si)
+            weight_vec = Matrix (subgroup.ratios (evaluate = True)).applyfunc (lambda si: 1/si)
         elif self.wtype == "equilateral":
             weight_vec = Matrix.ones (len (subgroup), 1)
         # elif self.wtype == "hahn24": #pending better implementation
@@ -36,23 +36,37 @@ class NormSym (te.Norm):
             - (skew**2/(len (subgroup)*skew**2 + 1))*Matrix.ones (len (subgroup), len (subgroup))).row_join (
             (skew/(len (subgroup)*skew**2 + 1))*Matrix.ones (len (subgroup), 1))
 
-def symbolic (vals, subgroup = None, norm = te.Norm (), #NOTE: "map" is a reserved word
-        cons_monzo_list = None, des_monzo = None, show = True):
-    vals, subgroup = te.get_subgroup (vals, subgroup, axis = te.ROW)
+def symbolic (vals, target = None, norm = te.Norm (), 
+        constraint = None, destretch = None, show = True, *, 
+        subgroup = None, cons_monzo_list = None, des_monzo = None): #deprecated parameters
+    # NOTE: "map" is a reserved word
+    # optimization is preferably done in the unit of octaves, but for precision reasons
+    
+    if not subgroup is None:
+        warnings.warn ("\"subgroup\" is deprecated. Use \"target\" instead. ")
+        target = te.Subgroup (subgroup)
+    if not cons_monzo_list is None:
+        warnings.warn ("\"cons_monzo_list\" is deprecated. Use \"constraint\" instead. ")
+        constraint = te.Subgroup ([te.monzo2ratio (entry) for entry in cons_monzo_list.T])
+    if not des_monzo is None:
+        warnings.warn ("\"des_monzo\" is deprecated. Use \"destretch\" instead. ")
+        destretch = te.monzo2ratio (des_monzo)
+
+    vals, target = te.get_subgroup (vals, target, axis = te.AXIS.ROW)
     norm = NormSym (norm)
     if norm.order != 2:
         raise ValueError ("Euclidean norm is required for symbolic solution. ")
 
-    just_tuning_map = Matrix ([subgroup]).applyfunc (lambda si: log (si, 2))*te.SCALAR
-    weightskew = norm.get_weight_sym (subgroup) @ norm.get_skew_sym (subgroup)
+    just_tuning_map = te.SCALAR.CENT*Matrix ([target.ratios (evaluate = True)]).applyfunc (lambda si: log (si, 2))
+    weightskew = norm.get_weight_sym (target) @ norm.get_skew_sym (target)
     vals_copy = Matrix (vals)
     vals_x = vals_copy @ weightskew
 
-    if cons_monzo_list is None:
+    if constraint is None:
         projection = weightskew @ vals_x.pinv () @ vals_x @ weightskew.pinv ()
     else:
-        cons_monzo_list_copy = Matrix (cons_monzo_list)
-        cons_monzo_list_x = weightskew.pinv () @ cons_monzo_list_copy
+        cons_monzo_list = Matrix (constraint.basis_matrix_to (target))
+        cons_monzo_list_x = weightskew.pinv () @ cons_monzo_list
         # orthonormal complement basis of the weight-skewed constraints
         comp_monzo_list_x = Matrix (BlockMatrix (Matrix.orthogonalize (
             *cons_monzo_list_x.T.nullspace (), normalize = True)))
@@ -68,7 +82,7 @@ def symbolic (vals, subgroup = None, norm = te.Norm (), #NOTE: "map" is a reserv
         projection_xs_eigen = projection_xs @ cons_monzo_list_xs
 
         # finds the minor projection map
-        r = cons_monzo_list_copy.rank ()
+        r = cons_monzo_list.rank ()
         vals_xs_minor = vals_xs[r:, r:]
         projection_xs_minor = vals_xs_minor.pinv () @ vals_xs_minor
         # composes the inverse of weight-skewed constrained projection map in the working basis
@@ -81,18 +95,16 @@ def symbolic (vals, subgroup = None, norm = te.Norm (), #NOTE: "map" is a reserv
             weightskew @ subgroup_x @ projection_xs @ subgroup_x.inv () @ weightskew.pinv ())
     print ("Solved. ")
 
-    if not des_monzo is None:
-        des_monzo_copy = Matrix (des_monzo)
-        if des_monzo_copy.rank () > 1:
-            raise IndexError ("only one destretch target is allowed. ")
-        elif (tempered_size := (just_tuning_map @ projection @ des_monzo_copy).det ()) == 0:
+    if not destretch is None:
+        des_monzo = Matrix (te.ratio2monzo (te.as_ratio (destretch), subgroup = target))
+        if (tempered_size := (just_tuning_map @ projection @ des_monzo).det ()) == 0:
             raise ZeroDivisionError ("destretch target is in the nullspace. ")
         else:
-            projection *= (just_tuning_map @ des_monzo_copy).det ()/tempered_size
+            projection *= (just_tuning_map @ des_monzo).det ()/tempered_size
 
     gen = np.array (just_tuning_map @ projection @ vals_copy.pinv (), dtype = float).squeeze ()
     tempered_tuning_map = np.array (just_tuning_map @ projection, dtype = float).squeeze ()
-    misprojection = projection - Matrix.eye (len (subgroup))
+    misprojection = projection - Matrix.eye (len (target))
     mistuning_map = np.array (just_tuning_map @ misprojection, dtype = float).squeeze ()
 
     if show:
@@ -106,7 +118,7 @@ def symbolic (vals, subgroup = None, norm = te.Norm (), #NOTE: "map" is a reserv
             pprint (misprojection)
             print ("Eigenmonzos: ")
             eigenmonzo_list = projection.eigenvects ()[-1][-1]
-            te.show_monzo_list (eigenmonzo_list, subgroup)
+            te.show_monzo_list (eigenmonzo_list, target)
         else:
             print ("Transcendental projection map and misprojection map not shown. ")
 

@@ -44,17 +44,17 @@ temp.comma_basis ()
 #   subgroup: specifies a custom ji subgroup
 #   alt_val: alters the val by this matrix
 
-temp = te_et.et_construct (["14c", "17c"], [2, 3, 5, 7]) # squares
+temp = te_et.et_construct (["14c", "17c"], te.Subgroup ([2, 3, 5, 7])) # squares
 temp.temperament_measures (ntype = "smith", badness_scale = 1)
 
 # comma_construct
 # parameters:
 #   subgroup: specifies a custom ji subgroup
 
-temp = te_et.comma_construct (np.column_stack ([
-    te.ratio2monzo ([126, 125]), 
-    te.ratio2monzo ([245, 243])
-    ])) # septimal sensi
+temp = te_et.comma_construct (te.Subgroup ([
+    "126/125", 
+    "245/243"
+    ]).basis_matrix) # septimal sensi
 temp.temperament_measures (ntype = "smith", badness_scale = 1)
 
 # et_sequence

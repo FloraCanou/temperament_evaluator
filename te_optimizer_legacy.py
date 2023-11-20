@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.2
+# © 2020-2023 Flora Canou | Version 0.26.4
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -7,10 +7,13 @@ from scipy import optimize, linalg
 np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89]
-SCALAR = 1200 #could be in octave, but for precision reason
 
-# norm profile for the tuning space
+class SCALAR:
+    CENT = 1200
+
 class Norm: 
+    """Norm profile for the tuning space."""
+    
     def __init__ (self, wtype = "tenney", wamount = 1, skew = 0, order = 2):
         self.wtype = wtype
         self.wamount = wamount
@@ -18,16 +21,17 @@ class Norm:
         self.order = order
 
     def __get_weight (self, subgroup):
-        if self.wtype == "tenney":
-            weight_vec = np.reciprocal (np.log2 (np.array (subgroup, dtype = float)))
-        elif self.wtype == "wilson" or self.wtype == "benedetti":
-            weight_vec = np.reciprocal (np.array (subgroup, dtype = float))
-        elif self.wtype == "equilateral":
-            weight_vec = np.ones (len (subgroup))
-        else:
-            warnings.warn ("weighter type not supported, using default (\"tenney\")")
-            self.wtype = "tenney"
-            return self.__get_weight (subgroup)
+        match self.wtype:
+            case "tenney":
+                weight_vec = np.reciprocal (np.log2 (subgroup))
+            case "wilson" | "benedetti":
+                weight_vec = np.reciprocal (subgroup)
+            case "equilateral":
+                weight_vec = np.ones (len (subgroup))
+            case _:
+                warnings.warn ("weighter type not supported, using default (\"tenney\")")
+                self.wtype = "tenney"
+                return self.__get_weight (subgroup)
         return np.diag (weight_vec**self.wamount)
 
     def __get_skew (self, subgroup):
@@ -59,11 +63,13 @@ def __get_subgroup (main, subgroup):
 def __error (gen, vals, just_tuning_map, order):
     return linalg.norm (gen @ vals - just_tuning_map, ord = order)
 
-def optimizer_main (vals, subgroup = None, norm = Norm (), #"map" is a reserved word
+def optimizer_main (vals, subgroup = None, norm = Norm (), 
         cons_monzo_list = None, des_monzo = None, show = True):
+    # NOTE: "map" is a reserved word
+    # optimization is preferably done in the unit of octaves, but for precision reasons
     vals, subgroup = __get_subgroup (vals, subgroup)
 
-    just_tuning_map = np.log2 (subgroup)*SCALAR
+    just_tuning_map = SCALAR.CENT*np.log2 (subgroup)
     vals_x = norm.weightskewed (vals, subgroup)
     just_tuning_map_x = norm.weightskewed (just_tuning_map, subgroup)
     if norm.order == 2 and cons_monzo_list is None: #simply using lstsq for better performance
@@ -71,7 +77,7 @@ def optimizer_main (vals, subgroup = None, norm = Norm (), #"map" is a reserved 
         gen = res[0]
         print ("Euclidean tuning without constraints, solved using lstsq. ")
     else:
-        gen0 = [SCALAR]*vals.shape[0] #initial guess
+        gen0 = [SCALAR.CENT]*vals.shape[0] #initial guess
         cons = () if cons_monzo_list is None else {'type': 'eq', 'fun': lambda gen: (gen @ vals - just_tuning_map) @ cons_monzo_list}
         res = optimize.minimize (__error, gen0, args = (vals_x, just_tuning_map_x, norm.order), method = "SLSQP",
             options = {'ftol': 1e-9}, constraints = cons)
