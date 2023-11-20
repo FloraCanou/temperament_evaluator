@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.2
+# © 2020-2023 Flora Canou | Version 0.26.3
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -11,16 +11,16 @@ np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
 class Temperament:
     def __init__ (self, vals, subgroup = None, saturate = True, normalize = True): #NOTE: "map" is a reserved word
-        vals, subgroup = te.get_subgroup (vals, subgroup, axis = te.ROW)
+        vals, subgroup = te.get_subgroup (vals, subgroup, axis = te.AXIS.ROW)
         self.subgroup = subgroup
-        self.just_tuning_map = np.log2 (self.subgroup)*te.SCALAR
+        self.just_tuning_map = np.log2 (self.subgroup)*te.SCALAR.CENT
         self.vals = te.canonicalize (np.rint (vals).astype (int), saturate, normalize)
 
     def weightskewed (self, main, norm):
         return norm.weightskewed (main, self.subgroup)
 
-    # checks availability of the symbolic solver
     def __check_sym (self, order):
+        """Checks the availability of the symbolic solver."""
         if order == 2:
             try:
                 global te_sym
@@ -33,8 +33,8 @@ class Temperament:
             warnings.warn ("Condition for symbolic solution not met. Using main optimizer. ")
             return False
 
-    # interprets the enforce specification as a monzo
     def __get_enforce_vec (self, enforce_index, norm, optimizer):
+        """Interprets the enforce specification as a monzo."""
         if optimizer == "main":
             if enforce_index == 0:
                 weightskew = self.weightskewed (np.eye (len (self.subgroup)), norm)
@@ -49,9 +49,11 @@ class Temperament:
             else:
                 return Matrix ([1 if i == enforce_index - 1 else 0 for i, _ in enumerate (self.subgroup)])
 
-    # this mean rejects the extra dimension from the denominator
-    # such that when skew = 0, introducing the extra dimension doesn't change the result
     def __mean (self, main):
+        """
+        This mean rejects the extra dimension from the denominator
+        such that when skew = 0, introducing the extra dimension doesn't change the result.
+        """
         return np.sum (main)/len (self.subgroup)
 
     def __power_mean_norm (self, main, order):
@@ -130,11 +132,15 @@ class Temperament:
         # optimization
         if optimizer == "main":
             import te_optimizer as te_opt
-            gen, tempered_tuning_map, mistuning_map = te_opt.optimizer_main (self.vals, subgroup = self.subgroup,
-                norm = norm, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
+            gen, tempered_tuning_map, mistuning_map = te_opt.optimizer_main (
+                self.vals, subgroup = self.subgroup, norm = norm, 
+                cons_monzo_list = cons_monzo_list, des_monzo = des_monzo
+            )
         elif optimizer == "sym":
-            gen, tempered_tuning_map, mistuning_map = te_sym.symbolic (self.vals, subgroup = self.subgroup,
-                norm = te_sym.NormSym (norm), cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
+            gen, tempered_tuning_map, mistuning_map = te_sym.symbolic (
+                self.vals, subgroup = self.subgroup, norm = te_sym.NormSym (norm), 
+                cons_monzo_list = cons_monzo_list, des_monzo = des_monzo
+            )
 
         # error and bias
         tempered_tuning_map_x = self.weightskewed (tempered_tuning_map, norm)
@@ -207,13 +213,13 @@ class Temperament:
     def badness (self, ntype = "breed", norm = te.Norm ()): #in octaves
         return (self.error (ntype, norm)
             * self.complexity (ntype, norm)
-            / te.SCALAR)
+            / te.SCALAR.CENT)
 
     def badness_logflat (self, ntype = "breed", norm = te.Norm ()): #in octaves
         try:
             return (self.error (ntype, norm)
                 * self.complexity (ntype, norm)**(self.vals.shape[1]/(self.vals.shape[1] - self.vals.shape[0]))
-                / te.SCALAR)
+                / te.SCALAR.CENT)
         except ZeroDivisionError:
             return np.nan
 

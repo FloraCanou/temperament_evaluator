@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.2
+# © 2020-2023 Flora Canou | Version 0.26.3
 # This work is licensed under the GNU General Public License version 3.
 
 import functools, warnings
@@ -7,17 +7,29 @@ from scipy import linalg
 from sympy.matrices import Matrix, normalforms
 from sympy import gcd
 
-ROW, COL, VEC = 0, 1, 2
 PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89]
-SCALAR = 1200 #could be in octave, but for precision reason
 RATIONAL_WEIGHT_LIST = ["equilateral"]
 ALGEBRAIC_WEIGHT_LIST = RATIONAL_WEIGHT_LIST + ["wilson", "benedetti"]
 
-def as_list (a):
-    return a if isinstance (a, list) else [a]
+class AXIS:
+    ROW, COL, VEC = 0, 1, 2
 
-# norm profile for the tuning space
+class SCALAR:
+    OCTAVE = 1
+    CENT = 1200
+
+def as_list (main):
+    if isinstance (main, list):
+        return main
+    else:
+        try:
+            return list (main)
+        except TypeError:
+            return [main]
+
 class Norm: 
+    """Norm profile for the tuning space."""
+
     def __init__ (self, wtype = "tenney", wamount = 1, skew = 0, order = 2):
         self.wtype = wtype
         self.wamount = wamount
@@ -25,18 +37,19 @@ class Norm:
         self.order = order
 
     def __get_weight (self, subgroup):
-        if self.wtype == "tenney":
-            weight_vec = np.reciprocal (np.log2 (np.array (subgroup, dtype = float)))
-        elif self.wtype == "wilson" or self.wtype == "benedetti":
-            weight_vec = np.reciprocal (np.array (subgroup, dtype = float))
-        elif self.wtype == "equilateral":
-            weight_vec = np.ones (len (subgroup))
-        # elif self.wtype == "hahn24": #pending better implementation
-        #     weight_vec = np.floor (np.log2 (24)/np.log2 (np.array (subgroup, dtype = float)))
-        else:
-            warnings.warn ("weighter type not supported, using default (\"tenney\")")
-            self.wtype = "tenney"
-            return self.__get_weight (subgroup)
+        match self.wtype:
+            case "tenney":
+                weight_vec = np.reciprocal (np.log2 (np.array (subgroup, dtype = float)))
+            case "wilson" | "benedetti":
+                weight_vec = np.reciprocal (np.array (subgroup, dtype = float))
+            case "equilateral":
+                weight_vec = np.ones (len (subgroup))
+            # case "hahn24": #pending better implementation
+                # weight_vec = np.floor (np.log2 (24)/np.log2 (np.array (subgroup, dtype = float)))
+            case _:
+                warnings.warn ("weighter type not supported, using default (\"tenney\")")
+                self.wtype = "tenney"
+                return self.__get_weight (subgroup)
         return np.diag (weight_vec**self.wamount)
 
     def __get_skew (self, subgroup):
@@ -54,41 +67,43 @@ class Norm:
     def weightskewed (self, main, subgroup):
         return main @ self.__get_weight (subgroup) @ self.__get_skew (subgroup)
 
-# normalizes the matrix to HNF
-def __hnf (main, mode = ROW):
-    if mode == ROW:
+def __hnf (main, mode = AXIS.ROW):
+    """Normalizes a matrix to HNF."""
+    if mode == AXIS.ROW:
         return np.flip (np.array (normalforms.hermite_normal_form (Matrix (np.flip (main)).T).T, dtype = int))
-    elif mode == COL:
+    elif mode == AXIS.COL:
         return np.flip (np.array (normalforms.hermite_normal_form (Matrix (np.flip (main))), dtype = int))
 
-# saturates the matrix, pernet--stein method
 def __sat (main):
+    """Saturates a matrix, pernet--stein method."""
     r = Matrix (main).rank ()
     return np.rint (
-        linalg.inv (__hnf (main, mode = COL)[:, :r]) @ main
+        linalg.inv (__hnf (main, mode = AXIS.COL)[:, :r]) @ main
         ).astype (int)
 
-# saturation & normalization
-# normalization only checks multirank matrices
-def canonicalize (main, saturate = True, normalize = True, axis = ROW):
-    if axis == ROW:
+def canonicalize (main, saturate = True, normalize = True, axis = AXIS.ROW):
+    """
+    Saturation & normalization.
+    Normalization only checks multirank matrices.
+    """
+    if axis == AXIS.ROW:
         main = __sat (main) if saturate else main
         main = __hnf (main) if normalize and main.shape[0] > 1 else main
-    elif axis == COL:
+    elif axis == AXIS.COL:
         main = np.flip (__sat (np.flip (main).T)).T if saturate else main
         main = np.flip (__hnf (np.flip (main).T)).T if normalize and main.shape[1] > 1 else main
     return main
 
 canonicalise = canonicalize
 
-# gets the subgroup and tries to match the dimensions
 def get_subgroup (main, subgroup, axis):
+    """Gets the subgroup and tries to match the dimensions."""
     main = np.asarray (main)
-    if axis == ROW:
+    if axis == AXIS.ROW:
         length_main = main.shape[1]
-    elif axis == COL:
+    elif axis == AXIS.COL:
         length_main = main.shape[0]
-    elif axis == VEC:
+    elif axis == AXIS.VEC:
         length_main = len (main)
 
     if subgroup is None:
@@ -96,20 +111,23 @@ def get_subgroup (main, subgroup, axis):
     elif length_main != len (subgroup):
         warnings.warn ("dimension does not match. Casting to the smaller dimension. ")
         dim = min (length_main, len (subgroup))
-        if axis == ROW:
+        if axis == AXIS.ROW:
             main = main[:, :dim]
-        elif axis == COL:
+        elif axis == AXIS.COL:
             main = main[:dim, :]
-        elif axis == VEC:
+        elif axis == AXIS.VEC:
             main = main[:dim]
         subgroup = subgroup[:dim]
 
     return main, subgroup
 
-# takes a monzo, returns the ratio in [num, den] form
-# ratio[0]: num, ratio[1]: den
 def monzo2ratio (monzo, subgroup = None):
-    monzo, subgroup = get_subgroup (monzo, subgroup, axis = VEC)
+    """
+    Takes a monzo, returns the ratio in [num, den] form, 
+    subgroup monzo supported.
+    ratio[0]: num, ratio[1]: den
+    """
+    monzo, subgroup = get_subgroup (monzo, subgroup, axis = AXIS.VEC)
     ratio = [1, 1]
     for i, mi in enumerate (monzo):
         if mi > 0:
@@ -118,10 +136,13 @@ def monzo2ratio (monzo, subgroup = None):
             ratio[1] *= subgroup[i]**(-mi)
     return ratio
 
-# takes a ratio in [num, den] form, returns the monzo
 def ratio2monzo (ratio, subgroup = None):
-    if (not all (isinstance (entry, (int, np.integer)) for entry in ratio)
-        or any (entry < 1 for entry in ratio)):
+    """
+    Takes a ratio in [num, den] form, returns the monzo, 
+    subgroup monzo supported.
+    """
+    if (not isinstance (ratio[0], (int, np.integer)) or not isinstance (ratio[1], (int, np.integer))
+        or ratio[0] < 1 or ratio[1] < 1):
         raise ValueError ("numerator and denominator should be positive integers. ")
     if trim := (subgroup is None):
         subgroup = PRIME_LIST
@@ -147,13 +168,15 @@ def bra (val):
 def ket (monzo):
     return "[" + " ".join (map (str, np.trim_zeros (monzo, trim = "b"))) + ">"
 
-# takes a possibly fractional sympy matrix and converts it to an integer numpy array
 def matrix2array (main):
+    """Takes a possibly fractional sympy matrix and converts it to an integer numpy array."""
     return np.array (main/functools.reduce (gcd, tuple (main)), dtype = int).squeeze ()
 
-# takes a list (python list) of monzos (sympy matrices) and show them in a readable manner
-# used for comma basis and eigenmonzo basis
 def show_monzo_list (monzo_list, subgroup):
+    """
+    Takes a list (python list) of monzos (sympy matrices) and show them in a readable manner. 
+    Used to display comma bases and eigenmonzo bases. 
+    """
     for entry in monzo_list:
         monzo = matrix2array (entry)
         monzo_str = ket (monzo)

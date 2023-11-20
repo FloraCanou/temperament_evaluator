@@ -38,12 +38,12 @@ class NormSym (te.Norm):
 
 def symbolic (vals, subgroup = None, norm = te.Norm (), #NOTE: "map" is a reserved word
         cons_monzo_list = None, des_monzo = None, show = True):
-    vals, subgroup = te.get_subgroup (vals, subgroup, axis = te.ROW)
+    vals, subgroup = te.get_subgroup (vals, subgroup, axis = te.AXIS.ROW)
     norm = NormSym (norm)
     if norm.order != 2:
         raise ValueError ("Euclidean norm is required for symbolic solution. ")
 
-    just_tuning_map = Matrix ([subgroup]).applyfunc (lambda si: log (si, 2))*te.SCALAR
+    just_tuning_map = Matrix ([subgroup]).applyfunc (lambda si: log (si, 2))*te.SCALAR.CENT
     weightskew = norm.get_weight_sym (subgroup) @ norm.get_skew_sym (subgroup)
     vals_copy = Matrix (vals)
     vals_x = vals_copy @ weightskew

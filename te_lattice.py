@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.2
+# © 2020-2023 Flora Canou | Version 0.26.3
 # This work is licensed under the GNU General Public License version 3.
 
 import math, warnings
@@ -21,7 +21,7 @@ class TemperamentLattice (te_tm.Temperament):
         return interval_temperamental_norm
 
     def find_complexity_spectrum (self, monzo_list, norm = te.Norm (), oe = True):
-        monzo_list, _ = te.get_subgroup (monzo_list, self.subgroup, axis = te.COL)
+        monzo_list, _ = te.get_subgroup (monzo_list, self.subgroup, axis = te.AXIS.COL)
         spectrum = [[monzo_list[:, i], self.find_temperamental_norm (
             monzo_list[:, i], norm, oe, show = False
             )] for i in range (monzo_list.shape[1])]
