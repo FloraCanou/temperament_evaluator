@@ -13,7 +13,7 @@ class SCALAR:
 
 class Norm: 
     """Norm profile for the tuning space."""
-    
+
     def __init__ (self, wtype = "tenney", wamount = 1, skew = 0, order = 2):
         self.wtype = wtype
         self.wamount = wamount
@@ -23,9 +23,9 @@ class Norm:
     def __get_weight (self, subgroup):
         match self.wtype:
             case "tenney":
-                weight_vec = np.reciprocal (np.log2 (subgroup))
+                weight_vec = np.reciprocal (np.log2 (subgroup, dtype = float))
             case "wilson" | "benedetti":
-                weight_vec = np.reciprocal (subgroup)
+                weight_vec = np.reciprocal (np.array (subgroup, dtype = float))
             case "equilateral":
                 weight_vec = np.ones (len (subgroup))
             case _:
@@ -78,9 +78,12 @@ def optimizer_main (vals, subgroup = None, norm = Norm (),
         print ("Euclidean tuning without constraints, solved using lstsq. ")
     else:
         gen0 = [SCALAR.CENT]*vals.shape[0] #initial guess
-        cons = () if cons_monzo_list is None else {'type': 'eq', 'fun': lambda gen: (gen @ vals - just_tuning_map) @ cons_monzo_list}
-        res = optimize.minimize (__error, gen0, args = (vals_x, just_tuning_map_x, norm.order), method = "SLSQP",
-            options = {'ftol': 1e-9}, constraints = cons)
+        cons = () if cons_monzo_list is None else {
+            'type': 'eq', 
+            'fun': lambda gen: (gen @ vals - just_tuning_map) @ cons_monzo_list
+        }
+        res = optimize.minimize (__error, gen0, args = (vals_x, just_tuning_map_x, norm.order), 
+            method = "SLSQP", options = {'ftol': 1e-9}, constraints = cons)
         print (res.message)
         if res.success:
             gen = res.x
