@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.3
+# © 2020-2023 Flora Canou | Version 0.26.4
 # This work is licensed under the GNU General Public License version 3.
 
 import functools, warnings
@@ -155,7 +155,7 @@ def ratio2monzo (ratio, subgroup = None):
         while ratio[1] % si == 0:
             monzo[i] -= 1
             ratio[1] /= si
-        if all (entry == 1 for entry in ratio):
+        if ratio[0] == 1 and ratio[1] == 1:
             break
     else:
         raise ValueError ("improper subgroup. ")

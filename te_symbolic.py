@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.2
+# © 2020-2023 Flora Canou | Version 0.26.4
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -15,19 +15,20 @@ class NormSym (te.Norm):
 
     def get_weight_sym (self, subgroup):
         wamount = Rational (self.wamount).limit_denominator (1e3)
-        if self.wtype == "tenney":
-            warnings.warn ("transcendental weight can be slow. Main optimizer recommended. ")
-            weight_vec = Matrix (subgroup).applyfunc (lambda si: log (2, si))
-        elif self.wtype == "wilson" or self.wtype == "benedetti":
-            weight_vec = Matrix (subgroup).applyfunc (lambda si: 1/si)
-        elif self.wtype == "equilateral":
-            weight_vec = Matrix.ones (len (subgroup), 1)
-        # elif self.wtype == "hahn24": #pending better implementation
-        #     weight_vec = Matrix (subgroup).applyfunc (lambda si: floor (log (24, si)))
-        else:
-            warnings.warn ("weighter type not supported, using default (\"tenney\")")
-            self.wtype = "tenney"
-            return self.get_weight_sym (subgroup)
+        match self.wtype:
+            case "tenney":
+                warnings.warn ("transcendental weight can be slow. Main optimizer recommended. ")
+                weight_vec = Matrix (subgroup).applyfunc (lambda si: log (2, si))
+            case "wilson" | "benedetti":
+                weight_vec = Matrix (subgroup).applyfunc (lambda si: 1/si)
+            case "equilateral":
+                weight_vec = Matrix.ones (len (subgroup), 1)
+            # case "hahn24": #pending better implementation
+                # weight_vec = Matrix (subgroup).applyfunc (lambda si: floor (log (24, si)))
+            case _:
+                warnings.warn ("weighter type not supported, using default (\"tenney\")")
+                self.wtype = "tenney"
+                return self.get_weight_sym (subgroup)
         return Matrix.diag (*weight_vec.applyfunc (lambda wi: Pow (wi, wamount)))
 
     def get_skew_sym (self, subgroup):
