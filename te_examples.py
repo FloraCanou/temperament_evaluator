@@ -8,10 +8,10 @@ import te_lattice as te_la
 
 # Norm
 # parameters: 
-#   wtype: specifies the weight. "tenney", "equilateral" and "wilson"/"benedetti"
-#   wamount: scales the weight specified above
-#   skew: specifies the skew
-#   order: specifies the order
+#   wtype: weight method. "tenney", "equilateral" and "wilson"/"benedetti"
+#   wamount: weight scaling factor
+#   skew: skew of the space
+#   order: optimization order
 
 # Temperament
 # parameters:
@@ -19,14 +19,13 @@ import te_lattice as te_la
 # methods:
 #   tune: gives the tuning
 #     parameters:
-#       norm: specifies the norm profile of the tuning space. see above
-#       enforce: specifies constraints and destretch targets. try "c", "d", "c1c2", "c0" and see readme for more examples
-#       cons_monzo_list: constrains this list of monzos to pure
-#       des_monzo: destretches this monzo to pure
+#       norm: norm profile of the tuning space. see above
+#       constraint: constrains this subgroup to pure
+#       destretch: destretches this ratio to pure
 #   temperament_measures: gives the temperament measures
 #     parameters:
-#       ntype: specifies the averaging normalizer. "breed", "smith", or "l2"
-#       norm: specifies the norm profile for the tuning space. see above
+#       ntype: averaging normalizer. "breed", "smith", or "l2"
+#       norm: norm profile for the tuning space. see above
 #       badness_scale: scales the badnesses, literally
 #   comma_basis: gives the comma basis
 
@@ -34,39 +33,39 @@ temp = te_tm.Temperament ([
     [1, 0, 2, -1], 
     [0, 5, 1, 12]
     ]) # septimal magic
-temp.tune (norm = te.Norm (skew = 1), enforce = "c") # ctwe tuning
-temp.temperament_measures (ntype = "smith", badness_scale = 1)
+temp.tune (norm = te.Norm (skew = 1), constraint = te.Subgroup ("2")) # ctwe tuning
+temp.temperament_measures (ntype = "smith", badness_scale = 1) # te temperament measures
 temp.wedgie (norm = te.Norm (wtype = "equilateral"))
 temp.comma_basis ()
 
 # et_construct
 # parameters:
-#   subgroup: specifies a custom ji subgroup
+#   subgroup: custom ji subgroup
 #   alt_val: alters the val by this matrix
 
-temp = te_et.et_construct (["14c", "17c"], [2, 3, 5, 7]) # squares
+temp = te_et.et_construct (["14c", "17c"], te.Subgroup ([2, 3, 5, 7])) # squares
 temp.temperament_measures (ntype = "smith", badness_scale = 1)
 
 # comma_construct
 # parameters:
-#   subgroup: specifies a custom ji subgroup
+#   subgroup: custom ji subgroup
 
-temp = te_et.comma_construct (np.column_stack ([
-    te.ratio2monzo ([126, 125]), 
-    te.ratio2monzo ([245, 243])
-    ])) # septimal sensi
+temp = te_et.comma_construct (te.Subgroup ([
+    "126/125", 
+    "245/243"
+    ]).basis_matrix) # septimal sensi
 temp.temperament_measures (ntype = "smith", badness_scale = 1)
 
 # et_sequence
 # parameters:
-#   subgroup: specifies a custom ji subgroup
-#   ntype: specifies the averaging normalizer. "breed", "smith", or "none"
-#   norm: specifies the norm profile for the tuning space. see above
+#   subgroup: custom ji subgroup
+#   ntype: averaging normalizer. "breed", "smith", or "none"
+#   norm: norm profile for the tuning space. see above
 #   cond: "error" or "badness"
 #   threshold: temperaments failing this will not be shown
 #   prog: if true, threshold will be updated
 #   pv: if true, only patent vals will be considered
-#   search_range: specifies the upper bound where to stop searching
+#   search_range: upper bound where to stop searching
 
 temp = te_tm.Temperament ([
     [1, 0, -4, -13], 

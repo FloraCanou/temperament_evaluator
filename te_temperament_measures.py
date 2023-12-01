@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.4
+# © 2020-2023 Flora Canou | Version 1.0.0
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -11,13 +11,9 @@ np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
 class Temperament:
     def __init__ (self, vals, subgroup = None, saturate = True, normalize = True): #NOTE: "map" is a reserved word
-        vals, subgroup = te.get_subgroup (vals, subgroup, axis = te.AXIS.ROW)
+        vals, subgroup = te.setup (vals, subgroup, axis = te.AXIS.ROW)
         self.subgroup = subgroup
-        self.just_tuning_map = np.log2 (self.subgroup)*te.SCALAR.CENT
         self.vals = te.canonicalize (np.rint (vals).astype (int), saturate, normalize)
-
-    def weightskewed (self, main, norm):
-        return norm.weightskewed (main, self.subgroup)
 
     def __check_sym (self, order):
         """Checks the availability of the symbolic solver."""
@@ -34,36 +30,20 @@ class Temperament:
             return False
 
     def __get_enforce_vec (self, enforce_index, norm, optimizer):
-        """Interprets the enforce specification as a monzo."""
+        """Interprets the enforce specification."""
         if optimizer == "main":
-            if enforce_index == 0:
-                weightskew = self.weightskewed (np.eye (len (self.subgroup)), norm)
-                return weightskew @ np.ones (weightskew.shape[1])
+            if enforce_index == 0: #pending implementation
+                raise ValueError ("this functionality is removed due to support for subgroup tuning. ")
             else:
-                return np.array ([1 if i == enforce_index - 1 else 0 for i, _ in enumerate (self.subgroup)])
+                return te.monzo2ratio (self.subgroup.basis_matrix.T[enforce_index - 1], self.subgroup)
         elif optimizer == "sym":
-            if enforce_index == 0:
-                norm = te_sym.NormSym ()
-                weightskew = norm.get_weight_sym (self.subgroup) @ te_sym.get_skew_sym (self.subgroup)
-                return weightskew @ Matrix.ones (weightskew.shape[1], 1)
+            if enforce_index == 0: #pending implementation
+                raise ValueError ("this functionality is removed due to support for subgroup tuning. ")
             else:
-                return Matrix ([1 if i == enforce_index - 1 else 0 for i, _ in enumerate (self.subgroup)])
+                return te.monzo2ratio (self.subgroup.basis_matrix.T[enforce_index - 1], self.subgroup)
 
-    def __mean (self, main):
-        """
-        This mean rejects the extra dimension from the denominator
-        such that when skew = 0, introducing the extra dimension doesn't change the result.
-        """
-        return np.sum (main)/len (self.subgroup)
-
-    def __power_mean_norm (self, main, order):
-        if order == np.inf:
-            return np.max (main)
-        else:
-            return np.power (self.__mean (np.power (np.abs (main), order)), np.reciprocal (float (order)))
-
-    def __show_header (self, norm = None, enforce_text = None, ntype = None):
-        print (f"\nSubgroup: {'.'.join (map (str, self.subgroup))}",
+    def __show_header (self, norm = None, mode_text = None, enforce_text = None, ntype = None):
+        print (f"\nSubgroup: {self.subgroup}",
             f"Mapping: \n{self.vals}", sep = "\n")
 
         if norm: 
@@ -83,74 +63,75 @@ class Temperament:
             except KeyError:
                 order_text = f"-L{norm.order}"
 
-            print (f"Norm: {weight_text}{skew_text}{order_text}")
+            print ("Norm: " + weight_text + skew_text + order_text)
+        if mode_text:
+            print ("Mode: " + mode_text)
         if enforce_text:
-            print (f"Enforcement: {enforce_text}")
+            print ("Enforcement: " + enforce_text)
         if ntype:
-            print (f"Normalizer: {ntype}")
+            print ("Normalizer: " + ntype)
         return
 
-    def tune (self, optimizer = "main", norm = te.Norm (), 
-            enforce = "", cons_monzo_list = None, des_monzo = None): #in cents
+    def tune (self, optimizer = "main", norm = te.Norm (), inharmonic = False, 
+            constraint = None, destretch = None, *, 
+            enforce = None, cons_monzo_list = None, des_monzo = None): #deprecated parameters
+
+        if not enforce is None:
+            warnings.warn ("\"enforce\" is deprecated. Use \"constraint\" and/or \"destretch\" instead. ")
+            if enforce == "c": #default to octave-constrained
+                enforce = "c1"
+            elif enforce == "d": #default to octave-destretched
+                enforce = "d1"
+            if constraint is None and destretch is None:
+                if enforce_spec_list := re.findall ("[cd]\d+", str (enforce)): #separates the enforcements
+                    cons_ratios, des_ratios, cons_text, des_text = ([] for _ in range (4))
+                    for entry in enforce_spec_list:
+                        if entry[0] == "c":
+                            cons_ratios.append (self.__get_enforce_vec (int (entry[1:]), norm, optimizer))
+                        else:
+                            des_ratios.append (self.__get_enforce_vec (int (entry[1:]), norm, optimizer))
+                    
+                    constraint = te.Subgroup (cons_ratios) if cons_ratios else None
+                    destretch = te.as_ratio (*des_ratios) if des_ratios else None
+
+        if not cons_monzo_list is None:
+            constraint = te.Subgroup ([te.monzo2ratio (entry) for entry in cons_monzo_list.T])
+            warnings.warn ("\"cons_monzo_list\" is deprecated. Use \"constraint\" instead. ")
+        if not des_monzo is None:
+            destretch = te.monzo2ratio (des_monzo)
+            warnings.warn ("\"des_monzo\" is deprecated. Use \"destretch\" instead. ")
+
         # checks optimizer availability
         if optimizer == "sym" and not self.__check_sym (norm.order):
-            return self.tune (optimizer = "main", norm = norm,
-                enforce = enforce, cons_monzo_list = cons_monzo_list, des_monzo = des_monzo)
+            return self.tune (optimizer = "main", norm = norm, inharmonic = inharmonic, 
+                constraint = constraint, destretch = destretch)
 
-        # gets the enforcements
-        if enforce == "c": #default to octave-constrained
-            enforce = "c1"
-        elif enforce == "d": #default to octave-destretched
-            enforce = "d1"
-        if cons_monzo_list is None and des_monzo is None:
-            if enforce_spec_list := re.findall ("[cd]\d+", str (enforce)): #separates the enforcements
-                cons_monzo_list, des_monzo, cons_text, des_text = ([] for _ in range (4))
-                for entry in enforce_spec_list:
-                    if entry[0] == "c":
-                        cons_monzo_list.append (self.__get_enforce_vec (int (entry[1:]), norm, optimizer))
-                        cons_text.append ("Xj" if entry[1:] == "0" else f"{self.subgroup[int (entry[1:]) - 1]}")
-                    else:
-                        des_monzo.append (self.__get_enforce_vec (int (entry[1:]), norm, optimizer))
-                        des_text.append ("Xj" if entry[1:] == "0" else f"{self.subgroup[int (entry[1:]) - 1]}")
-                if optimizer == "main":
-                    cons_monzo_list = np.column_stack (cons_monzo_list) if cons_monzo_list else None
-                    des_monzo = np.column_stack (des_monzo) if des_monzo else None
-                elif optimizer == "sym":
-                    cons_monzo_list = Matrix (BlockMatrix (cons_monzo_list)) if cons_monzo_list else None
-                    des_monzo = Matrix (BlockMatrix (des_monzo)) if des_monzo else None
-                cons_text = ".".join (cons_text) + "-constrained" if cons_text else ""
-                des_text = ".".join (des_text) + "-destretched" if des_text else ""
-                enforce_text = " ".join ([cons_text, des_text])
-            else:
-                enforce_text = "none"
+        # gets the enforcement text
+        cons_text = constraint.__str__ () + "-constrained" if constraint else ""
+        des_text = destretch.__str__ () + "-destretched" if destretch else ""
+        enforce_text = " ".join ([cons_text, des_text]) if cons_text or des_text else "none"
+        if self.subgroup.is_simple ():
+            mode_text = "prime-harmonic"
         else:
-            enforce_text = "custom"
+            mode_text = "inharmonic" if inharmonic else "subgroup"
 
         # shows the header
-        self.__show_header (norm = norm, enforce_text = enforce_text)
+        self.__show_header (norm = norm, mode_text = mode_text, enforce_text = enforce_text)
 
         # optimization
         if optimizer == "main":
             import te_optimizer as te_opt
-            gen, tempered_tuning_map, mistuning_map = te_opt.optimizer_main (
-                self.vals, subgroup = self.subgroup, norm = norm, 
-                cons_monzo_list = cons_monzo_list, des_monzo = des_monzo
+            gen, tempered_tuning_map, error_map = te_opt.wrapper_main (
+                self.vals, subgroup = self.subgroup, norm = norm, inharmonic = inharmonic, 
+                constraint = constraint, destretch = destretch
             )
         elif optimizer == "sym":
-            gen, tempered_tuning_map, mistuning_map = te_sym.symbolic (
-                self.vals, subgroup = self.subgroup, norm = te_sym.NormSym (norm), 
-                cons_monzo_list = cons_monzo_list, des_monzo = des_monzo
+            gen, tempered_tuning_map, error_map = te_sym.wrapper_symbolic (
+                self.vals, subgroup = self.subgroup, norm = te_sym.NormSym (norm), inharmonic = inharmonic, 
+                constraint = constraint, destretch = destretch
             )
 
-        # error and bias
-        tempered_tuning_map_x = self.weightskewed (tempered_tuning_map, norm)
-        mistuning_map_x = self.weightskewed (mistuning_map, norm)
-        error = self.__power_mean_norm (mistuning_map_x, norm.order)
-        bias = np.mean (mistuning_map_x)
-        # print (mistuning_map_x) #for debugging
-        print (f"Tuning error: {error:.6f} (¢)",
-            f"Tuning bias: {bias:.6f} (¢)", sep = "\n")
-        return gen, tempered_tuning_map, mistuning_map
+        return gen, tempered_tuning_map, error_map
 
     optimise = tune
     optimize = tune
@@ -158,8 +139,10 @@ class Temperament:
     analyse = tune
 
     def wedgie (self, norm = te.Norm (), show = True):
-        combination_list = itertools.combinations (range (self.vals.shape[1]), self.vals.shape[0])
-        wedgie = np.array ([linalg.det (self.weightskewed (self.vals, norm)[:, entry]) for entry in combination_list])
+        combinations = itertools.combinations (range (self.vals.shape[1]), self.vals.shape[0])
+        wedgie = np.array ([
+            linalg.det (norm.tuning_x (self.vals, self.subgroup)[:, entry]) for entry in combinations
+        ])
         wedgie *= np.copysign (1, wedgie[0])
         if show:
             self.__show_header ()
@@ -167,13 +150,27 @@ class Temperament:
         return wedgie
 
     def complexity (self, ntype = "breed", norm = te.Norm ()):
+        if not norm.order == 2:
+            raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
+        elif not self.subgroup.is_simple ():
+            raise NotImplementedError ("subgroup temperaments not supported as of now. ")
+        return self.__complexity (ntype, norm)
+
+    def error (self, ntype = "breed", norm = te.Norm (), inharmonic = False, scalar = te.SCALAR.CENT): #in cents by default
+        """
+        Returns the temperament's inherent inaccuracy regardless of the actual tuning, 
+        subgroup temperaments supported. 
+        """
         if norm.order != 2:
             raise NotImplementedError ("temperament measures only work for Euclidean norm as of now. ")
-        
+        return self.__error (ntype, norm, inharmonic, scalar)
+
+    def __complexity (self, ntype, norm):
         # standard L2 complexity
         complexity = np.sqrt (linalg.det (
-            self.weightskewed (self.vals, norm)
-            @ self.weightskewed (self.vals, norm).T))
+            norm.tuning_x (self.vals, self.subgroup)
+            @ norm.tuning_x (self.vals, self.subgroup).T
+        ))
         # complexity = linalg.norm (self.wedgie (norm = norm, show = False)) #same
         if ntype == "breed": #Graham Breed's RMS (default)
             complexity *= 1/np.sqrt (self.vals.shape[1]**self.vals.shape[0])
@@ -183,64 +180,83 @@ class Temperament:
             pass
         else:
             warnings.warn ("normalizer not supported, using default (\"breed\")")
-            return self.complexity (ntype = "breed", norm = norm)
+            return self.__complexity (ntype = "breed", norm = norm)
         return complexity
 
-    def error (self, ntype = "breed", norm = te.Norm ()): #in cents
-        if norm.order != 2:
-            raise NotImplementedError ("temperament measures only work for Euclidean norm as of now. ")
-
+    def __error (self, ntype, norm, inharmonic, scalar):
         # standard L2 error
+        if inharmonic:
+            vals = self.vals
+            subgroup = self.subgroup
+        else:
+            vals = te.antinullspace (self.subgroup.basis_matrix @ te.nullspace (self.vals))
+            subgroup = te.get_subgroup (self.subgroup.basis_matrix, axis = te.AXIS.COL)
+        just_tuning_map = subgroup.just_tuning_map (scalar)
         error = linalg.norm (
-            self.weightskewed (self.just_tuning_map, norm)
-            @ linalg.pinv (self.weightskewed (self.vals, norm))
-            @ self.weightskewed (self.vals, norm)
-            - self.weightskewed (self.just_tuning_map, norm))
+            norm.tuning_x (just_tuning_map, subgroup)
+            @ linalg.pinv (norm.tuning_x (vals, subgroup))
+            @ norm.tuning_x (vals, subgroup)
+            - norm.tuning_x (just_tuning_map, subgroup)
+        )
         if ntype == "breed": #Graham Breed's RMS (default)
-            error *= 1/np.sqrt (self.vals.shape[1])
+            error *= 1/np.sqrt (vals.shape[1])
         elif ntype == "smith": #Gene Ward Smith's RMS
             try:
-                error *= np.sqrt ((self.vals.shape[0] + 1) / (self.vals.shape[1] - self.vals.shape[0]))
+                error *= np.sqrt ((vals.shape[0] + 1) / (vals.shape[1] - vals.shape[0]))
             except ZeroDivisionError:
                 error = np.nan
         elif ntype == "none":
             pass
         else:
             warnings.warn ("normalizer not supported, using default (\"breed\")")
-            return self.error (ntype = "breed", norm = norm)
+            return self.__error (ntype = "breed", norm = norm, inharmonic = inharmonic, scalar = scalar)
         return error
 
-    def badness (self, ntype = "breed", norm = te.Norm ()): #in octaves
-        return (self.error (ntype, norm)
-            * self.complexity (ntype, norm)
-            / te.SCALAR.CENT)
+    def badness (self, ntype = "breed", norm = te.Norm (), logflat = False, scalar = te.SCALAR.OCTAVE): #in octaves by default
+        if not norm.order == 2:
+            raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
+        elif not self.subgroup.is_simple ():
+            raise NotImplementedError ("subgroup temperaments not supported as of now. ")
 
-    def badness_logflat (self, ntype = "breed", norm = te.Norm ()): #in octaves
+        if logflat:
+            return __badness_logflat (ntype, norm, scalar)
+        else:
+            return __badness (ntype, norm, scalar)
+
+    def __badness (self, ntype, norm, scalar):
+        return (self.__error (ntype, norm, inharmonic = False, scalar = scalar)
+            * self.__complexity (ntype, norm))
+
+    def __badness_logflat (self, ntype, norm, scalar):
         try:
-            return (self.error (ntype, norm)
-                * self.complexity (ntype, norm)**(self.vals.shape[1]/(self.vals.shape[1] - self.vals.shape[0]))
-                / te.SCALAR.CENT)
+            return (self.__error (ntype, norm, inharmonic = False, scalar = scalar)
+                * self.__complexity (ntype, norm)**(self.vals.shape[1]/(self.vals.shape[1] - self.vals.shape[0])))
         except ZeroDivisionError:
             return np.nan
 
-    def temperament_measures (self, ntype = "breed", norm = te.Norm (), badness_scale = 1000):
+    def temperament_measures (self, ntype = "breed", norm = te.Norm (), error_scale = te.SCALAR.CENT, badness_scale = 1e3):
+        """Shows the temperament measures."""
+        if not norm.order == 2:
+            raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
+        elif not self.subgroup.is_simple ():
+            raise NotImplementedError ("subgroup temperaments not supported as of now. ")
+        return self.__temperament_measures (ntype, norm, error_scale, badness_scale)
+        
+    def __temperament_measures (self, ntype, norm, error_scale, badness_scale):
         self.__show_header (norm = norm, ntype = ntype)
-
-        # shows the temperament measures
-        error = self.error (ntype, norm)
-        complexity = self.complexity (ntype, norm)
-        badness = self.badness (ntype, norm) * badness_scale
-        badness_logflat = self.badness_logflat (ntype, norm) * badness_scale
+        error = self.__error (ntype, norm, inharmonic = False, scalar = error_scale)
+        complexity = self.__complexity (ntype, norm)
+        badness = self.__badness (ntype, norm, scalar = badness_scale)
+        badness_logflat = self.__badness_logflat (ntype, norm, scalar = badness_scale)
         print (f"Complexity: {complexity:.6f}",
-            f"Error: {error:.6f} (¢)",
+            f"Error: {error:.6f} (oct/{error_scale})",
             f"Badness (simple): {badness:.6f} (oct/{badness_scale})",
             f"Badness (logflat): {badness_logflat:.6f} (oct/{badness_scale})", sep = "\n")
 
     def comma_basis (self, show = True):
-        comma_basis_frac = Matrix (self.vals).nullspace ()
-        comma_basis = np.column_stack ([te.matrix2array (entry) for entry in comma_basis_frac])
+        comma_basis = te.nullspace (self.vals)
         if show:
             self.__show_header ()
             print ("Comma basis: ")
-            te.show_monzo_list (comma_basis_frac, self.subgroup)
+            te.show_monzo_list (comma_basis, self.subgroup)
         return comma_basis
