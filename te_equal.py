@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.27.0
+# © 2020-2023 Flora Canou | Version 1.0.0
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -16,23 +16,22 @@ def et_construct (et_list, subgroup, alt_val = 0):
         warnings.warn ("subgroup list is deprecated. Use the Subgroup class. ")
         subgroup = te.Subgroup (subgroup)
 
-    val_list = (np.array ([warts2val (n, subgroup) for n in te.as_list (et_list)])
+    vals = (np.array ([warts2val (n, subgroup) for n in te.as_list (et_list)])
         + np.resize (alt_val, (len (te.as_list (et_list)), len (subgroup))))
-    return te_tm.Temperament (val_list, subgroup)
+    return te_tm.Temperament (vals, subgroup)
 
-def comma_construct (monzo_list, subgroup = None):
+def comma_construct (monzos, subgroup = None):
     """Temperament construction function from commas."""
 
     if isinstance (subgroup, list):
         warnings.warn ("subgroup list is deprecated. Use the Subgroup class. ")
         subgroup = te.Subgroup (subgroup)
 
-    monzo_list, subgroup = te.get_subgroup (monzo_list, subgroup, axis = te.AXIS.COL)
-    val_list_frac = Matrix (np.flip (monzo_list.T)).nullspace ()
-    val_list = np.flip (np.row_stack ([te.matrix2array (entry) for entry in val_list_frac]))
-    return te_tm.Temperament (val_list, subgroup)
+    monzos, subgroup = te.setup (monzos, subgroup, axis = te.AXIS.COL)
+    vals = te.antinullspace (monzos)
+    return te_tm.Temperament (vals, subgroup)
 
-def et_sequence (monzo_list = None, subgroup = None, cond = "error", ntype = "breed", norm = te.Norm (), 
+def et_sequence (monzos = None, subgroup = None, cond = "error", ntype = "breed", norm = te.Norm (), 
         pv = False, prog = True, threshold = 20, search_range = 1200):
     """
     Finds the optimal sequence from the comma list. 
@@ -44,13 +43,13 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error", ntype = "br
         warnings.warn ("subgroup list is deprecated. Use the Subgroup class. ")
         subgroup = te.Subgroup (subgroup)
 
-    if monzo_list is None:
+    if monzos is None:
         if subgroup is None:
             raise ValueError ("please specify a monzo list or a subgroup. ")
         else:
-            monzo_list = np.zeros ((len (subgroup), 1))
+            monzos = np.zeros ((len (subgroup), 1))
     else:
-        monzo_list, subgroup = te.get_subgroup (monzo_list, subgroup, axis = te.AXIS.COL)
+        monzos, subgroup = te.setup (monzos, subgroup, axis = te.AXIS.COL)
 
     print ("\nOptimal GPV sequence: ")
     gpv_infra = [0]*len (subgroup) #initialize with the all-zeroes val
@@ -65,7 +64,7 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error", ntype = "br
         # condition of further analysis
         if (pv and not is_pv (gpv, subgroup) # non-patent val if pv is set
             or np.gcd.reduce (gpv) > 1 #enfactored
-            or np.any ([gpv] @ monzo_list)): #not tempering out the commas
+            or np.any ([gpv] @ monzos)): #not tempering out the commas
                 continue
 
         et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
@@ -83,7 +82,7 @@ def et_sequence (monzo_list = None, subgroup = None, cond = "error", ntype = "br
 
 def is_gpv (val, subgroup = None):
     """Checks if a val is a GPV."""
-    val, subgroup = te.get_subgroup (val, subgroup, axis = te.AXIS.VEC)
+    val, subgroup = te.setup (val, subgroup, axis = te.AXIS.VEC)
     just_tuning_map = subgroup.just_tuning_map ()
     lower_bounds = (np.asarray (val) - 0.5) / just_tuning_map
     upper_bounds = (np.asarray (val) + 0.5) / just_tuning_map
@@ -91,7 +90,7 @@ def is_gpv (val, subgroup = None):
 
 def is_pv (val, subgroup = None):
     """Checks if a val is a patent val."""
-    val, subgroup = te.get_subgroup (val, subgroup, axis = te.AXIS.VEC)
+    val, subgroup = te.setup (val, subgroup, axis = te.AXIS.VEC)
     just_tuning_map = subgroup.just_tuning_map ()
     return all (val == np.rint (val[0]*just_tuning_map/just_tuning_map[0]))
 
@@ -100,7 +99,7 @@ def gpv_roll (val, subgroup = None, n = 1):
     Enter a GPV, finds the n-th next GPV. 
     Doesn't handle some nontrivial subgroups. 
     """
-    val, subgroup = te.get_subgroup (val, subgroup, axis = te.AXIS.VEC)
+    val, subgroup = te.setup (val, subgroup, axis = te.AXIS.VEC)
     if not is_gpv (val, subgroup): #verify input
         raise ValueError ("input is not a GPV. ")
     if not isinstance (n, (int, np.integer)):
@@ -129,7 +128,7 @@ def val2warts (val, subgroup = None):
     Enter a val, finds its wart notation. 
     Zero equave is disallowed. 
     """
-    val, subgroup = te.get_subgroup (val, subgroup, axis = te.AXIS.VEC)
+    val, subgroup = te.setup (val, subgroup, axis = te.AXIS.VEC)
     if val[0] == 0:
         raise ValueError ("Wart is undefined. ")
 

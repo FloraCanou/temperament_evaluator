@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.27.0
+# © 2020-2023 Flora Canou | Version 1.0.0
 # This work is licensed under the GNU General Public License version 3.
 
 import math, warnings
@@ -11,9 +11,9 @@ np.set_printoptions (suppress = True, linewidth = 256)
 class TemperamentLattice (te_tm.Temperament):
     def find_temperamental_norm (self, monzo, norm = te.Norm (), oe = False, show = True):
         vals_copy = self.vals[1:] if oe else self.vals # octave equivalence
-        vals_x = self.weightskewed (vals_copy, norm)
+        vals_x = norm.tuning_x (vals_copy, self.subgroup)
         projection_x = linalg.pinv (vals_x) @ vals_x
-        monzo_x = linalg.pinv (norm._Norm__get_weight (self.subgroup) @ norm._Norm__get_skew (self.subgroup)) @ monzo
+        monzo_x = norm.interval_x (monzo, self.subgroup)
         interval_temperamental_norm = np.sqrt (monzo_x.T @ projection_x @ monzo_x)
         if show:
             ratio = te.monzo2ratio (monzo, self.subgroup)
@@ -21,7 +21,7 @@ class TemperamentLattice (te_tm.Temperament):
         return interval_temperamental_norm
 
     def find_complexity_spectrum (self, monzo_list, norm = te.Norm (), oe = True):
-        monzo_list, _ = te.get_subgroup (monzo_list, self.subgroup, axis = te.AXIS.COL)
+        monzo_list, _ = te.setup (monzo_list, self.subgroup, axis = te.AXIS.COL)
         spectrum = [[monzo_list[:, i], self.find_temperamental_norm (
             monzo_list[:, i], norm, oe, show = False
             )] for i in range (monzo_list.shape[1])]

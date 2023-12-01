@@ -11,6 +11,9 @@
 
 Common functions. Required by virtually all subsequent modules. 
 
+Use the `Subgroup` class to create a just intonation subgroup. Parameters: 
+- `ratios`: list of ratios, fractional notation supported. 
+
 Use the `Norm` class to create a norm profile for the tuning space. Parameters: 
 - `wtype`: Weight method. Has `"tenney"` (default), `"equilateral"`, and `"wilson"`/`"benedetti"`. 
 - `wamount`: Weight scaling factor. Default is `1`. 
@@ -25,10 +28,10 @@ Requires `te_common`.
 
 Use `optimizer_main` to optimize a temperament. Parameters: 
 - `vals`: *first positional*, *required*. The map of the temperament. 
-- `subgroup`: *optional*. Specifies a custom subgroup for the map. Default is prime harmonics. 
-- `norm`: *optional*. Specifies the norm profile for the tuning space. See above. 
-- `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. 
-- `des_monzo`: *optional*. Destretches this monzo to pure. Default is empty. 
+- `target`: *optional*. Custom subgroup for the map. Default is prime harmonics. 
+- `norm`: *optional*. Norm profile for the tuning space. See above. 
+- `constraint`: *optional*. Constrains this subgroup to pure. Default is empty. 
+- `destretch`: *optional*. Destretches this ratio to pure. Default is empty. 
 
 **Important: a single monzo should be entered as a vector. A monzo list should be entered as composed by column vectors.** 
 
@@ -44,10 +47,10 @@ Requires `te_common`.
 
 Use `symbolic` to solve for a Euclidean tuning of a temperament. Parameters: 
 - `vals`: *first positional*, *required*. The map of the temperament. 
-- `subgroup`: *optional*. Specifies a custom subgroup for the map. Default is prime harmonics. 
-- `norm`: *optional*. Specifies the norm profile for the tuning space. See above. 
-- `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. 
-- `des_monzo`: *optional*. Destretches this monzo to pure. Default is empty. 
+- `subgroup`: *optional*. Custom subgroup for the map. Default is prime harmonics. 
+- `norm`: *optional*. Norm profile for the tuning space. See above. 
+- `constraint`: *optional*. Constrains this subgroup to pure. Default is empty. 
+- `destretch`: *optional*. Destretches this ratio to pure. Default is empty. 
 
 ## `te_temperament_measures.py`
 
@@ -57,18 +60,13 @@ Requires `te_common`, `te_optimizer`, and optionally `te_symbolic`.
 
 Use `Temperament` to construct a temperament object. Methods: 
 - `tune`: calls `optimizer_main`/`symbolic` and shows the generator, tuning map, mistuning map, tuning error, and tuning bias. Parameters: 
-	- `optimizer`: *optional*. Specifies the optimizer. `"main"`: calls `optimizer_main`. `"sym"`: calls `symbolic`. Default is `"main"`. 
-	- `norm`: *optional*. Specifies the norm profile for the tuning space. See above. 
-	- `enforce`: *optional*. A shortcut to specify constraints and destretch targets, so you don't need to enter monzos. Default is empty. To add an enforcement, use `c` or `d` followed by the subgroup index. For example, if the subgroup is the prime harmonics: 
-		- `"c"` or `"c1"`: pure-2 constrained
-		- `"d"` or `"d1"`: pure-2 destretched
-		- `"c1c2"`: pure-2.3 constrained
-		- `"c0"`: a special indicator meaning weight-skewed-ones constrained
-	- `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. Overrides `enforce`. 
-	- `des_monzo`: *optional*. Destretches this monzo to pure. Default is empty. Overrides `enforce`. 
+	- `optimizer`: *optional*. Optimizer. `"main"`: calls `optimizer_main`. `"sym"`: calls `symbolic`. Default is `"main"`. 
+	- `norm`: *optional*. Norm profile for the tuning space. See above. 
+	- `constraint`: *optional*. Constrains this subgroup to pure. Default is empty. 
+	- `destretch`: *optional*. Destretches this ratio to pure. Default is empty. 
 - `temperament_measures`: shows the complexity, error, and badness (simple and logflat). Parameters: 
-	- `ntype`: *optional*. Specifies the averaging normalizer. Has `"breed"` (default), `"smith"` and `"none"`. 
-	- `norm`: *optional*. Specifies the norm profile for the tuning space. See above. 
+	- `ntype`: *optional*. Averaging normalizer. Has `"breed"` (default), `"smith"` and `"none"`. 
+	- `norm`: *optional*. Norm profile for the tuning space. See above. 
 	- `badness_scale`: *optional*. Scales the badness, literally. Default is `1000`. 
 - `wedgie`: returns and shows the wedgie of the temperament. 
 - `comma_basis`: returns and shows the comma basis of the temperament. 
@@ -90,11 +88,11 @@ Use `et_construct` to quickly construct temperaments from equal temperaments. Pa
 
 Use `et_sequence` to iterate through all GPVs. Parameters: 
 - `monzo_list`: *optional\**. Specifies the commas to be tempered out. Default is empty, implying **JI**. 
-- `subgroup`: *optional\**. Specifies a custom subgroup for the map. Default is prime harmonics. 
+- `subgroup`: *optional\**. Custom subgroup for the map. Default is prime harmonics. 
 	- \* At least one of the above must be specified, for the script to know the dimension. 
 - `cond`: *optional*. Either `"error"` or `"badness"`. Default is `"error"`. 
-- `ntype`: *optional*. Specifies the averaging normalizer. See above. 
-- `norm`: *optional*. Specifies the norm profile for the tuning space. See above. 
+- `ntype`: *optional*. Averaging normalizer. See above. 
+- `norm`: *optional*. Norm profile for the tuning space. See above. 
 - `pv`: *optional*. If `True`, only patent vals will be considered. Default is `False`. 
 - `prog`: *optional*. If `True`, threshold will be updated. Default is `True`. 
 - `threshold`: *optional*. Temperaments failing this will not be shown. Default is `20`. 
