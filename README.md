@@ -13,6 +13,7 @@ Common functions. Required by virtually all subsequent modules.
 
 Use the `Subgroup` class to create a just intonation subgroup. Parameters: 
 - `ratios`: list of ratios, fractional notation supported. 
+- `monzos`: matrix of monzos, alternative way to initialize it. 
 
 Use the `Norm` class to create a norm profile for the tuning space. Parameters: 
 - `wtype`: Weight method. Has `"tenney"` (default), `"equilateral"`, and `"wilson"`/`"benedetti"`. 
@@ -26,18 +27,20 @@ Optimizes tunings. Custom norm profile, constraints and destretch are supported.
 
 Requires `te_common`. 
 
-Use `optimizer_main` to optimize a temperament. Parameters: 
+Use `wrapper_main` to optimize a temperament. Parameters: 
 - `vals`: *first positional*, *required*. The map of the temperament. 
-- `target`: *optional*. Custom subgroup for the map. Default is prime harmonics. 
+- `subgroup`: *optional*. Custom subgroup for the map. Default is prime harmonics. 
 - `norm`: *optional*. Norm profile for the tuning space. See above. 
+- `inharmonic`: *optional*. For subgroup temperaments, treats the basis as if they were primes. Default is `False`. 
 - `constraint`: *optional*. Constrains this subgroup to pure. Default is empty. 
 - `destretch`: *optional*. Destretches this ratio to pure. Default is empty. 
+- `show`: *optional*. Displays the result. Default is `True`. 
 
 **Important: a single monzo should be entered as a vector. A monzo list should be entered as composed by column vectors.** 
 
 ## `te_optimizer_legacy.py`
 
-Legacy single-file edition (doesn't require `te_common.py`). 
+Legacy single-file edition (doesn't require `te_common.py`). Support for subgroup tuning is limited. 
 
 ## `te_symbolic.py`
 
@@ -45,29 +48,33 @@ Solves Euclidean tunings symbolically. *It is recommended to use `te_temperament
 
 Requires `te_common`. 
 
-Use `symbolic` to solve for a Euclidean tuning of a temperament. Parameters: 
+Use `wrapper_symbolic` to solve for a Euclidean tuning of a temperament. Parameters: 
 - `vals`: *first positional*, *required*. The map of the temperament. 
 - `subgroup`: *optional*. Custom subgroup for the map. Default is prime harmonics. 
 - `norm`: *optional*. Norm profile for the tuning space. See above. 
+- `inharmonic`: *optional*. For subgroup temperaments, treats the basis as if they were primes. Default is `False`. 
 - `constraint`: *optional*. Constrains this subgroup to pure. Default is empty. 
 - `destretch`: *optional*. Destretches this ratio to pure. Default is empty. 
+- `show`: *optional*. Displays the result. Default is `True`. 
 
 ## `te_temperament_measures.py`
 
-Analyses tunings and computes temperament measures from the temperament map. 
+Analyses tunings and computes temperament measures from the temperament mapping matrix. 
 
 Requires `te_common`, `te_optimizer`, and optionally `te_symbolic`. 
 
 Use `Temperament` to construct a temperament object. Methods: 
-- `tune`: calls `optimizer_main`/`symbolic` and shows the generator, tuning map, mistuning map, tuning error, and tuning bias. Parameters: 
-	- `optimizer`: *optional*. Optimizer. `"main"`: calls `optimizer_main`. `"sym"`: calls `symbolic`. Default is `"main"`. 
+- `tune`: calls `wrapper_main`/`wrapper_symbolic` and shows the generator, tuning map, error map, tuning error, and tuning bias. Parameters: 
+	- `optimizer`: *optional*. Optimizer. `"main"`: calls `wrapper_main`. `"sym"`: calls `wrapper_symbolic`. Default is `"main"`. 
 	- `norm`: *optional*. Norm profile for the tuning space. See above. 
+	- `inharmonic`: *optional*. For subgroup temperaments, treats the basis as if they were primes. Default is `False`. 
 	- `constraint`: *optional*. Constrains this subgroup to pure. Default is empty. 
 	- `destretch`: *optional*. Destretches this ratio to pure. Default is empty. 
 - `temperament_measures`: shows the complexity, error, and badness (simple and logflat). Parameters: 
 	- `ntype`: *optional*. Averaging normalizer. Has `"breed"` (default), `"smith"` and `"none"`. 
 	- `norm`: *optional*. Norm profile for the tuning space. See above. 
-	- `badness_scale`: *optional*. Scales the badness, literally. Default is `1000`. 
+	- `error_scale`: *optional*. Scales the error. Default is `1200` (cents).
+	- `badness_scale`: *optional*. Scales the badness. Default is `1000` (millioctaves). 
 - `wedgie`: returns and shows the wedgie of the temperament. 
 - `comma_basis`: returns and shows the comma basis of the temperament. 
 
