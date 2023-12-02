@@ -144,7 +144,7 @@ class Norm:
         self.skew = skew
         self.order = order
 
-    def __get_weight (self, primes):
+    def __get_interval_weight (self, primes):
         """Returns the weight matrix for a list of formal primes. """
         match self.wtype:
             case "tenney":
@@ -161,10 +161,10 @@ class Norm:
                 return self.__get_weight (primes)
         return np.diag (weight_vec**self.wamount)
 
-    def __get_dual_weight (self, primes):
-        return linalg.inv (self.__get_weight (primes))
+    def __get_tuning_weight (self, primes):
+        return linalg.inv (self.__get_interval_weight (primes))
 
-    def __get_skew (self, primes):
+    def __get_interval_skew (self, primes):
         """Returns the skew matrix for a list of formal primes. """
         if self.skew == 0:
             return np.eye (len (primes))
@@ -173,8 +173,8 @@ class Norm:
         else:
             raise NotImplementedError ("Skew only works with Euclidean norm as of now.")
 
-    def __get_dual_skew (self, primes):
-        # return linalg.pinv (self.__get_skew (primes)) # same but for skew = np.inf
+    def __get_tuning_skew (self, primes):
+        # return linalg.pinv (self.__get_interval_skew (primes)) # same but for skew = np.inf
         if self.skew == 0:
             return np.eye (len (primes))
         elif self.order == 2:
@@ -190,11 +190,11 @@ class Norm:
 
     def tuning_x (self, main, subgroup):
         primes = subgroup.ratios (evaluate = True)
-        return main @ self.__get_dual_weight (primes) @ self.__get_dual_skew (primes)
+        return main @ self.__get_tuning_weight (primes) @ self.__get_tuning_skew (primes)
 
     def interval_x (self, main, subgroup):
         primes = subgroup.ratios (evaluate = True)
-        return self.__get_skew (primes) @ self.__get_weight (primes) @ main
+        return self.__get_interval_skew (primes) @ self.__get_interval_weight (primes) @ main
 
 def __hnf (main, mode = AXIS.ROW):
     """Normalizes a matrix to HNF."""

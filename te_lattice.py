@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.0.0
+# © 2020-2023 Flora Canou | Version 1.0.1
 # This work is licensed under the GNU General Public License version 3.
 
 import math, warnings
@@ -10,9 +10,9 @@ np.set_printoptions (suppress = True, linewidth = 256)
 
 class TemperamentLattice (te_tm.Temperament):
     def find_temperamental_norm (self, monzo, norm = te.Norm (), oe = False, show = True):
-        vals_copy = self.vals[1:] if oe else self.vals # octave equivalence
-        vals_x = norm.tuning_x (vals_copy, self.subgroup)
-        projection_x = linalg.pinv (vals_x) @ vals_x
+        mapping_copy = self.mapping[1:] if oe else self.mapping # octave equivalence
+        mapping_x = norm.tuning_x (mapping_copy, self.subgroup)
+        projection_x = linalg.pinv (mapping_x) @ mapping_x
         monzo_x = norm.interval_x (monzo, self.subgroup)
         interval_temperamental_norm = np.sqrt (monzo_x.T @ projection_x @ monzo_x)
         if show:

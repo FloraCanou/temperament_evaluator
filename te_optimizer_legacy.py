@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.4
+# © 2020-2023 Flora Canou | Version 0.26.5
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -20,7 +20,7 @@ class Norm:
         self.skew = skew
         self.order = order
 
-    def __get_weight (self, subgroup):
+    def __get_tuning_weight (self, subgroup):
         match self.wtype:
             case "tenney":
                 weight_vec = np.reciprocal (np.log2 (subgroup, dtype = float))
@@ -34,7 +34,7 @@ class Norm:
                 return self.__get_weight (subgroup)
         return np.diag (weight_vec**self.wamount)
 
-    def __get_skew (self, subgroup):
+    def __get_tuning_skew (self, subgroup):
         if self.skew == 0:
             return np.eye (len (subgroup))
         elif self.order == 2:
@@ -46,8 +46,8 @@ class Norm:
             np.eye (len (subgroup)) - kr*np.ones ((len (subgroup), len (subgroup))),
             r*np.ones ((len (subgroup), 1)), axis = 1)
 
-    def weightskewed (self, main, subgroup):
-        return main @ self.__get_weight (subgroup) @ self.__get_skew (subgroup)
+    def tuning_x (self, main, subgroup):
+        return main @ self.__get_tuning_weight (subgroup) @ self.__get_tuning_skew (subgroup)
 
 def __get_subgroup (main, subgroup):
     main = np.asarray (main)
@@ -60,29 +60,26 @@ def __get_subgroup (main, subgroup):
         subgroup = subgroup[:dim]
     return main, subgroup
 
-def __error (gen, vals, just_tuning_map, order):
-    return linalg.norm (gen @ vals - just_tuning_map, ord = order)
-
-def optimizer_main (vals, subgroup = None, norm = Norm (), 
+def optimizer_main (breeds, subgroup = None, norm = Norm (), 
         cons_monzo_list = None, des_monzo = None, show = True):
     # NOTE: "map" is a reserved word
     # optimization is preferably done in the unit of octaves, but for precision reasons
-    vals, subgroup = __get_subgroup (vals, subgroup)
+    breeds, subgroup = __get_subgroup (breeds, subgroup)
 
     just_tuning_map = SCALAR.CENT*np.log2 (subgroup)
-    vals_x = norm.weightskewed (vals, subgroup)
-    just_tuning_map_x = norm.weightskewed (just_tuning_map, subgroup)
+    breeds_x = norm.tuning_x (breeds, subgroup)
+    just_tuning_map_x = norm.tuning_x (just_tuning_map, subgroup)
     if norm.order == 2 and cons_monzo_list is None: #simply using lstsq for better performance
-        res = linalg.lstsq (vals_x.T, just_tuning_map_x)
+        res = linalg.lstsq (breeds_x.T, just_tuning_map_x)
         gen = res[0]
         print ("Euclidean tuning without constraints, solved using lstsq. ")
     else:
-        gen0 = [SCALAR.CENT]*vals.shape[0] #initial guess
+        gen0 = [SCALAR.CENT]*breeds.shape[0] #initial guess
         cons = () if cons_monzo_list is None else {
             'type': 'eq', 
-            'fun': lambda gen: (gen @ vals - just_tuning_map) @ cons_monzo_list
+            'fun': lambda gen: (gen @ breeds - just_tuning_map) @ cons_monzo_list
         }
-        res = optimize.minimize (__error, gen0, args = (vals_x, just_tuning_map_x, norm.order), 
+        res = optimize.minimize (lambda gen: linalg.norm (gen @ breeds_x - just_tuning_map_x, ord = norm.order), gen0, 
             method = "SLSQP", options = {'ftol': 1e-9}, constraints = cons)
         print (res.message)
         if res.success:
@@ -93,12 +90,12 @@ def optimizer_main (vals, subgroup = None, norm = Norm (),
     if not des_monzo is None:
         if np.asarray (des_monzo).ndim > 1 and np.asarray (des_monzo).shape[1] != 1:
             raise IndexError ("only one destretch target is allowed. ")
-        elif (tempered_size := gen @ vals @ des_monzo) == 0:
+        elif (tempered_size := gen @ breeds @ des_monzo) == 0:
             raise ZeroDivisionError ("destretch target is in the nullspace. ")
         else:
             gen *= (just_tuning_map @ des_monzo)/tempered_size
 
-    tempered_tuning_map = gen @ vals
+    tempered_tuning_map = gen @ breeds
     mistuning_map = tempered_tuning_map - just_tuning_map
 
     if show:

@@ -20,13 +20,15 @@ import te_lattice as te_la
 #   tune: gives the tuning
 #     parameters:
 #       norm: norm profile of the tuning space. see above
+#       inharmonic: for subgroup temps, treats the basis as if they were primes
 #       constraint: constrains this subgroup to pure
 #       destretch: destretches this ratio to pure
 #   temperament_measures: gives the temperament measures
 #     parameters:
 #       ntype: averaging normalizer. "breed", "smith", or "l2"
 #       norm: norm profile for the tuning space. see above
-#       badness_scale: scales the badnesses, literally
+#       error_scale: scales the error
+#       badness_scale: scales the badness
 #   comma_basis: gives the comma basis
 
 temp = te_tm.Temperament ([
@@ -41,7 +43,6 @@ temp.comma_basis ()
 # et_construct
 # parameters:
 #   subgroup: custom ji subgroup
-#   alt_val: alters the val by this matrix
 
 temp = te_et.et_construct (["14c", "17c"], te.Subgroup ([2, 3, 5, 7])) # squares
 temp.temperament_measures (ntype = "smith", badness_scale = 1)

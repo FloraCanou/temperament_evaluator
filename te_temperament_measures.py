@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.0.0
+# © 2020-2023 Flora Canou | Version 1.0.1
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -10,10 +10,10 @@ import te_common as te
 np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
 class Temperament:
-    def __init__ (self, vals, subgroup = None, saturate = True, normalize = True): #NOTE: "map" is a reserved word
-        vals, subgroup = te.setup (vals, subgroup, axis = te.AXIS.ROW)
+    def __init__ (self, breeds, subgroup = None, saturate = True, normalize = True): #NOTE: "map" is a reserved word
+        breeds, subgroup = te.setup (breeds, subgroup, axis = te.AXIS.ROW)
         self.subgroup = subgroup
-        self.vals = te.canonicalize (np.rint (vals).astype (int), saturate, normalize)
+        self.mapping = te.canonicalize (np.rint (breeds).astype (int), saturate, normalize)
 
     def __check_sym (self, order):
         """Checks the availability of the symbolic solver."""
@@ -44,7 +44,7 @@ class Temperament:
 
     def __show_header (self, norm = None, mode_text = None, enforce_text = None, ntype = None):
         print (f"\nSubgroup: {self.subgroup}",
-            f"Mapping: \n{self.vals}", sep = "\n")
+            f"Mapping: \n{self.mapping}", sep = "\n")
 
         if norm: 
             weight_text = norm.wtype
@@ -122,12 +122,12 @@ class Temperament:
         if optimizer == "main":
             import te_optimizer as te_opt
             gen, tempered_tuning_map, error_map = te_opt.wrapper_main (
-                self.vals, subgroup = self.subgroup, norm = norm, inharmonic = inharmonic, 
+                self.mapping, subgroup = self.subgroup, norm = norm, inharmonic = inharmonic, 
                 constraint = constraint, destretch = destretch
             )
         elif optimizer == "sym":
             gen, tempered_tuning_map, error_map = te_sym.wrapper_symbolic (
-                self.vals, subgroup = self.subgroup, norm = te_sym.NormSym (norm), inharmonic = inharmonic, 
+                self.mapping, subgroup = self.subgroup, norm = te_sym.NormSym (norm), inharmonic = inharmonic, 
                 constraint = constraint, destretch = destretch
             )
 
@@ -139,9 +139,9 @@ class Temperament:
     analyse = tune
 
     def wedgie (self, norm = te.Norm (), show = True):
-        combinations = itertools.combinations (range (self.vals.shape[1]), self.vals.shape[0])
+        combinations = itertools.combinations (range (self.mapping.shape[1]), self.mapping.shape[0])
         wedgie = np.array ([
-            linalg.det (norm.tuning_x (self.vals, self.subgroup)[:, entry]) for entry in combinations
+            linalg.det (norm.tuning_x (self.mapping, self.subgroup)[:, entry]) for entry in combinations
         ])
         wedgie *= np.copysign (1, wedgie[0])
         if show:
@@ -168,14 +168,14 @@ class Temperament:
     def __complexity (self, ntype, norm):
         # standard L2 complexity
         complexity = np.sqrt (linalg.det (
-            norm.tuning_x (self.vals, self.subgroup)
-            @ norm.tuning_x (self.vals, self.subgroup).T
+            norm.tuning_x (self.mapping, self.subgroup)
+            @ norm.tuning_x (self.mapping, self.subgroup).T
         ))
         # complexity = linalg.norm (self.wedgie (norm = norm, show = False)) #same
         if ntype == "breed": #Graham Breed's RMS (default)
-            complexity *= 1/np.sqrt (self.vals.shape[1]**self.vals.shape[0])
+            complexity *= 1/np.sqrt (self.mapping.shape[1]**self.mapping.shape[0])
         elif ntype == "smith": #Gene Ward Smith's RMS
-            complexity *= 1/np.sqrt (len (tuple (itertools.combinations (range (self.vals.shape[1]), self.vals.shape[0]))))
+            complexity *= 1/np.sqrt (len (tuple (itertools.combinations (range (self.mapping.shape[1]), self.mapping.shape[0]))))
         elif ntype == "none":
             pass
         else:
@@ -186,23 +186,23 @@ class Temperament:
     def __error (self, ntype, norm, inharmonic, scalar):
         # standard L2 error
         if inharmonic:
-            vals = self.vals
+            mapping = self.mapping
             subgroup = self.subgroup
         else:
-            vals = te.antinullspace (self.subgroup.basis_matrix @ te.nullspace (self.vals))
+            mapping = te.antinullspace (self.subgroup.basis_matrix @ te.nullspace (self.mapping))
             subgroup = te.get_subgroup (self.subgroup.basis_matrix, axis = te.AXIS.COL)
         just_tuning_map = subgroup.just_tuning_map (scalar)
         error = linalg.norm (
             norm.tuning_x (just_tuning_map, subgroup)
-            @ linalg.pinv (norm.tuning_x (vals, subgroup))
-            @ norm.tuning_x (vals, subgroup)
+            @ linalg.pinv (norm.tuning_x (mapping, subgroup))
+            @ norm.tuning_x (mapping, subgroup)
             - norm.tuning_x (just_tuning_map, subgroup)
         )
         if ntype == "breed": #Graham Breed's RMS (default)
-            error *= 1/np.sqrt (vals.shape[1])
+            error *= 1/np.sqrt (mapping.shape[1])
         elif ntype == "smith": #Gene Ward Smith's RMS
             try:
-                error *= np.sqrt ((vals.shape[0] + 1) / (vals.shape[1] - vals.shape[0]))
+                error *= np.sqrt ((mapping.shape[0] + 1) / (mapping.shape[1] - mapping.shape[0]))
             except ZeroDivisionError:
                 error = np.nan
         elif ntype == "none":
@@ -230,7 +230,7 @@ class Temperament:
     def __badness_logflat (self, ntype, norm, scalar):
         try:
             return (self.__error (ntype, norm, inharmonic = False, scalar = scalar)
-                * self.__complexity (ntype, norm)**(self.vals.shape[1]/(self.vals.shape[1] - self.vals.shape[0])))
+                * self.__complexity (ntype, norm)**(self.mapping.shape[1]/(self.mapping.shape[1] - self.mapping.shape[0])))
         except ZeroDivisionError:
             return np.nan
 
@@ -254,7 +254,7 @@ class Temperament:
             f"Badness (logflat): {badness_logflat:.6f} (oct/{badness_scale})", sep = "\n")
 
     def comma_basis (self, show = True):
-        comma_basis = te.nullspace (self.vals)
+        comma_basis = te.nullspace (self.mapping)
         if show:
             self.__show_header ()
             print ("Comma basis: ")

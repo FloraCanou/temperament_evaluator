@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.0.0
+# © 2020-2023 Flora Canou | Version 1.0.1
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -9,16 +9,15 @@ import te_temperament_measures as te_tm
 
 WARTS_LIST = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x"]
 
-def et_construct (et_list, subgroup, alt_val = 0):
+def et_construct (et_list, subgroup):
     """Temperament construction function from equal temperaments."""
 
     if isinstance (subgroup, list):
         warnings.warn ("subgroup list is deprecated. Use the Subgroup class. ")
         subgroup = te.Subgroup (subgroup)
 
-    vals = (np.array ([warts2val (n, subgroup) for n in te.as_list (et_list)])
-        + np.resize (alt_val, (len (te.as_list (et_list)), len (subgroup))))
-    return te_tm.Temperament (vals, subgroup)
+    breeds = np.array ([warts2breed (n, subgroup) for n in te.as_list (et_list)])
+    return te_tm.Temperament (breeds, subgroup)
 
 def comma_construct (monzos, subgroup = None):
     """Temperament construction function from commas."""
@@ -28,8 +27,8 @@ def comma_construct (monzos, subgroup = None):
         subgroup = te.Subgroup (subgroup)
 
     monzos, subgroup = te.setup (monzos, subgroup, axis = te.AXIS.COL)
-    vals = te.antinullspace (monzos)
-    return te_tm.Temperament (vals, subgroup)
+    breeds = te.antinullspace (monzos)
+    return te_tm.Temperament (breeds, subgroup)
 
 def et_sequence (monzos = None, subgroup = None, cond = "error", ntype = "breed", norm = te.Norm (), 
         pv = False, prog = True, threshold = 20, search_range = 1200):
@@ -52,9 +51,9 @@ def et_sequence (monzos = None, subgroup = None, cond = "error", ntype = "breed"
         monzos, subgroup = te.setup (monzos, subgroup, axis = te.AXIS.COL)
 
     print ("\nOptimal GPV sequence: ")
-    gpv_infra = [0]*len (subgroup) #initialize with the all-zeroes val
+    gpv_infra = [0]*len (subgroup) #initialize with the all-zeroes breed
     search_flag = 1
-    while (gpv_infra := __gpv_roll (gpv_infra, subgroup, 1))[0] == 0: #skip zero-equave vals
+    while (gpv_infra := __gpv_roll (gpv_infra, subgroup, 1))[0] == 0: #skip zero-equave breeds
         gpv = gpv_infra
     while (gpv := __gpv_roll (gpv, subgroup, 1))[0] <= search_range:
         # notification at multiples of 1200
@@ -77,44 +76,44 @@ def et_sequence (monzos = None, subgroup = None, cond = "error", ntype = "breed"
         if current <= threshold:
             if prog:
                 threshold = current
-            print (f"{te.bra (gpv)} ({val2warts (gpv, subgroup)})")
+            print (f"{te.bra (gpv)} ({breed2warts (gpv, subgroup)})")
     print ("Search complete. ")
 
-def is_gpv (val, subgroup = None):
-    """Checks if a val is a GPV."""
-    val, subgroup = te.setup (val, subgroup, axis = te.AXIS.VEC)
+def is_gpv (breed, subgroup = None):
+    """Checks if a breed is a GPV."""
+    breed, subgroup = te.setup (breed, subgroup, axis = te.AXIS.VEC)
     just_tuning_map = subgroup.just_tuning_map ()
-    lower_bounds = (np.asarray (val) - 0.5) / just_tuning_map
-    upper_bounds = (np.asarray (val) + 0.5) / just_tuning_map
+    lower_bounds = (np.asarray (breed) - 0.5) / just_tuning_map
+    upper_bounds = (np.asarray (breed) + 0.5) / just_tuning_map
     return max (lower_bounds) < min (upper_bounds)
 
-def is_pv (val, subgroup = None):
-    """Checks if a val is a patent val."""
-    val, subgroup = te.setup (val, subgroup, axis = te.AXIS.VEC)
+def is_pv (breed, subgroup = None):
+    """Checks if a breed is a patent val."""
+    breed, subgroup = te.setup (breed, subgroup, axis = te.AXIS.VEC)
     just_tuning_map = subgroup.just_tuning_map ()
-    return all (val == np.rint (val[0]*just_tuning_map/just_tuning_map[0]))
+    return all (breed == np.rint (breed[0]*just_tuning_map/just_tuning_map[0]))
 
-def gpv_roll (val, subgroup = None, n = 1):
+def gpv_roll (breed, subgroup = None, n = 1):
     """
     Enter a GPV, finds the n-th next GPV. 
     Doesn't handle some nontrivial subgroups. 
     """
-    val, subgroup = te.setup (val, subgroup, axis = te.AXIS.VEC)
-    if not is_gpv (val, subgroup): #verify input
+    breed, subgroup = te.setup (breed, subgroup, axis = te.AXIS.VEC)
+    if not is_gpv (breed, subgroup): #verify input
         raise ValueError ("input is not a GPV. ")
     if not isinstance (n, (int, np.integer)):
         raise TypeError ("n must be an integer. ")
-    return __gpv_roll (val, subgroup, n)
+    return __gpv_roll (breed, subgroup, n)
 
-def __gpv_roll (val, subgroup, n):
+def __gpv_roll (breed, subgroup, n):
     if n == 0:
-        return val
+        return breed
     else:
         for i in range (1, len (subgroup) + 1):
-            val_copy = np.array (val)
-            val_copy[-i] += np.copysign (1, n).astype (int)
-            if is_gpv (val_copy, subgroup):
-                return __gpv_roll (val_copy, subgroup, n - np.copysign (1, n).astype (int))
+            breed_copy = np.array (breed)
+            breed_copy[-i] += np.copysign (1, n).astype (int)
+            if is_gpv (breed_copy, subgroup):
+                return __gpv_roll (breed_copy, subgroup, n - np.copysign (1, n).astype (int))
         else:
             raise NotImplementedError ("this nontrivial subgroup cannot be processed. ")
 
@@ -123,13 +122,13 @@ def __just_tuning_map_n (n, equave, subgroup):
     just_tuning_map = subgroup.just_tuning_map ()
     return n*just_tuning_map/np.log2 (equave)
 
-def val2warts (val, subgroup = None):
+def breed2warts (breed, subgroup = None):
     """
-    Enter a val, finds its wart notation. 
+    Enter a breed, finds its wart notation. 
     Zero equave is disallowed. 
     """
-    val, subgroup = te.setup (val, subgroup, axis = te.AXIS.VEC)
-    if val[0] == 0:
+    breed, subgroup = te.setup (breed, subgroup, axis = te.AXIS.VEC)
+    if breed[0] == 0:
         raise ValueError ("Wart is undefined. ")
 
     equave = subgroup.ratios ()[0].value ()
@@ -140,13 +139,13 @@ def val2warts (val, subgroup = None):
     else: #nonprime equave
         prefix = "*"
 
-    if is_pv (val, subgroup): #patent val
+    if is_pv (breed, subgroup): #patent val
         postfix = ""
     elif all (entry in te.PRIME_LIST for entry in subgroup.ratios (evaluate = True)): #nonpatent val in prime subgroup
-        just_tuning_map_n = __just_tuning_map_n (val[0], equave, subgroup) #just tuning map in edostep numbers
+        just_tuning_map_n = __just_tuning_map_n (breed[0], equave, subgroup) #just tuning map in edostep numbers
         pv = np.rint (just_tuning_map_n) #corresponding patent val
         warts_number_list = (
-            2*np.abs (val - pv) + (np.copysign (1, (val - pv)*(pv - just_tuning_map_n)) - 1)/2
+            2*np.abs (breed - pv) + (np.copysign (1, (breed - pv)*(pv - just_tuning_map_n)) - 1)/2
             ).astype (int)
         postfix = ""
         for i, si in enumerate (subgroup.ratios (evaluate = True)):
@@ -154,23 +153,23 @@ def val2warts (val, subgroup = None):
     else: #nonpatent val in nonprime subgroup
         postfix = "*"
 
-    return prefix + str (val[0]) + postfix
+    return prefix + str (breed[0]) + postfix
 
-def warts2val (warts, subgroup):
+def warts2breed (warts, subgroup):
     """
-    Enter a wart notation and a subgroup, finds the val. 
+    Enter a wart notation and a subgroup, finds the breed. 
     Same letter in the prefix and postfix is considered invalid. 
     Equave is the octave regardless of the subgroup
     unless specified explicitly with warts. 
     """
     if isinstance (warts, str):
-        return __warts2val (warts, subgroup)
+        return __warts2breed (warts, subgroup)
     elif isinstance (warts, (int, float)):
         return np.rint (__just_tuning_map_n (warts, 2, subgroup)).astype (int)
     else:
         raise TypeError ("Enter a string or number. ")
 
-def __warts2val (warts, subgroup):
+def __warts2breed (warts, subgroup):
     match = re.match ("(^[a-x]?)(\d+)([a-x]*)", str (warts))
     if not match or (match.group (1) and re.match (match.group (1), match.group (3))):
         raise ValueError ("Invalid wart notation. ")
@@ -182,6 +181,6 @@ def __warts2val (warts, subgroup):
             warts_number_list[i] = len (re.findall (WARTS_LIST[te.PRIME_LIST.index (si)], match.group (3)))
     just_tuning_map_n = __just_tuning_map_n (int (match.group (2)), wart_equave, subgroup) #just tuning map in edostep numbers
     pv = np.rint (just_tuning_map_n) #corresponding patent val
-    alt_val = np.copysign (np.ceil (warts_number_list/2), (1 - 2*(warts_number_list % 2))*(pv - just_tuning_map_n))
+    alt_breed = np.copysign (np.ceil (warts_number_list/2), (1 - 2*(warts_number_list % 2))*(pv - just_tuning_map_n))
 
-    return (pv + alt_val).astype (int)
+    return (pv + alt_breed).astype (int)
