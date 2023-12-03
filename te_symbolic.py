@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.27.0
+# © 2020-2023 Flora Canou | Version 0.27.1
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -64,7 +64,7 @@ class NormSym (te.Norm):
         primes = Matrix (subgroup)
         return self.__get_tuning_weight_sym (primes) @ self.__get_tuning_skew_sym (primes)
 
-def symbolic (breeds, subgroup = None, norm = te.Norm (), #NOTE: "map" is a reserved word
+def optimizer_symbolic (breeds, subgroup = None, norm = te.Norm (), #NOTE: "map" is a reserved word
         cons_monzo_list = None, des_monzo = None, show = True):
     breeds, subgroup = te.setup (breeds, subgroup, axis = te.AXIS.ROW)
     norm = NormSym (norm)
@@ -133,9 +133,12 @@ def symbolic (breeds, subgroup = None, norm = te.Norm (), #NOTE: "map" is a rese
             print ("Error projection map: ")
             pprint (error_projection)
             print ("Eigenmonzos: ")
-            frac_eigenmonzos = tuning_projection.eigenvects ()[-1][-1]
-            eigenmonzos = np.column_stack ([te.matrix2array (entry) for entry in frac_eigenmonzos])
-            te.show_monzo_list (eigenmonzos, subgroup)
+            # this returns the eigenvalue, number of eigenvectors, 
+            # and eigenvectors for each eigenvalue
+            # but we're only interested in eigenvectors of unit eigenvalue
+            frac_unit_eigenmonzos = tuning_projection.eigenvects ()[-1][-1]
+            unit_eigenmonzos = np.column_stack ([te.matrix2array (entry) for entry in frac_unit_eigenmonzos])
+            te.show_monzo_list (unit_eigenmonzos, subgroup)
         else:
             print ("Transcendental projection maps not shown. ")
 

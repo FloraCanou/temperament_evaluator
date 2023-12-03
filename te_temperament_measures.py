@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.27.0
+# © 2020-2023 Flora Canou | Version 0.27.1
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -132,7 +132,7 @@ class Temperament:
                 cons_monzo_list = cons_monzo_list, des_monzo = des_monzo
             )
         elif optimizer == "sym":
-            gen, tempered_tuning_map, mistuning_map = te_sym.symbolic (
+            gen, tempered_tuning_map, mistuning_map = te_sym.optimizer_symbolic (
                 self.mapping, subgroup = self.subgroup, norm = te_sym.NormSym (norm), 
                 cons_monzo_list = cons_monzo_list, des_monzo = des_monzo
             )
