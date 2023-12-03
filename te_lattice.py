@@ -33,7 +33,7 @@ class TemperamentLattice (te_tm.Temperament):
 
     find_spectrum = find_complexity_spectrum
 
-def ratio_8ve_reduce (ratio): #NOTE: "oct" is a reserved word
+def ratio_octave_reduce (ratio): #NOTE: "oct" is a reserved word
     """Octave-reduces the ratio in [num, den] form."""
     num_oct = np.floor (np.log2 (ratio[0]/ratio[1])) 
     if num_oct > 0:
@@ -42,8 +42,8 @@ def ratio_8ve_reduce (ratio): #NOTE: "oct" is a reserved word
         ratio[0] *= round (2**(-num_oct))
     return ratio
 
-def odd_limit_monzo_list_gen (odd_limit, excl = [], sort = None):
-    """Enter an odd limit, returns the matrix of monzos."""
+def odd_limit_monzos_gen (odd_limit, excl = [], sort = None):
+    """Enter an odd limit, returns the array of monzos."""
     ratio_list = []
     for num in range (1, odd_limit + 1, 2):
         if num in te.as_list (excl):
@@ -51,7 +51,7 @@ def odd_limit_monzo_list_gen (odd_limit, excl = [], sort = None):
         for den in range (1, odd_limit + 1, 2):
             if (den in te.as_list (excl)) or math.gcd (num, den) != 1:
                 continue
-            ratio_list.append (ratio_8ve_reduce ([num, den]))
+            ratio_list.append (ratio_octave_reduce ([num, den]))
     if sort == "size":
         ratio_list.sort (key = lambda k: k[0]/k[1])
     return te.column_stack_pad ([te.ratio2monzo (entry) for entry in ratio_list])

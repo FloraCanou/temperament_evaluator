@@ -39,7 +39,7 @@ class Temperament:
                 return np.array ([1 if i == enforce_index - 1 else 0 for i, _ in enumerate (self.subgroup)])
         elif optimizer == "sym":
             if enforce_index == 0:
-                norm = te_sym.NormSym ()
+                norm = te_sym.NormSym (norm)
                 return norm.interval_x_sym (Matrix.ones (len (self.subgroup), 1), self.subgroup)
             else:
                 return Matrix ([1 if i == enforce_index - 1 else 0 for i, _ in enumerate (self.subgroup)])

@@ -79,4 +79,4 @@ temp = te_la.TemperamentLattice ([
     [0, 6, 0, -7, -2, 9], 
     [0, 0, 1, 1, 1, 1]
     ]) # history
-temp.find_complexity_spectrum (te_la.odd_limit_monzo_list_gen (15))
+temp.find_complexity_spectrum (te_la.odd_limit_monzos_gen (15))

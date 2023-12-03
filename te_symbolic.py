@@ -134,7 +134,7 @@ def symbolic (breeds, subgroup = None, norm = te.Norm (), #NOTE: "map" is a rese
             pprint (error_projection)
             print ("Eigenmonzos: ")
             frac_eigenmonzos = tuning_projection.eigenvects ()[-1][-1]
-            eigenmonzos = np.column_stack ([te.__matrix2array (entry) for entry in frac_eigenmonzos])
+            eigenmonzos = np.column_stack ([te.matrix2array (entry) for entry in frac_eigenmonzos])
             te.show_monzo_list (eigenmonzos, subgroup)
         else:
             print ("Transcendental projection maps not shown. ")
