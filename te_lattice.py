@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.0.1
+# © 2020-2023 Flora Canou | Version 1.0.2
 # This work is licensed under the GNU General Public License version 3.
 
 import math, warnings
@@ -20,11 +20,11 @@ class TemperamentLattice (te_tm.Temperament):
             print (f"{ratio}\t {interval_temperamental_norm}")
         return interval_temperamental_norm
 
-    def find_complexity_spectrum (self, monzo_list, norm = te.Norm (), oe = True):
-        monzo_list, _ = te.setup (monzo_list, self.subgroup, axis = te.AXIS.COL)
-        spectrum = [[monzo_list[:, i], self.find_temperamental_norm (
-            monzo_list[:, i], norm, oe, show = False
-            )] for i in range (monzo_list.shape[1])]
+    def find_complexity_spectrum (self, monzos, norm = te.Norm (), oe = True):
+        monzos, _ = te.setup (monzos, self.subgroup, axis = te.AXIS.COL)
+        spectrum = [[monzos[:, i], self.find_temperamental_norm (
+            monzos[:, i], norm, oe, show = False
+            )] for i in range (monzos.shape[1])]
         spectrum.sort (key = lambda k: k[1])
         print ("\nComplexity spectrum: ")
         for entry in spectrum:
@@ -34,7 +34,7 @@ class TemperamentLattice (te_tm.Temperament):
     find_spectrum = find_complexity_spectrum
 
 # enter an odd limit, returns the monzo list
-def odd_limit_monzo_list_gen (odd_limit, excl = [], sort = None):
+def odd_limit_monzos_gen (odd_limit, excl = [], sort = None):
     ratio_list = []
     for num in range (1, odd_limit + 1, 2):
         if num in te.as_list (excl):

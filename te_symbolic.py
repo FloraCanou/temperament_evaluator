@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.0.1
+# © 2020-2023 Flora Canou | Version 1.0.2
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -109,7 +109,6 @@ def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = F
             breeds_parent, target = subgroup_parent, norm = norm, 
             constraint = constraint, destretch = destretch
         )
-
         error_map_parent_x = norm.tuning_x (error_map_parent, subgroup_parent)
         # print (error_map_parent_x) #for debugging
         error = __power_mean_norm (error_map_parent_x)
@@ -130,17 +129,21 @@ def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = F
             pprint (tuning_projection)
             print ("Error projection map: ")
             pprint (error_projection)
-            print ("Eigenmonzos: ")
-            eigenmonzo_list = np.column_stack (tuning_projection.eigenvects ()[-1][-1])
-            te.show_monzo_list (eigenmonzo_list, subgroup)
+            print ("Unchanged intervals: ")
+            # this returns the eigenvalue, number of eigenvectors, 
+            # and eigenvectors for each eigenvalue
+            # but we're only interested in eigenvectors of unit eigenvalue
+            frac_unit_eigenmonzos = tuning_projection.eigenvects ()[-1][-1]
+            unit_eigenmonzos = np.column_stack ([te.matrix2array (entry) for entry in frac_unit_eigenmonzos])
+            te.show_monzo_list (unit_eigenmonzos, subgroup)
         else:
             print ("Transcendental projection maps not shown. ")
 
     return gen, tempered_tuning_map, error_map
 
 def optimizer_symbolic (breeds, target = None, norm = te.Norm (), 
-        constraint = None, destretch = None, show = True, *, 
-        subgroup = None, cons_monzo_list = None, des_monzo = None): #deprecated parameters
+        constraint = None, destretch = None, *, 
+        subgroup = None, cons_monzo_list = None, des_monzo = None, show = True): #deprecated parameters
     # NOTE: "map" is a reserved word
     # optimization is preferably done in the unit of octaves, but for precision reasons
     

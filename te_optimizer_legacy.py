@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.5
+# © 2020-2023 Flora Canou | Version 0.27.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings

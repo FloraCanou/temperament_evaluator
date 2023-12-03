@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.0.0
+# © 2020-2023 Flora Canou | Version 1.0.2
 # This work is licensed under the GNU General Public License version 3.
 
 import re, functools, warnings
@@ -320,17 +320,17 @@ def bra (covector):
 def ket (vector):
     return "[" + " ".join (map (str, np.trim_zeros (vector, trim = "b"))) + ">"
 
-def __matrix2array (main):
+def matrix2array (main):
     """Takes a possibly fractional sympy matrix and converts it to an integer numpy array."""
     return np.array (main/functools.reduce (gcd, tuple (main)), dtype = int).squeeze ()
 
 def nullspace (covectors):
     frac_nullspace_matrix = Matrix (covectors).nullspace ()
-    return np.column_stack ([__matrix2array (entry) for entry in frac_nullspace_matrix])
+    return np.column_stack ([matrix2array (entry) for entry in frac_nullspace_matrix])
 
 def antinullspace (vectors):
     frac_antinullspace_matrix = Matrix (np.flip (vectors.T)).nullspace ()
-    return np.flip (np.row_stack ([__matrix2array (entry) for entry in frac_antinullspace_matrix]))
+    return np.flip (np.row_stack ([matrix2array (entry) for entry in frac_antinullspace_matrix]))
 
 def show_monzo_list (monzos, subgroup):
     """
