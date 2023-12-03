@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.26.4
+# © 2020-2023 Flora Canou | Version 0.27.0
 # This work is licensed under the GNU General Public License version 3.
 
 import functools, warnings
@@ -27,6 +27,17 @@ def as_list (main):
         except TypeError:
             return [main]
 
+def vec_pad (vec, length):
+    """Pads a vector with zeros to a specified length."""
+    vec_copy = np.array (vec)
+    vec_copy.resize (length)
+    return vec_copy
+
+def column_stack_pad (vec_list, length = None):
+    """Column-stack with zero-padding."""
+    length = length or max (vec_list, key = len).__len__ () # finds the max length
+    return np.column_stack ([vec_pad (vec, length) for vec in vec_list])
+
 class Norm: 
     """Norm profile for the tuning space."""
 
@@ -36,36 +47,55 @@ class Norm:
         self.skew = skew
         self.order = order
 
-    def __get_weight (self, subgroup):
+    def __get_interval_weight (self, primes):
+        """Returns the weight matrix for a list of formal primes. """
         match self.wtype:
             case "tenney":
-                weight_vec = np.reciprocal (np.log2 (np.array (subgroup, dtype = float)))
+                weight_vec = np.log2 (primes)
             case "wilson" | "benedetti":
-                weight_vec = np.reciprocal (np.array (subgroup, dtype = float))
+                weight_vec = np.asarray (primes)
             case "equilateral":
-                weight_vec = np.ones (len (subgroup))
+                weight_vec = np.ones (len (primes))
             # case "hahn24": #pending better implementation
-                # weight_vec = np.floor (np.log2 (24)/np.log2 (np.array (subgroup, dtype = float)))
+            #     weight_vec = np.ceil (np.log2 (primes)/np.log2 (24))
             case _:
                 warnings.warn ("weighter type not supported, using default (\"tenney\")")
                 self.wtype = "tenney"
-                return self.__get_weight (subgroup)
+                return self.__get_weight (primes)
         return np.diag (weight_vec**self.wamount)
 
-    def __get_skew (self, subgroup):
+    def __get_tuning_weight (self, primes):
+        return linalg.inv (self.__get_interval_weight (primes))
+
+    def __get_interval_skew (self, primes):
+        """Returns the skew matrix for a list of formal primes. """
         if self.skew == 0:
-            return np.eye (len (subgroup))
+            return np.eye (len (primes))
         elif self.order == 2:
-            r = 1/(len (subgroup)*self.skew + 1/self.skew)
-            kr = 1/(len (subgroup) + 1/self.skew**2)
+            return np.append (np.eye (len (primes)), self.skew*np.ones ((1, len (primes))), axis = 0)
         else:
             raise NotImplementedError ("Skew only works with Euclidean norm as of now.")
-        return np.append (
-            np.eye (len (subgroup)) - kr*np.ones ((len (subgroup), len (subgroup))),
-            r*np.ones ((len (subgroup), 1)), axis = 1)
 
-    def weightskewed (self, main, subgroup):
-        return main @ self.__get_weight (subgroup) @ self.__get_skew (subgroup)
+    def __get_tuning_skew (self, primes):
+        # return linalg.pinv (self.__get_interval_skew (primes)) # same but for skew = np.inf
+        if self.skew == 0:
+            return np.eye (len (primes))
+        elif self.order == 2:
+            r = 1/(len (primes)*self.skew + 1/self.skew)
+            kr = 1/(len (primes) + 1/self.skew**2)
+            return np.append (
+                np.eye (len (primes)) - kr*np.ones ((len (primes), len (primes))),
+                r*np.ones ((len (primes), 1)), 
+                axis = 1
+            )
+        else:
+            raise NotImplementedError ("Skew only works with Euclidean norm as of now.")
+
+    def tuning_x (self, main, subgroup):
+        return main @ self.__get_tuning_weight (subgroup) @ self.__get_tuning_skew (subgroup)
+
+    def interval_x (self, main, subgroup):
+        return self.__get_interval_skew (subgroup) @ self.__get_interval_weight (subgroup) @ main
 
 def __hnf (main, mode = AXIS.ROW):
     """Normalizes a matrix to HNF."""
@@ -96,29 +126,36 @@ def canonicalize (main, saturate = True, normalize = True, axis = AXIS.ROW):
 
 canonicalise = canonicalize
 
-def get_subgroup (main, subgroup, axis):
-    """Gets the subgroup and tries to match the dimensions."""
-    main = np.asarray (main)
-    if axis == AXIS.ROW:
-        length_main = main.shape[1]
-    elif axis == AXIS.COL:
-        length_main = main.shape[0]
-    elif axis == AXIS.VEC:
-        length_main = len (main)
+def __get_length (main, axis):
+    """Gets the length along a certain axis."""
+    match axis:
+        case AXIS.ROW:
+            return main.shape[1]
+        case AXIS.COL:
+            return main.shape[0]
+        case AXIS.VEC:
+            return main.size
 
+def get_subgroup (main, axis):
+    """Gets the default subgroup along a certain axis."""
+    return PRIME_LIST[:__get_length (main, axis)]
+
+def setup (main, subgroup, axis):
+    """Tries to match the dimensions along a certain axis."""
+    main = np.asarray (main)
     if subgroup is None:
-        subgroup = PRIME_LIST[:length_main]
-    elif length_main != len (subgroup):
+        subgroup = get_subgroup (main, axis)
+    elif (length_main := __get_length (main, axis)) != len (subgroup):
         warnings.warn ("dimension does not match. Casting to the smaller dimension. ")
         dim = min (length_main, len (subgroup))
-        if axis == AXIS.ROW:
-            main = main[:, :dim]
-        elif axis == AXIS.COL:
-            main = main[:dim, :]
-        elif axis == AXIS.VEC:
-            main = main[:dim]
+        match axis:
+            case AXIS.ROW:
+                main = main[:, :dim]
+            case AXIS.COL:
+                main = main[:dim, :]
+            case AXIS.VEC:
+                main = main[:dim]
         subgroup = subgroup[:dim]
-
     return main, subgroup
 
 def monzo2ratio (monzo, subgroup = None):
@@ -127,7 +164,7 @@ def monzo2ratio (monzo, subgroup = None):
     subgroup monzo supported.
     ratio[0]: num, ratio[1]: den
     """
-    monzo, subgroup = get_subgroup (monzo, subgroup, axis = AXIS.VEC)
+    monzo, subgroup = setup (monzo, subgroup, axis = AXIS.VEC)
     ratio = [1, 1]
     for i, mi in enumerate (monzo):
         if mi > 0:
@@ -162,26 +199,33 @@ def ratio2monzo (ratio, subgroup = None):
 
     return np.trim_zeros (np.array (monzo), trim = "b") if trim else np.array (monzo)
 
-def bra (val):
-    return "<" + " ".join (map (str, np.trim_zeros (val, trim = "b"))) + "]"
+def bra (covector):
+    return "<" + " ".join (map (str, np.trim_zeros (covector, trim = "b"))) + "]"
 
-def ket (monzo):
-    return "[" + " ".join (map (str, np.trim_zeros (monzo, trim = "b"))) + ">"
+def ket (vector):
+    return "[" + " ".join (map (str, np.trim_zeros (vector, trim = "b"))) + ">"
 
-def matrix2array (main):
+def __matrix2array (main):
     """Takes a possibly fractional sympy matrix and converts it to an integer numpy array."""
     return np.array (main/functools.reduce (gcd, tuple (main)), dtype = int).squeeze ()
 
-def show_monzo_list (monzo_list, subgroup):
+def nullspace (covectors):
+    frac_nullspace_matrix = Matrix (covectors).nullspace ()
+    return np.column_stack ([__matrix2array (entry) for entry in frac_nullspace_matrix])
+
+def antinullspace (vectors):
+    frac_antinullspace_matrix = Matrix (np.flip (vectors.T)).nullspace ()
+    return np.flip (np.row_stack ([__matrix2array (entry) for entry in frac_antinullspace_matrix]))
+
+def show_monzo_list (monzos, subgroup):
     """
-    Takes a list (python list) of monzos (sympy matrices) and show them in a readable manner. 
+    Takes an array of monzos and show them in a readable manner. 
     Used to display comma bases and eigenmonzo bases. 
     """
-    for entry in monzo_list:
-        monzo = matrix2array (entry)
-        monzo_str = ket (monzo)
-        if np.log2 (subgroup) @ np.abs (monzo) < 53: # shows the ratio for those < ~1e16
-            ratio = monzo2ratio (monzo, subgroup)
+    for entry in monzos.T:
+        monzo_str = ket (entry)
+        if np.log2 (subgroup) @ np.abs (entry) < 53: # shows the ratio for those < ~1e16
+            ratio = monzo2ratio (entry, subgroup)
             print (monzo_str, f"({ratio[0]}/{ratio[1]})")
         else:
             print (monzo_str)
