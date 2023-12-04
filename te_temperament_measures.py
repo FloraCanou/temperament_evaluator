@@ -189,9 +189,9 @@ class Temperament:
             raise NotImplementedError ("nontrivial subgroups not supported as of now. ")
 
         if logflat:
-            return __badness_logflat (ntype, norm, scalar)
+            return self.__badness_logflat (ntype, norm, scalar)
         else:
-            return __badness (ntype, norm, scalar)
+            return self.__badness (ntype, norm, scalar)
 
     def __badness (self, ntype, norm, scalar):
         return (self.__error (ntype, norm, inharmonic = True, scalar = scalar)
