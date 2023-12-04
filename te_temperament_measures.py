@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.0.1
+# © 2020-2023 Flora Canou | Version 1.1.0
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -28,19 +28,6 @@ class Temperament:
         else:
             warnings.warn ("Condition for symbolic solution not met. Using main optimizer. ")
             return False
-
-    def __get_enforce_vec (self, enforce_index, norm, optimizer):
-        """Interprets the enforce specification."""
-        if optimizer == "main":
-            if enforce_index == 0: #pending implementation
-                raise ValueError ("this functionality is removed due to support for subgroup tuning. ")
-            else:
-                return te.monzo2ratio (self.subgroup.basis_matrix.T[enforce_index - 1], self.subgroup)
-        elif optimizer == "sym":
-            if enforce_index == 0: #pending implementation
-                raise ValueError ("this functionality is removed due to support for subgroup tuning. ")
-            else:
-                return te.monzo2ratio (self.subgroup.basis_matrix.T[enforce_index - 1], self.subgroup)
 
     def __show_header (self, norm = None, mode_text = None, enforce_text = None, ntype = None):
         print (f"\nSubgroup: {self.subgroup}",
@@ -73,33 +60,11 @@ class Temperament:
         return
 
     def tune (self, optimizer = "main", norm = te.Norm (), inharmonic = False, 
-            constraint = None, destretch = None, *, 
-            enforce = None, cons_monzo_list = None, des_monzo = None): #deprecated parameters
-
-        if not enforce is None:
-            warnings.warn ("\"enforce\" is deprecated. Use \"constraint\" and/or \"destretch\" instead. ")
-            if enforce == "c": #default to octave-constrained
-                enforce = "c1"
-            elif enforce == "d": #default to octave-destretched
-                enforce = "d1"
-            if constraint is None and destretch is None:
-                if enforce_spec_list := re.findall ("[cd]\d+", str (enforce)): #separates the enforcements
-                    cons_ratios, des_ratios, cons_text, des_text = ([] for _ in range (4))
-                    for entry in enforce_spec_list:
-                        if entry[0] == "c":
-                            cons_ratios.append (self.__get_enforce_vec (int (entry[1:]), norm, optimizer))
-                        else:
-                            des_ratios.append (self.__get_enforce_vec (int (entry[1:]), norm, optimizer))
-                    
-                    constraint = te.Subgroup (cons_ratios) if cons_ratios else None
-                    destretch = te.as_ratio (*des_ratios) if des_ratios else None
-
-        if not cons_monzo_list is None:
-            constraint = te.Subgroup ([te.monzo2ratio (entry) for entry in cons_monzo_list.T])
-            warnings.warn ("\"cons_monzo_list\" is deprecated. Use \"constraint\" instead. ")
-        if not des_monzo is None:
-            destretch = te.monzo2ratio (des_monzo)
-            warnings.warn ("\"des_monzo\" is deprecated. Use \"destretch\" instead. ")
+            constraint = None, destretch = None): 
+        """
+        Gives the tuning. 
+        Calls either wrapper_main or wrapper_symbolic. 
+        """
 
         # checks optimizer availability
         if optimizer == "sym" and not self.__check_sym (norm.order):
@@ -110,7 +75,8 @@ class Temperament:
         cons_text = constraint.__str__ () + "-constrained" if constraint else ""
         des_text = destretch.__str__ () + "-destretched" if destretch else ""
         enforce_text = " ".join ([cons_text, des_text]) if cons_text or des_text else "none"
-        if self.subgroup.is_simple ():
+        if is_trivial := (self.subgroup.is_trivial ()
+                or norm.wtype == "tenney" and subgroup.is_tenney_trivial ()):
             mode_text = "prime-harmonic"
         else:
             mode_text = "inharmonic" if inharmonic else "subgroup"
@@ -122,12 +88,12 @@ class Temperament:
         if optimizer == "main":
             import te_optimizer as te_opt
             gen, tempered_tuning_map, error_map = te_opt.wrapper_main (
-                self.mapping, subgroup = self.subgroup, norm = norm, inharmonic = inharmonic, 
+                self.mapping, subgroup = self.subgroup, norm = norm, inharmonic = is_trivial, 
                 constraint = constraint, destretch = destretch
             )
         elif optimizer == "sym":
             gen, tempered_tuning_map, error_map = te_sym.wrapper_symbolic (
-                self.mapping, subgroup = self.subgroup, norm = te_sym.NormSym (norm), inharmonic = inharmonic, 
+                self.mapping, subgroup = self.subgroup, norm = te_sym.NormSym (norm), inharmonic = is_trivial, 
                 constraint = constraint, destretch = destretch
             )
 
@@ -152,8 +118,9 @@ class Temperament:
     def complexity (self, ntype = "breed", norm = te.Norm ()):
         if not norm.order == 2:
             raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
-        elif not self.subgroup.is_simple ():
-            raise NotImplementedError ("subgroup temperaments not supported as of now. ")
+        elif not (self.subgroup.is_trivial ()
+                or norm.wtype == "tenney" and self.subgroup.is_tenney_trivial ()):
+            raise NotImplementedError ("nontrivial subgroups not supported as of now. ")
         return self.__complexity (ntype, norm)
 
     def error (self, ntype = "breed", norm = te.Norm (), inharmonic = False, scalar = te.SCALAR.CENT): #in cents by default
@@ -161,9 +128,11 @@ class Temperament:
         Returns the temperament's inherent inaccuracy regardless of the actual tuning, 
         subgroup temperaments supported. 
         """
-        if norm.order != 2:
-            raise NotImplementedError ("temperament measures only work for Euclidean norm as of now. ")
-        return self.__error (ntype, norm, inharmonic, scalar)
+        if not norm.order == 2:
+            raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
+        is_trivial = (inharmonic or self.subgroup.is_trivial ()
+            or norm.wtype == "tenney" and self.subgroup.is_tenney_trivial ())
+        return self.__error (ntype, norm, inharmonic = is_trivial, scalar = scalar)
 
     def __complexity (self, ntype, norm):
         # standard L2 complexity
@@ -215,8 +184,9 @@ class Temperament:
     def badness (self, ntype = "breed", norm = te.Norm (), logflat = False, scalar = te.SCALAR.OCTAVE): #in octaves by default
         if not norm.order == 2:
             raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
-        elif not self.subgroup.is_simple ():
-            raise NotImplementedError ("subgroup temperaments not supported as of now. ")
+        elif not (self.subgroup.is_trivial ()
+                or norm.wtype == "tenney" and self.subgroup.is_tenney_trivial ()):
+            raise NotImplementedError ("nontrivial subgroups not supported as of now. ")
 
         if logflat:
             return __badness_logflat (ntype, norm, scalar)
@@ -224,12 +194,12 @@ class Temperament:
             return __badness (ntype, norm, scalar)
 
     def __badness (self, ntype, norm, scalar):
-        return (self.__error (ntype, norm, inharmonic = False, scalar = scalar)
+        return (self.__error (ntype, norm, inharmonic = True, scalar = scalar)
             * self.__complexity (ntype, norm))
 
     def __badness_logflat (self, ntype, norm, scalar):
         try:
-            return (self.__error (ntype, norm, inharmonic = False, scalar = scalar)
+            return (self.__error (ntype, norm, inharmonic = True, scalar = scalar)
                 * self.__complexity (ntype, norm)**(self.mapping.shape[1]/(self.mapping.shape[1] - self.mapping.shape[0])))
         except ZeroDivisionError:
             return np.nan
@@ -238,8 +208,9 @@ class Temperament:
         """Shows the temperament measures."""
         if not norm.order == 2:
             raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
-        elif not self.subgroup.is_simple ():
-            raise NotImplementedError ("subgroup temperaments not supported as of now. ")
+        elif not (self.subgroup.is_trivial ()
+                or norm.wtype == "tenney" and self.subgroup.is_tenney_trivial ()):
+            raise NotImplementedError ("nontrivial subgroups not supported as of now. ")
         return self.__temperament_measures (ntype, norm, error_scale, badness_scale)
         
     def __temperament_measures (self, ntype, norm, error_scale, badness_scale):

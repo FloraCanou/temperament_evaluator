@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.0.2
+# © 2020-2023 Flora Canou | Version 1.1.0
 # This work is licensed under the GNU General Public License version 3.
 
 import re, functools, warnings
@@ -120,10 +120,23 @@ class Subgroup:
     def just_tuning_map (self, scalar = SCALAR.OCTAVE): #in octaves by default
         return scalar*np.log2 (self.ratios (evaluate = True))
 
-    def is_simple (self):
-        """Returns whether the subgroup consists of prime numbers only."""
+    def is_trivial (self):
+        """
+        Returns whether the basis consists of only primes.
+        Such a basis allows no distinction between inharmonic and subgroup tunings
+        for all norms. 
+        """
         ratios = self.ratios (evaluate = True)
         return all (entry in PRIME_LIST for entry in ratios)
+
+    def is_tenney_trivial (self):
+        """
+        Returns whether the basis consists of only primes and/or their multiples.
+        Such a basis allows no distinction between inharmonic and subgroup tunings
+        for tenney-weighted norms. 
+        """
+        return (all (np.count_nonzero (entry) <= 1 for entry in self.basis_matrix)
+            and all (np.count_nonzero (entry) <= 1 for entry in self.basis_matrix.T))
 
     def __str__ (self):
         return ".".join (entry.__str__ () for entry in self.ratios ())

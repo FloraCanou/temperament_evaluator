@@ -28,7 +28,7 @@ Optimizes tunings. Custom norm profile, constraints and destretch are supported.
 Requires `te_common`. 
 
 Use `wrapper_main` to optimize a temperament. Parameters: 
-- `vals`: *first positional*, *required*. The map of the temperament. 
+- `breeds`: *first positional*, *required*. The map of the temperament. 
 - `subgroup`: *optional*. Custom subgroup for the map. Default is prime harmonics. 
 - `norm`: *optional*. Norm profile for the tuning space. See above. 
 - `inharmonic`: *optional*. For subgroup temperaments, treats the basis as if they were primes. Default is `False`. 
@@ -36,7 +36,7 @@ Use `wrapper_main` to optimize a temperament. Parameters:
 - `destretch`: *optional*. Destretches this ratio to pure. Default is empty. 
 - `show`: *optional*. Displays the result. Default is `True`. 
 
-**Important: a single monzo should be entered as a vector. A monzo list should be entered as composed by column vectors.** 
+**Important: a single monzo should be entered as a vector. A monzo list should be entered as an array of column vectors.** 
 
 ## `te_optimizer_legacy.py`
 
@@ -49,7 +49,7 @@ Solves Euclidean tunings symbolically. *It is recommended to use `te_temperament
 Requires `te_common`. 
 
 Use `wrapper_symbolic` to solve for a Euclidean tuning of a temperament. Parameters: 
-- `vals`: *first positional*, *required*. The map of the temperament. 
+- `breeds`: *first positional*, *required*. The map of the temperament. 
 - `subgroup`: *optional*. Custom subgroup for the map. Default is prime harmonics. 
 - `norm`: *optional*. Norm profile for the tuning space. See above. 
 - `inharmonic`: *optional*. For subgroup temperaments, treats the basis as if they were primes. Default is `False`. 
@@ -78,7 +78,7 @@ Use `Temperament` to construct a temperament object. Methods:
 - `wedgie`: returns and shows the wedgie of the temperament. 
 - `comma_basis`: returns and shows the comma basis of the temperament. 
 
-**Important: a single monzo should be entered as a vector. A monzo list should be entered as composed by column vectors.** 
+**Important: a single monzo should be entered as a vector. A monzo list should be entered as an array of column vectors.** 
 
 ## `te_equal.py`
 
@@ -91,21 +91,21 @@ Requires `te_common`, `te_optimizer`, and `te_temperament_measures`.
 Use `et_construct` to quickly construct temperaments from equal temperaments. Parameters: 
 - `et_list`: *first positional*, *required*. The equal temperament list. 
 - `subgroup`: *second positional*, *required*. The subgroup for the equal temperament list. 
-- `alt_val`: *optional*. Alters the mapping by this matrix. 
 
 Use `et_sequence` to iterate through all GPVs. Parameters: 
-- `monzo_list`: *optional\**. Specifies the commas to be tempered out. Default is empty, implying **JI**. 
+- `monzos`: *optional\**. Specifies the commas to be tempered out. Default is empty, implying **JI**. 
 - `subgroup`: *optional\**. Custom subgroup for the map. Default is prime harmonics. 
 	- \* At least one of the above must be specified, for the script to know the dimension. 
-- `cond`: *optional*. Either `"error"` or `"badness"`. Default is `"error"`. 
 - `ntype`: *optional*. Averaging normalizer. See above. 
 - `norm`: *optional*. Norm profile for the tuning space. See above. 
+- `inharmonic`: *optional*. For subgroup temperaments, treats the basis as if they were primes. Default is `False`. 
+- `cond`: *optional*. Either `"error"` or `"badness"`. Default is `"error"`. 
 - `pv`: *optional*. If `True`, only patent vals will be considered. Default is `False`. 
 - `prog`: *optional*. If `True`, threshold will be updated. Default is `True`. 
 - `threshold`: *optional*. Temperaments failing this will not be shown. Default is `20`. 
 - `search_range`: *optional*. Specifies the upper bound where to stop searching. Default is `1200`. 
 
-**Important: a single monzo should be entered as a vector. A monzo list should be entered as composed by column vectors.** 
+**Important: a single monzo should be entered as a vector. A monzo list should be entered as an array of column vectors.** 
 
 ## `te_lattice.py`
 
@@ -115,4 +115,4 @@ Requires `te_common` and `te_temperament_measures`.
 
 Use `TemperamentLattice` to construct a temperament object. Methods: 
 - `find_temperamental_norm`: shows the temperamental complexity of an interval. 
-- `find_complexity_spectrum`: shows the odd-limit complexity spectrum of a temperament
+- `find_complexity_spectrum`: shows the complexity spectrum of a temperament

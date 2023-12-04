@@ -2,7 +2,7 @@ import numpy as np
 import te_common as te
 import te_temperament_measures as te_tm
 import te_equal as te_et
-import te_lattice as te_la
+import te_lattice as te_lat
 
 # Important: a single monzo should be entered as a vector; a monzo list should be entered as composed by column vectors
 
@@ -62,6 +62,7 @@ temp.temperament_measures (ntype = "smith", badness_scale = 1)
 #   subgroup: custom ji subgroup
 #   ntype: averaging normalizer. "breed", "smith", or "none"
 #   norm: norm profile for the tuning space. see above
+#   inharmonic: for subgroup temps, treats the basis as if they were primes
 #   cond: "error" or "badness"
 #   threshold: temperaments failing this will not be shown
 #   prog: if true, threshold will be updated
@@ -74,10 +75,13 @@ temp = te_tm.Temperament ([
     ]) # septimal meantone
 te_et.et_sequence (temp.comma_basis (show = False), cond = "error", search_range = 300)
 
-# find_spectrum
-temp = te_la.TemperamentLattice ([
+# find_complexity_spectrum
+# parameters:
+#   norm: norm profile for the tuning space. see above
+#   oe: octave equivalence
+temp = te_lat.TemperamentLattice ([
     [1, 2, 0, 0, 1, 2], 
     [0, 6, 0, -7, -2, 9], 
     [0, 0, 1, 1, 1, 1]
-    ]) # history
-temp.find_complexity_spectrum (te_la.odd_limit_monzos_gen (15))
+    ]) # tridecimal history
+temp.find_complexity_spectrum (te_lat.odd_limit_monzos_gen (15), oe = True)

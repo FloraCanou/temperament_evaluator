@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.0.2
+# © 2020-2023 Flora Canou | Version 1.1.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -92,7 +92,8 @@ def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = F
             return np.power (__mean (np.power (np.abs (main), norm.order)), np.reciprocal (float (norm.order)))
 
     breeds, subgroup = te.setup (breeds, subgroup, axis = te.AXIS.ROW)
-    if subgroup.is_simple () or inharmonic:
+    if (inharmonic or subgroup.is_trivial ()
+            or norm.wtype == "tenney" and subgroup.is_tenney_trivial ()):
         gen, tuning_projection, tempered_tuning_map, error_projection, error_map = optimizer_symbolic (
             breeds, target = subgroup, norm = norm, 
             constraint = constraint, destretch = destretch
@@ -142,21 +143,10 @@ def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = F
     return gen, tempered_tuning_map, error_map
 
 def optimizer_symbolic (breeds, target = None, norm = te.Norm (), 
-        constraint = None, destretch = None, *, 
-        subgroup = None, cons_monzo_list = None, des_monzo = None, show = True): #deprecated parameters
+        constraint = None, destretch = None):
     # NOTE: "map" is a reserved word
     # optimization is preferably done in the unit of octaves, but for precision reasons
     
-    if not subgroup is None:
-        warnings.warn ("\"subgroup\" is deprecated. Use \"target\" instead. ")
-        target = te.Subgroup (subgroup)
-    if not cons_monzo_list is None:
-        warnings.warn ("\"cons_monzo_list\" is deprecated. Use \"constraint\" instead. ")
-        constraint = te.Subgroup ([te.monzo2ratio (entry) for entry in cons_monzo_list.T])
-    if not des_monzo is None:
-        warnings.warn ("\"des_monzo\" is deprecated. Use \"destretch\" instead. ")
-        destretch = te.monzo2ratio (des_monzo)
-
     breeds, target = te.setup (breeds, target, axis = te.AXIS.ROW)
     norm = NormSym (norm)
     if norm.order != 2:

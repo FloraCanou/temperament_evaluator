@@ -1,9 +1,8 @@
-# © 2020-2023 Flora Canou | Version 1.0.1
+# © 2020-2023 Flora Canou | Version 1.1.0
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
 import numpy as np
-from sympy import Matrix
 import te_common as te
 import te_temperament_measures as te_tm
 
@@ -11,44 +10,35 @@ WARTS_LIST = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "
 
 def et_construct (et_list, subgroup):
     """Temperament construction function from equal temperaments."""
-
-    if isinstance (subgroup, list):
-        warnings.warn ("subgroup list is deprecated. Use the Subgroup class. ")
-        subgroup = te.Subgroup (subgroup)
-
     breeds = np.array ([warts2breed (n, subgroup) for n in te.as_list (et_list)])
     return te_tm.Temperament (breeds, subgroup)
 
 def comma_construct (monzos, subgroup = None):
     """Temperament construction function from commas."""
-
-    if isinstance (subgroup, list):
-        warnings.warn ("subgroup list is deprecated. Use the Subgroup class. ")
-        subgroup = te.Subgroup (subgroup)
-
     monzos, subgroup = te.setup (monzos, subgroup, axis = te.AXIS.COL)
     breeds = te.antinullspace (monzos)
     return te_tm.Temperament (breeds, subgroup)
 
-def et_sequence (monzos = None, subgroup = None, cond = "error", ntype = "breed", norm = te.Norm (), 
-        pv = False, prog = True, threshold = 20, search_range = 1200):
+def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm (), inharmonic = False, 
+        cond = "error", pv = False, prog = True, threshold = 20, search_range = 1200):
     """
     Finds the optimal sequence from the comma list. 
-    Can be used to find optimal patent vals.
-    Comma list should be entered as column vectors
+    Can be used to find optimal PVs and/or GPVs. 
+    Comma list should be entered as column vectors. 
     """
-
-    if isinstance (subgroup, list):
-        warnings.warn ("subgroup list is deprecated. Use the Subgroup class. ")
-        subgroup = te.Subgroup (subgroup)
-
-    if monzos is None:
+    if not norm.order == 2:
+        raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
+    elif monzos is None:
         if subgroup is None:
             raise ValueError ("please specify a monzo list or a subgroup. ")
         else:
             monzos = np.zeros ((len (subgroup), 1))
     else:
         monzos, subgroup = te.setup (monzos, subgroup, axis = te.AXIS.COL)
+    is_trivial = (inharmonic or subgroup.is_trivial ()
+            or norm.wtype == "tenney" and subgroup.is_tenney_trivial ())
+    if not is_trivial and cond == "badness":
+        raise NotImplementedError ("nontrivial subgroups not supported as of now. ")
 
     print ("\nOptimal GPV sequence: ")
     gpv_infra = [0]*len (subgroup) #initialize with the all-zeroes breed
@@ -68,9 +58,9 @@ def et_sequence (monzos = None, subgroup = None, cond = "error", ntype = "breed"
 
         et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
         if cond == "error":
-            current = et.error (ntype, norm, scalar = te.SCALAR.CENT)
+            current = et._Temperament__error (ntype, norm, inharmonic = is_trivial, scalar = te.SCALAR.CENT)
         elif cond == "badness":
-            current = et.badness (ntype, norm, scalar = te.SCALAR.OCTAVE)
+            current = et._Temperament__badness (ntype, norm, scalar = te.SCALAR.OCTAVE)
         else:
             current = threshold
         if current <= threshold:
