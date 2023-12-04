@@ -115,10 +115,10 @@ class Temperament:
             print (f"Wedgie: {wedgie}", sep = "\n")
         return wedgie
 
-    def complexity (self, ntype = "breed", norm = te.Norm ()):
+    def complexity (self, ntype = "breed", norm = te.Norm (), inharmonic = False):
         if not norm.order == 2:
             raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
-        elif not (self.subgroup.is_trivial ()
+        elif not (inharmonic or self.subgroup.is_trivial ()
                 or norm.wtype == "tenney" and self.subgroup.is_tenney_trivial ()):
             raise NotImplementedError ("nontrivial subgroups not supported as of now. ")
         return self.__complexity (ntype, norm)
@@ -181,10 +181,11 @@ class Temperament:
             return self.__error (ntype = "breed", norm = norm, inharmonic = inharmonic, scalar = scalar)
         return error
 
-    def badness (self, ntype = "breed", norm = te.Norm (), logflat = False, scalar = te.SCALAR.OCTAVE): #in octaves by default
+    def badness (self, ntype = "breed", norm = te.Norm (), inharmonic = False, 
+            logflat = False, scalar = te.SCALAR.OCTAVE): #in octaves by default
         if not norm.order == 2:
             raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
-        elif not (self.subgroup.is_trivial ()
+        elif not (inharmonic or self.subgroup.is_trivial ()
                 or norm.wtype == "tenney" and self.subgroup.is_tenney_trivial ()):
             raise NotImplementedError ("nontrivial subgroups not supported as of now. ")
 
@@ -194,28 +195,33 @@ class Temperament:
             return self.__badness (ntype, norm, scalar)
 
     def __badness (self, ntype, norm, scalar):
+        # this can be called only if inharmonic is on or the subgroup is trivial
+        # so it's safe to set inharmonic = True
         return (self.__error (ntype, norm, inharmonic = True, scalar = scalar)
             * self.__complexity (ntype, norm))
 
     def __badness_logflat (self, ntype, norm, scalar):
+        # same situation as __badness
         try:
             return (self.__error (ntype, norm, inharmonic = True, scalar = scalar)
                 * self.__complexity (ntype, norm)**(self.mapping.shape[1]/(self.mapping.shape[1] - self.mapping.shape[0])))
         except ZeroDivisionError:
             return np.nan
 
-    def temperament_measures (self, ntype = "breed", norm = te.Norm (), error_scale = te.SCALAR.CENT, badness_scale = 1e3):
+    def temperament_measures (self, ntype = "breed", norm = te.Norm (), inharmonic = False, 
+            error_scale = te.SCALAR.CENT, badness_scale = 1e3):
         """Shows the temperament measures."""
         if not norm.order == 2:
             raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
-        elif not (self.subgroup.is_trivial ()
+        elif not (inharmonic or self.subgroup.is_trivial ()
                 or norm.wtype == "tenney" and self.subgroup.is_tenney_trivial ()):
             raise NotImplementedError ("nontrivial subgroups not supported as of now. ")
         return self.__temperament_measures (ntype, norm, error_scale, badness_scale)
         
     def __temperament_measures (self, ntype, norm, error_scale, badness_scale):
+        # same situation as __badness
         self.__show_header (norm = norm, ntype = ntype)
-        error = self.__error (ntype, norm, inharmonic = False, scalar = error_scale)
+        error = self.__error (ntype, norm, inharmonic = True, scalar = error_scale)
         complexity = self.__complexity (ntype, norm)
         badness = self.__badness (ntype, norm, scalar = badness_scale)
         badness_logflat = self.__badness_logflat (ntype, norm, scalar = badness_scale)
