@@ -67,6 +67,13 @@ class NormSym (te.Norm):
 def optimizer_symbolic (breeds, subgroup = None, norm = te.Norm (), #NOTE: "map" is a reserved word
         cons_monzo_list = None, des_monzo = None, show = True):
     breeds, subgroup = te.setup (breeds, subgroup, axis = te.AXIS.ROW)
+    """
+    Returns the generator tuning map, tuning map, and error map. 
+    The result can be displayed. 
+    """
+    # NOTE: "map" is a reserved word
+    # optimization is preferably done in the unit of octaves, but for precision reasons
+
     norm = NormSym (norm)
     if norm.order != 2:
         raise ValueError ("Euclidean norm is required for symbolic solution. ")

@@ -24,7 +24,7 @@ Optimizes tunings. Custom norm profile, constraints and destretch are supported.
 Requires `te_common`. 
 
 Use `optimizer_main` to optimize a temperament. Parameters: 
-- `vals`: *first positional*, *required*. The map of the temperament. 
+- `breeds`: *first positional*, *required*. The map of the temperament. 
 - `subgroup`: *optional*. Specifies a custom subgroup for the map. Default is prime harmonics. 
 - `norm`: *optional*. Specifies the norm profile for the tuning space. See above. 
 - `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. 
@@ -43,7 +43,7 @@ Solves Euclidean tunings symbolically. *It is recommended to use `te_temperament
 Requires `te_common`. 
 
 Use `symbolic` to solve for a Euclidean tuning of a temperament. Parameters: 
-- `vals`: *first positional*, *required*. The map of the temperament. 
+- `breeds`: *first positional*, *required*. The map of the temperament. 
 - `subgroup`: *optional*. Specifies a custom subgroup for the map. Default is prime harmonics. 
 - `norm`: *optional*. Specifies the norm profile for the tuning space. See above. 
 - `cons_monzo_list`: *optional*. Constrains this list of monzos to pure. Default is empty. 
@@ -86,15 +86,14 @@ Requires `te_common`, `te_optimizer`, and `te_temperament_measures`.
 Use `et_construct` to quickly construct temperaments from equal temperaments. Parameters: 
 - `et_list`: *first positional*, *required*. The equal temperament list. 
 - `subgroup`: *second positional*, *required*. The subgroup for the equal temperament list. 
-- `alt_val`: *optional*. Alters the mapping by this matrix. 
 
 Use `et_sequence` to iterate through all GPVs. Parameters: 
-- `monzo_list`: *optional\**. Specifies the commas to be tempered out. Default is empty, implying **JI**. 
+- `monzos`: *optional\**. Specifies the commas to be tempered out. Default is empty, implying **JI**. 
 - `subgroup`: *optional\**. Specifies a custom subgroup for the map. Default is prime harmonics. 
 	- \* At least one of the above must be specified, for the script to know the dimension. 
-- `cond`: *optional*. Either `"error"` or `"badness"`. Default is `"error"`. 
 - `ntype`: *optional*. Specifies the averaging normalizer. See above. 
 - `norm`: *optional*. Specifies the norm profile for the tuning space. See above. 
+- `cond`: *optional*. Either `"error"` or `"badness"`. Default is `"error"`. 
 - `pv`: *optional*. If `True`, only patent vals will be considered. Default is `False`. 
 - `prog`: *optional*. If `True`, threshold will be updated. Default is `True`. 
 - `threshold`: *optional*. Temperaments failing this will not be shown. Default is `20`. 

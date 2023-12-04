@@ -86,7 +86,12 @@ class Temperament:
         return
 
     def tune (self, optimizer = "main", norm = te.Norm (), 
-            enforce = "", cons_monzo_list = None, des_monzo = None): #in cents
+            enforce = "", cons_monzo_list = None, des_monzo = None): 
+        """
+        Gives the tuning. 
+        Calls either optimizer_main or optimizer_symbolic. 
+        """
+
         # checks optimizer availability
         if optimizer == "sym" and not self.__check_sym (norm.order):
             return self.tune (optimizer = "main", norm = norm,
@@ -162,9 +167,16 @@ class Temperament:
         return wedgie
 
     def complexity (self, ntype = "breed", norm = te.Norm ()):
-        if norm.order != 2:
-            raise NotImplementedError ("temperament measures only work for Euclidean norm as of now. ")
-        
+        if not norm.order == 2:
+            raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
+        return self.__complexity (ntype, norm)
+
+    def error (self, ntype = "breed", norm = te.Norm ()): #in cents
+        if not norm.order == 2:
+            raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
+        return self.__error (ntype, norm)
+
+    def __complexity (self, ntype, norm):
         # standard L2 complexity
         complexity = np.sqrt (linalg.det (
             norm.tuning_x (self.mapping, self.subgroup)
@@ -178,13 +190,10 @@ class Temperament:
             pass
         else:
             warnings.warn ("normalizer not supported, using default (\"breed\")")
-            return self.complexity (ntype = "breed", norm = norm)
+            return self.__complexity (ntype = "breed", norm = norm)
         return complexity
 
-    def error (self, ntype = "breed", norm = te.Norm ()): #in cents
-        if norm.order != 2:
-            raise NotImplementedError ("temperament measures only work for Euclidean norm as of now. ")
-
+    def __error (self, ntype, norm):
         # standard L2 error
         error = linalg.norm (
             norm.tuning_x (self.just_tuning_map, self.subgroup)
@@ -202,30 +211,42 @@ class Temperament:
             pass
         else:
             warnings.warn ("normalizer not supported, using default (\"breed\")")
-            return self.error (ntype = "breed", norm = norm)
+            return self.__error (ntype = "breed", norm = norm)
         return error
 
-    def badness (self, ntype = "breed", norm = te.Norm ()): #in octaves
-        return (self.error (ntype, norm)
-            * self.complexity (ntype, norm)
+    def badness (self, ntype = "breed", norm = te.Norm (), logflat = False): #in octaves
+        if not norm.order == 2:
+            raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
+        if logflat:
+            return self.__badness_logflat (ntype, norm)
+        else:
+            return self.__badness (ntype, norm)
+
+    def __badness (self, ntype, norm):
+        return (self.__error (ntype, norm)
+            * self.__complexity (ntype, norm)
             / te.SCALAR.CENT)
 
-    def badness_logflat (self, ntype = "breed", norm = te.Norm ()): #in octaves
+    def __badness_logflat (self, ntype, norm): #in octaves
         try:
-            return (self.error (ntype, norm)
-                * self.complexity (ntype, norm)**(self.mapping.shape[1]/(self.mapping.shape[1] - self.mapping.shape[0]))
+            return (self.__error (ntype, norm)
+                * self.__complexity (ntype, norm)**(self.mapping.shape[1]/(self.mapping.shape[1] - self.mapping.shape[0]))
                 / te.SCALAR.CENT)
         except ZeroDivisionError:
             return np.nan
 
     def temperament_measures (self, ntype = "breed", norm = te.Norm (), badness_scale = 1000):
-        self.__show_header (norm = norm, ntype = ntype)
+        """Shows the temperament measures."""
+        if not norm.order == 2:
+            raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
+        return self.__temperament_measures (ntype, norm, badness_scale)
 
-        # shows the temperament measures
-        error = self.error (ntype, norm)
-        complexity = self.complexity (ntype, norm)
-        badness = self.badness (ntype, norm) * badness_scale
-        badness_logflat = self.badness_logflat (ntype, norm) * badness_scale
+    def __temperament_measures (self, ntype, norm, badness_scale):
+        self.__show_header (norm = norm, ntype = ntype)
+        error = self.__error (ntype, norm)
+        complexity = self.__complexity (ntype, norm)
+        badness = self.__badness (ntype, norm) * badness_scale
+        badness_logflat = self.__badness_logflat (ntype, norm) * badness_scale
         print (f"Complexity: {complexity:.6f}",
             f"Error: {error:.6f} (¢)",
             f"Badness (simple): {badness:.6f} (oct/{badness_scale})",

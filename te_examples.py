@@ -2,7 +2,7 @@ import numpy as np
 import te_common as te
 import te_temperament_measures as te_tm
 import te_equal as te_et
-import te_lattice as te_la
+import te_lattice as te_lat
 
 # Important: a single monzo should be entered as a vector; a monzo list should be entered as composed by column vectors
 
@@ -35,7 +35,7 @@ temp = te_tm.Temperament ([
     [0, 5, 1, 12]
     ]) # septimal magic
 temp.tune (norm = te.Norm (skew = 1), enforce = "c") # ctwe tuning
-temp.temperament_measures (ntype = "smith", badness_scale = 1)
+temp.temperament_measures (ntype = "smith", badness_scale = 1) # te temperament measures
 temp.wedgie (norm = te.Norm (wtype = "equilateral"))
 temp.comma_basis ()
 
@@ -73,10 +73,10 @@ temp = te_tm.Temperament ([
     ]) # septimal meantone
 te_et.et_sequence (temp.comma_basis (show = False), cond = "error", search_range = 300)
 
-# find_spectrum
-temp = te_la.TemperamentLattice ([
+# find_complexity_spectrum
+temp = te_lat.TemperamentLattice ([
     [1, 2, 0, 0, 1, 2], 
     [0, 6, 0, -7, -2, 9], 
     [0, 0, 1, 1, 1, 1]
-    ]) # history
-temp.find_complexity_spectrum (te_la.odd_limit_monzos_gen (15))
+    ]) # tridecimal history
+temp.find_complexity_spectrum (te_lat.odd_limit_monzos_gen (15), oe = True)

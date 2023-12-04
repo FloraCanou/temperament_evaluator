@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.27.0
+# © 2020-2023 Flora Canou | Version 0.27.1
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -20,12 +20,12 @@ def comma_construct (monzos, subgroup = None):
     breeds = te.antinullspace (monzos)
     return te_tm.Temperament (breeds, subgroup)
 
-def et_sequence (monzos = None, subgroup = None, cond = "error", ntype = "breed", norm = te.Norm (), 
-        pv = False, prog = True, threshold = 20, search_range = 1200):
+def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm (), 
+        cond = "error", pv = False, prog = True, threshold = 20, search_range = 1200):
     """
     Finds the optimal sequence from the comma list. 
-    Can be used to find optimal patent vals.
-    Comma list should be entered as column vectors
+    Can be used to find optimal PVs and/or GPVs. 
+    Comma list should be entered as column vectors. 
     """
     if monzos is None:
         if subgroup is None:
@@ -53,9 +53,9 @@ def et_sequence (monzos = None, subgroup = None, cond = "error", ntype = "breed"
 
         et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
         if cond == "error":
-            current = et.error (ntype, norm)
+            current = et._Temperament__error (ntype, norm)
         elif cond == "badness":
-            current = et.badness (ntype, norm)
+            current = et._Temperament__badness (ntype, norm)
         else:
             current = threshold
         if current <= threshold:

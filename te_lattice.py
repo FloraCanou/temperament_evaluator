@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.27.0
+# © 2020-2023 Flora Canou | Version 0.27.1
 # This work is licensed under the GNU General Public License version 3.
 
 import math, warnings
@@ -48,10 +48,24 @@ def odd_limit_monzos_gen (odd_limit, excl = [], sort = None):
     for num in range (1, odd_limit + 1, 2):
         if num in te.as_list (excl):
             continue
-        for den in range (1, odd_limit + 1, 2):
+        for den in range (1, num + 1, 2):
             if (den in te.as_list (excl)) or math.gcd (num, den) != 1:
                 continue
             ratio_list.append (ratio_octave_reduce ([num, den]))
     if sort == "size":
         ratio_list.sort (key = lambda k: k[0]/k[1])
+    return te.column_stack_pad ([te.ratio2monzo (entry) for entry in ratio_list])
+
+def integer_limit_monzos_gen (integer_limit, excl = [], sort = None):
+    """Enter an integer limit, returns the array of monzos."""
+    ratio_list = []
+    for num in range (1, integer_limit + 1):
+        if num in te.as_list (excl):
+            continue
+        for den in range (1, num + 1):
+            if (den in te.as_list (excl)) or math.gcd (num, den) != 1:
+                continue
+            ratio_list.append (ratio_octave_reduce ([num, den]))
+    if sort == "size":
+        ratio_list.sort (key = lambda c: c.value ())
     return te.column_stack_pad ([te.ratio2monzo (entry) for entry in ratio_list])

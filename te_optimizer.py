@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.27.0
+# © 2020-2023 Flora Canou | Version 0.27.1
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -11,8 +11,7 @@ def optimizer_main (breeds, subgroup = None, norm = te.Norm (),
         cons_monzo_list = None, des_monzo = None, show = True): 
     """
     Returns the generator tuning map, tuning map, and error map. 
-    Inharmonic/subgroup modes can be configured here, 
-    and the result can be displayed. 
+    The result can be displayed. 
     """
     # NOTE: "map" is a reserved word
     # optimization is preferably done in the unit of octaves, but for precision reasons
