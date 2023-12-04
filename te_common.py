@@ -209,6 +209,8 @@ class Norm:
         primes = subgroup.ratios (evaluate = True)
         return self.__get_interval_skew (primes) @ self.__get_interval_weight (primes) @ main
 
+# canonicalization functions
+
 def __hnf (main, mode = AXIS.ROW):
     """Normalizes a matrix to HNF."""
     if mode == AXIS.ROW:
@@ -237,6 +239,8 @@ def canonicalize (main, saturate = True, normalize = True, axis = AXIS.ROW):
     return main
 
 canonicalise = canonicalize
+
+# initialization functions
 
 def __get_length (main, axis):
     """Gets the length along a certain axis."""
@@ -269,6 +273,8 @@ def setup (main, subgroup, axis):
                 main = main[:dim]
         subgroup.basis_matrix = subgroup.basis_matrix[:, :dim]
     return main, subgroup
+
+# conversion functions
 
 def monzo2ratio (monzo, subgroup = None):
     """
@@ -327,12 +333,6 @@ def __ratio2monzo (ratio):
         raise ValueError ("improper subgroup. ")
     return np.array (monzo)
 
-def bra (covector):
-    return "<" + " ".join (map (str, np.trim_zeros (covector, trim = "b"))) + "]"
-
-def ket (vector):
-    return "[" + " ".join (map (str, np.trim_zeros (vector, trim = "b"))) + ">"
-
 def matrix2array (main):
     """Takes a possibly fractional sympy matrix and converts it to an integer numpy array."""
     return np.array (main/functools.reduce (gcd, tuple (main)), dtype = int).squeeze ()
@@ -344,6 +344,14 @@ def nullspace (covectors):
 def antinullspace (vectors):
     frac_antinullspace_matrix = Matrix (np.flip (vectors.T)).nullspace ()
     return np.flip (np.row_stack ([matrix2array (entry) for entry in frac_antinullspace_matrix]))
+
+# annotation functions
+
+def bra (covector):
+    return "<" + " ".join (map (str, np.trim_zeros (covector, trim = "b"))) + "]"
+
+def ket (vector):
+    return "[" + " ".join (map (str, np.trim_zeros (vector, trim = "b"))) + ">"
 
 def show_monzo_list (monzos, subgroup):
     """
