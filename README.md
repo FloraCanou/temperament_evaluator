@@ -73,6 +73,7 @@ Use `Temperament` to construct a temperament object. Methods:
 - `temperament_measures`: shows the complexity, error, and badness (simple and logflat). Parameters: 
 	- `ntype`: *optional*. Averaging normalizer. Has `"breed"` (default), `"smith"` and `"none"`. 
 	- `norm`: *optional*. Norm profile for the tuning space. See above. 
+	- `inharmonic`: *optional*. For subgroup temperaments, treats the basis as if they were primes. Default is `False`. 
 	- `error_scale`: *optional*. Scales the error. Default is `1200` (cents).
 	- `badness_scale`: *optional*. Scales the badness. Default is `1000` (millioctaves). 
 - `wedgie`: returns and shows the wedgie of the temperament. 
@@ -110,6 +111,8 @@ Use `et_sequence` to iterate through all GPVs. Parameters:
 ## `te_lattice.py`
 
 Not fully functional yet. Currently able to find the complexity spectrum from the temperament map. 
+
+Support for subgroup temperaments is limited. 
 
 Requires `te_common` and `te_temperament_measures`. 
 

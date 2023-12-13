@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.1.0
+# © 2020-2023 Flora Canou | Version 1.2.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -92,8 +92,8 @@ def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = F
             return np.power (__mean (np.power (np.abs (main), norm.order)), np.reciprocal (float (norm.order)))
 
     breeds, subgroup = te.setup (breeds, subgroup, axis = te.AXIS.ROW)
-    if (inharmonic or subgroup.is_trivial ()
-            or norm.wtype == "tenney" and subgroup.is_tenney_trivial ()):
+    if (inharmonic or subgroup.is_prime ()
+            or norm.wtype == "tenney" and subgroup.is_prime_power ()):
         gen, tuning_projection, tempered_tuning_map, error_projection, error_map = optimizer_symbolic (
             breeds, target = subgroup, norm = norm, 
             constraint = constraint, destretch = destretch
@@ -103,23 +103,24 @@ def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = F
         error = __power_mean_norm (error_map_x)
         bias = __mean (error_map_x)
     else:
-        breeds_parent = te.antinullspace (subgroup.basis_matrix @ te.nullspace (breeds))
-        subgroup_parent = te.get_subgroup (subgroup.basis_matrix, axis = te.AXIS.COL)
+        subgroup_mp = subgroup.minimal_prime_subgroup ()
+        subgroup2mp = subgroup.basis_matrix_to (subgroup_mp)
+        breeds_mp = te.antinullspace (subgroup2mp @ te.nullspace (breeds))
 
-        gen_parent, tuning_projection_parent, tempered_tuning_map_parent, error_projection_parent, error_map_parent = optimizer_symbolic (
-            breeds_parent, target = subgroup_parent, norm = norm, 
+        gen_mp, tuning_projection_mp, tempered_tuning_map_mp, error_projection_mp, error_map_mp = optimizer_symbolic (
+            breeds_mp, target = subgroup_mp, norm = norm, 
             constraint = constraint, destretch = destretch
         )
-        error_map_parent_x = norm.tuning_x (error_map_parent, subgroup_parent)
-        # print (error_map_parent_x) #for debugging
-        error = __power_mean_norm (error_map_parent_x)
-        bias = __mean (error_map_parent_x)
+        error_map_mp_x = norm.tuning_x (error_map_mp, subgroup_mp)
+        # print (error_map_mp_x) #for debugging
+        error = __power_mean_norm (error_map_mp_x)
+        bias = __mean (error_map_mp_x)
 
-        tempered_tuning_map = tempered_tuning_map_parent @ subgroup.basis_matrix
+        tempered_tuning_map = tempered_tuning_map_mp @ subgroup2mp
         gen = tempered_tuning_map @ linalg.pinv (breeds)
         error_map = tempered_tuning_map - subgroup.just_tuning_map (scalar = te.SCALAR.CENT)
-        tuning_projection = Matrix (subgroup.basis_matrix).pinv () @ tuning_projection_parent @ Matrix (subgroup.basis_matrix)
-        error_projection = Matrix (subgroup.basis_matrix).pinv () @ error_projection_parent @ Matrix (subgroup.basis_matrix)
+        tuning_projection = Matrix (subgroup2mp).pinv () @ tuning_projection_mp @ Matrix (subgroup2mp)
+        error_projection = Matrix (subgroup2mp).pinv () @ error_projection_mp @ Matrix (subgroup2mp)
 
     if show:
         print (f"Generators: {gen} (¢)",
@@ -139,6 +140,8 @@ def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = F
             te.show_monzo_list (unit_eigenmonzos, subgroup)
         else:
             print ("Transcendental projection maps not shown. ")
+        print (f"Tuning error: {error:.6f} (¢)",
+            f"Tuning bias: {bias:.6f} (¢)", sep = "\n")
 
     return gen, tempered_tuning_map, error_map
 

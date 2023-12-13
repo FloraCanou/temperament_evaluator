@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.1.0
+# © 2020-2023 Flora Canou | Version 1.2.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -32,30 +32,31 @@ def wrapper_main (breeds, subgroup = None, norm = te.Norm (), inharmonic = False
             return np.power (__mean (np.power (np.abs (main), norm.order)), np.reciprocal (float (norm.order)))
 
     breeds, subgroup = te.setup (breeds, subgroup, axis = te.AXIS.ROW)
-    if (inharmonic or subgroup.is_trivial ()
-            or norm.wtype == "tenney" and subgroup.is_tenney_trivial ()):
+    if (inharmonic or subgroup.is_prime ()
+            or norm.wtype == "tenney" and subgroup.is_prime_power ()):
         gen, tempered_tuning_map, error_map = optimizer_main (
             breeds, target = subgroup, norm = norm, 
             constraint = constraint, destretch = destretch
         )
         error_map_x = norm.tuning_x (error_map, subgroup)
-        # print (error_map_x) #for debugging
+        print (error_map_x) #for debugging
         error = __power_mean_norm (error_map_x)
         bias = __mean (error_map_x)
     else:
-        breeds_parent = te.antinullspace (subgroup.basis_matrix @ te.nullspace (breeds))
-        subgroup_parent = te.get_subgroup (subgroup.basis_matrix, axis = te.AXIS.COL)
+        subgroup_mp = subgroup.minimal_prime_subgroup ()
+        subgroup2mp = subgroup.basis_matrix_to (subgroup_mp)
+        breeds_mp = te.antinullspace (subgroup2mp @ te.nullspace (breeds))
 
-        gen_parent, tempered_tuning_map_parent, error_map_parent = optimizer_main (
-            breeds_parent, target = subgroup_parent, norm = norm, 
+        gen_mp, tempered_tuning_map_mp, error_map_mp = optimizer_main (
+            breeds_mp, target = subgroup_mp, norm = norm, 
             constraint = constraint, destretch = destretch
         )
-        error_map_parent_x = norm.tuning_x (error_map_parent, subgroup_parent)
-        # print (error_map_parent_x) #for debugging
-        error = __power_mean_norm (error_map_parent_x)
-        bias = __mean (error_map_parent_x)
+        error_map_mp_x = norm.tuning_x (error_map_mp, subgroup_mp)
+        print (error_map_mp_x) #for debugging
+        error = __power_mean_norm (error_map_mp_x)
+        bias = __mean (error_map_mp_x)
 
-        tempered_tuning_map = tempered_tuning_map_parent @ subgroup.basis_matrix
+        tempered_tuning_map = tempered_tuning_map_mp @ subgroup2mp
         gen = tempered_tuning_map @ linalg.pinv (breeds)
         error_map = tempered_tuning_map - subgroup.just_tuning_map (scalar = te.SCALAR.CENT)
 

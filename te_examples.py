@@ -37,7 +37,7 @@ temp = te_tm.Temperament ([
     ]) # septimal magic
 temp.tune (norm = te.Norm (skew = 1), constraint = te.Subgroup ("2")) # ctwe tuning
 temp.temperament_measures (ntype = "smith", badness_scale = 1) # te temperament measures
-temp.wedgie (norm = te.Norm (wtype = "equilateral"))
+temp.wedgie ()
 temp.comma_basis ()
 
 # et_construct

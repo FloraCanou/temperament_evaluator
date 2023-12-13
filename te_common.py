@@ -1,7 +1,7 @@
-# © 2020-2023 Flora Canou | Version 1.1.0
+# © 2020-2023 Flora Canou | Version 1.2.0
 # This work is licensed under the GNU General Public License version 3.
 
-import re, functools, warnings
+import re, functools,  itertools, warnings
 import numpy as np
 from scipy import linalg
 from sympy.matrices import Matrix, normalforms
@@ -110,33 +110,54 @@ class Subgroup:
         if all (entry.is_integer () for entry in result.flat):
             return result.astype (int)
         else:
-            warnings.warn ("improper subgroup.")
+            warnings.warn ("non-integer basis. Maybe you entered an improper parent group?")
             return result
     
     def ratios (self, evaluate = False):
         """Returns a list of ratio objects or floats."""
-        return [monzo2ratio (entry).value () if evaluate else monzo2ratio (entry) for entry in self.basis_matrix.T]
+        if evaluate:
+            return [monzo2ratio (entry).value () for entry in self.basis_matrix.T]
+        else:
+            return [monzo2ratio (entry) for entry in self.basis_matrix.T]
 
     def just_tuning_map (self, scalar = SCALAR.OCTAVE): #in octaves by default
         return scalar*np.log2 (self.ratios (evaluate = True))
 
-    def is_trivial (self):
+    def is_prime (self):
         """
-        Returns whether the basis consists of only primes.
+        Returns whether the subgroup has a basis of only primes.
         Such a basis allows no distinction between inharmonic and subgroup tunings
         for all norms. 
         """
         ratios = self.ratios (evaluate = True)
         return all (entry in PRIME_LIST for entry in ratios)
 
-    def is_tenney_trivial (self):
+    def is_prime_power (self):
         """
-        Returns whether the basis consists of only primes and/or their multiples.
+        Returns whether the subgroup has a basis of only primes and/or their powers.
         Such a basis allows no distinction between inharmonic and subgroup tunings
         for tenney-weighted norms. 
         """
-        return (all (np.count_nonzero (entry) <= 1 for entry in self.basis_matrix)
-            and all (np.count_nonzero (entry) <= 1 for entry in self.basis_matrix.T))
+        return (all (np.count_nonzero (row) <= 1 for row in self.basis_matrix)
+            and all (np.count_nonzero (row) <= 1 for row in self.basis_matrix.T))
+
+    def minimal_prime_subgroup (self):
+        """Returns the smallest prime subgroup that contains this subgroup. """
+        group = PRIME_LIST
+        selector = self.basis_matrix.any (axis = 1)
+        return Subgroup (ratios = list (itertools.compress (group, selector)))
+
+    def index (self):
+        """
+        Returns what fraction the subgroup is to its minimal prime subgroup. 
+        1: it's a prime subgroup. 
+        inf: it's a degenerate subgroup. 
+        Temperament complexity can be defined on any nondegenerate subgroups. 
+        """
+        try:
+            return linalg.det (self.basis_matrix_to (self.minimal_prime_subgroup ()))
+        except ValueError:
+            return np.inf
 
     def __str__ (self):
         return ".".join (entry.__str__ () for entry in self.ratios ())

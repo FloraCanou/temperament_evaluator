@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.1.0
+# © 2020-2023 Flora Canou | Version 1.2.0
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -75,8 +75,8 @@ class Temperament:
         cons_text = constraint.__str__ () + "-constrained" if constraint else ""
         des_text = destretch.__str__ () + "-destretched" if destretch else ""
         enforce_text = " ".join ([cons_text, des_text]) if cons_text or des_text else "none"
-        if is_trivial := (self.subgroup.is_trivial ()
-                or norm.wtype == "tenney" and subgroup.is_tenney_trivial ()):
+        if is_trivial := (self.subgroup.is_prime ()
+                or norm.wtype == "tenney" and subgroup.is_prime_power ()):
             mode_text = "prime-harmonic"
         else:
             mode_text = "inharmonic" if inharmonic else "subgroup"
@@ -88,13 +88,13 @@ class Temperament:
         if optimizer == "main":
             import te_optimizer as te_opt
             gen, tempered_tuning_map, error_map = te_opt.wrapper_main (
-                self.mapping, subgroup = self.subgroup, norm = norm, inharmonic = is_trivial, 
-                constraint = constraint, destretch = destretch
+                self.mapping, subgroup = self.subgroup, norm = norm, 
+                inharmonic = inharmonic or is_trivial, constraint = constraint, destretch = destretch
             )
         elif optimizer == "sym":
             gen, tempered_tuning_map, error_map = te_sym.wrapper_symbolic (
-                self.mapping, subgroup = self.subgroup, norm = te_sym.NormSym (norm), inharmonic = is_trivial, 
-                constraint = constraint, destretch = destretch
+                self.mapping, subgroup = self.subgroup, norm = te_sym.NormSym (norm), 
+                inharmonic = inharmonic or is_trivial, constraint = constraint, destretch = destretch
             )
 
         return gen, tempered_tuning_map, error_map
@@ -104,7 +104,7 @@ class Temperament:
     analyze = tune
     analyse = tune
 
-    def wedgie (self, norm = te.Norm (), show = True):
+    def wedgie (self, norm = te.Norm (wtype = "equilateral"), show = True):
         combinations = itertools.combinations (range (self.mapping.shape[1]), self.mapping.shape[0])
         wedgie = np.array ([
             linalg.det (norm.tuning_x (self.mapping, self.subgroup)[:, entry]) for entry in combinations
@@ -116,51 +116,64 @@ class Temperament:
         return wedgie
 
     def complexity (self, ntype = "breed", norm = te.Norm (), inharmonic = False):
+        """
+        Returns the temperament's complexity, 
+        nondegenerate subgroup temperaments supported. 
+        """
         if not norm.order == 2:
-            raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
-        elif not (inharmonic or self.subgroup.is_trivial ()
-                or norm.wtype == "tenney" and self.subgroup.is_tenney_trivial ()):
-            raise NotImplementedError ("nontrivial subgroups not supported as of now. ")
-        return self.__complexity (ntype, norm)
+            raise ValueError ("this measure is only defined on Euclidean norms. ")
+        do_inharmonic = (inharmonic or self.subgroup.is_prime ()
+            or norm.wtype == "tenney" and self.subgroup.is_prime_power ())
+        if not do_inharmonic and self.subgroup.index () == np.inf:
+            raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
+        return self.__complexity (ntype, norm, inharmonic = do_inharmonic)
 
     def error (self, ntype = "breed", norm = te.Norm (), inharmonic = False, scalar = te.SCALAR.CENT): #in cents by default
         """
         Returns the temperament's inherent inaccuracy regardless of the actual tuning, 
-        subgroup temperaments supported. 
+        all subgroup temperaments supported. 
         """
         if not norm.order == 2:
             raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
-        is_trivial = (inharmonic or self.subgroup.is_trivial ()
-            or norm.wtype == "tenney" and self.subgroup.is_tenney_trivial ())
-        return self.__error (ntype, norm, inharmonic = is_trivial, scalar = scalar)
+        do_inharmonic = (inharmonic or self.subgroup.is_prime ()
+            or norm.wtype == "tenney" and self.subgroup.is_prime_power ())
+        return self.__error (ntype, norm, inharmonic = do_inharmonic, scalar = scalar)
 
-    def __complexity (self, ntype, norm):
+    def __complexity (self, ntype, norm, inharmonic):
+        if inharmonic:
+            subgroup = self.subgroup
+            mapping = self.mapping
+            index = 1
+        else:
+            subgroup = self.subgroup.minimal_prime_subgroup ()
+            mapping = te.antinullspace (self.subgroup.basis_matrix_to (subgroup) @ te.nullspace (self.mapping))
+            index = self.subgroup.index ()
         # standard L2 complexity
         complexity = np.sqrt (linalg.det (
-            norm.tuning_x (self.mapping, self.subgroup)
-            @ norm.tuning_x (self.mapping, self.subgroup).T
-        ))
+            norm.tuning_x (mapping, subgroup)
+            @ norm.tuning_x (mapping, subgroup).T
+        )) / index
         # complexity = linalg.norm (self.wedgie (norm = norm, show = False)) #same
         if ntype == "breed": #Graham Breed's RMS (default)
-            complexity *= 1/np.sqrt (self.mapping.shape[1]**self.mapping.shape[0])
+            complexity *= 1/np.sqrt (mapping.shape[1]**mapping.shape[0])
         elif ntype == "smith": #Gene Ward Smith's RMS
-            complexity *= 1/np.sqrt (len (tuple (itertools.combinations (range (self.mapping.shape[1]), self.mapping.shape[0]))))
+            complexity *= 1/np.sqrt (len (tuple (itertools.combinations (range (mapping.shape[1]), mapping.shape[0]))))
         elif ntype == "none":
             pass
         else:
             warnings.warn ("normalizer not supported, using default (\"breed\")")
-            return self.__complexity (ntype = "breed", norm = norm)
+            return self.__complexity (ntype = "breed", norm = norm, inharmonic = inharmonic)
         return complexity
 
     def __error (self, ntype, norm, inharmonic, scalar):
-        # standard L2 error
         if inharmonic:
             mapping = self.mapping
             subgroup = self.subgroup
         else:
-            mapping = te.antinullspace (self.subgroup.basis_matrix @ te.nullspace (self.mapping))
-            subgroup = te.get_subgroup (self.subgroup.basis_matrix, axis = te.AXIS.COL)
+            subgroup = self.subgroup.minimal_prime_subgroup ()
+            mapping = te.antinullspace (self.subgroup.basis_matrix_to (subgroup) @ te.nullspace (self.mapping))
         just_tuning_map = subgroup.just_tuning_map (scalar)
+        # standard L2 error
         error = linalg.norm (
             norm.tuning_x (just_tuning_map, subgroup)
             @ linalg.pinv (norm.tuning_x (mapping, subgroup))
@@ -178,33 +191,32 @@ class Temperament:
             pass
         else:
             warnings.warn ("normalizer not supported, using default (\"breed\")")
-            return self.__error (ntype = "breed", norm = norm, inharmonic = inharmonic, scalar = scalar)
+            return self.__error ("breed", norm, inharmonic, scalar)
         return error
 
     def badness (self, ntype = "breed", norm = te.Norm (), inharmonic = False, 
             logflat = False, scalar = te.SCALAR.OCTAVE): #in octaves by default
         if not norm.order == 2:
-            raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
-        elif not (inharmonic or self.subgroup.is_trivial ()
-                or norm.wtype == "tenney" and self.subgroup.is_tenney_trivial ()):
-            raise NotImplementedError ("nontrivial subgroups not supported as of now. ")
+            raise ValueError ("this measure is only defined on Euclidean norms. ")
+        do_inharmonic = (inharmonic or self.subgroup.is_prime ()
+            or norm.wtype == "tenney" and self.subgroup.is_prime_power ())
+        if not do_inharmonic and self.subgroup.index () == np.inf:
+            raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
 
         if logflat:
-            return self.__badness_logflat (ntype, norm, scalar)
+            return self.__badness_logflat (ntype, norm, inharmonic, scalar)
         else:
-            return self.__badness (ntype, norm, scalar)
+            return self.__badness (ntype, norm, inharmonic, scalar)
 
-    def __badness (self, ntype, norm, scalar):
-        # this can be called only if inharmonic is on or the subgroup is trivial
-        # so it's safe to set inharmonic = True
-        return (self.__error (ntype, norm, inharmonic = True, scalar = scalar)
-            * self.__complexity (ntype, norm))
+    def __badness (self, ntype, norm, inharmonic, scalar):
+        return (self.__error (ntype, norm, inharmonic, scalar)
+            * self.__complexity (ntype, norm, inharmonic))
 
-    def __badness_logflat (self, ntype, norm, scalar):
-        # same situation as __badness
+    def __badness_logflat (self, ntype, norm, inharmonic, scalar):
         try:
-            return (self.__error (ntype, norm, inharmonic = True, scalar = scalar)
-                * self.__complexity (ntype, norm)**(self.mapping.shape[1]/(self.mapping.shape[1] - self.mapping.shape[0])))
+            return (self.__error (ntype, norm, inharmonic, scalar)
+                * self.__complexity (ntype, norm, inharmonic)
+                **(self.mapping.shape[1]/(self.mapping.shape[1] - self.mapping.shape[0])))
         except ZeroDivisionError:
             return np.nan
 
@@ -212,19 +224,19 @@ class Temperament:
             error_scale = te.SCALAR.CENT, badness_scale = 1e3):
         """Shows the temperament measures."""
         if not norm.order == 2:
-            raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
-        elif not (inharmonic or self.subgroup.is_trivial ()
-                or norm.wtype == "tenney" and self.subgroup.is_tenney_trivial ()):
-            raise NotImplementedError ("nontrivial subgroups not supported as of now. ")
-        return self.__temperament_measures (ntype, norm, error_scale, badness_scale)
+            raise ValueError ("this measure is only defined on Euclidean norms. ")
+        do_inharmonic = (inharmonic or self.subgroup.is_prime ()
+            or norm.wtype == "tenney" and self.subgroup.is_prime_power ())
+        if not do_inharmonic and self.subgroup.index () == np.inf:
+            raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
+        return self.__temperament_measures (ntype, norm, do_inharmonic, error_scale, badness_scale)
         
-    def __temperament_measures (self, ntype, norm, error_scale, badness_scale):
-        # same situation as __badness
+    def __temperament_measures (self, ntype, norm, inharmonic, error_scale, badness_scale):
         self.__show_header (norm = norm, ntype = ntype)
-        error = self.__error (ntype, norm, inharmonic = True, scalar = error_scale)
-        complexity = self.__complexity (ntype, norm)
-        badness = self.__badness (ntype, norm, scalar = badness_scale)
-        badness_logflat = self.__badness_logflat (ntype, norm, scalar = badness_scale)
+        complexity = self.__complexity (ntype, norm, inharmonic)
+        error = self.__error (ntype, norm, inharmonic, error_scale)
+        badness = self.__badness (ntype, norm, inharmonic, badness_scale)
+        badness_logflat = self.__badness_logflat (ntype, norm, inharmonic, badness_scale)
         print (f"Complexity: {complexity:.6f}",
             f"Error: {error:.6f} (oct/{error_scale})",
             f"Badness (simple): {badness:.6f} (oct/{badness_scale})",

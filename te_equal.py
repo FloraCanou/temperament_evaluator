@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.1.0
+# © 2020-2023 Flora Canou | Version 1.2.0
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -35,10 +35,10 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
             monzos = np.zeros ((len (subgroup), 1))
     else:
         monzos, subgroup = te.setup (monzos, subgroup, axis = te.AXIS.COL)
-    is_trivial = (inharmonic or subgroup.is_trivial ()
-            or norm.wtype == "tenney" and subgroup.is_tenney_trivial ())
-    if not is_trivial and cond == "badness":
-        raise NotImplementedError ("nontrivial subgroups not supported as of now. ")
+    do_inharmonic = (inharmonic or subgroup.is_prime ()
+        or norm.wtype == "tenney" and subgroup.is_prime_power ())
+    if not do_inharmonic and subgroup.index () == np.inf and cond == "badness":
+        raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
 
     print ("\nOptimal GPV sequence: ")
     gpv_infra = [0]*len (subgroup) #initialize with the all-zeroes breed
@@ -58,9 +58,9 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
 
         et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
         if cond == "error":
-            current = et._Temperament__error (ntype, norm, inharmonic = is_trivial, scalar = te.SCALAR.CENT)
+            current = et._Temperament__error (ntype, norm, do_inharmonic, te.SCALAR.CENT)
         elif cond == "badness":
-            current = et._Temperament__badness (ntype, norm, scalar = te.SCALAR.OCTAVE)
+            current = et._Temperament__badness (ntype, norm, do_inharmonic, te.SCALAR.OCTAVE)
         else:
             current = threshold
         if current <= threshold:
