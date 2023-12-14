@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.27.1
+# © 2020-2023 Flora Canou | Version 0.27.2
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -13,7 +13,6 @@ class Temperament:
     def __init__ (self, breeds, subgroup = None, saturate = True, normalize = True): #NOTE: "map" is a reserved word
         breeds, subgroup = te.setup (breeds, subgroup, axis = te.AXIS.ROW)
         self.subgroup = subgroup
-        self.just_tuning_map = np.log2 (self.subgroup)*te.SCALAR.CENT
         self.mapping = te.canonicalize (np.rint (breeds).astype (int), saturate, normalize)
 
     def __check_sym (self, order):
@@ -132,32 +131,32 @@ class Temperament:
         # optimization
         if optimizer == "main":
             import te_optimizer as te_opt
-            gen, tempered_tuning_map, mistuning_map = te_opt.optimizer_main (
+            gen, tempered_tuning_map, error_map = te_opt.optimizer_main (
                 self.mapping, subgroup = self.subgroup, norm = norm, 
                 cons_monzo_list = cons_monzo_list, des_monzo = des_monzo
             )
         elif optimizer == "sym":
-            gen, tempered_tuning_map, mistuning_map = te_sym.optimizer_symbolic (
+            gen, tempered_tuning_map, error_map = te_sym.optimizer_symbolic (
                 self.mapping, subgroup = self.subgroup, norm = te_sym.NormSym (norm), 
                 cons_monzo_list = cons_monzo_list, des_monzo = des_monzo
             )
 
         # error and bias
         tempered_tuning_map_x = norm.tuning_x (tempered_tuning_map, self.subgroup)
-        mistuning_map_x = norm.tuning_x (mistuning_map, self.subgroup)
-        error = self.__power_mean_norm (mistuning_map_x, norm.order)
-        bias = np.mean (mistuning_map_x)
-        # print (mistuning_map_x) #for debugging
+        error_map_x = norm.tuning_x (error_map, self.subgroup)
+        error = self.__power_mean_norm (error_map_x, norm.order)
+        bias = np.mean (error_map_x)
+        # print (error_map_x) #for debugging
         print (f"Tuning error: {error:.6f} (¢)",
             f"Tuning bias: {bias:.6f} (¢)", sep = "\n")
-        return gen, tempered_tuning_map, mistuning_map
+        return gen, tempered_tuning_map, error_map
 
     optimise = tune
     optimize = tune
     analyze = tune
     analyse = tune
 
-    def wedgie (self, norm = te.Norm (), show = True):
+    def wedgie (self, norm = te.Norm (wtype = "equilateral"), show = True):
         combinations = itertools.combinations (range (self.mapping.shape[1]), self.mapping.shape[0])
         wedgie = np.array ([linalg.det (norm.tuning_x (self.mapping, self.subgroup)[:, entry]) for entry in combinations])
         wedgie *= np.copysign (1, wedgie[0])
@@ -167,11 +166,13 @@ class Temperament:
         return wedgie
 
     def complexity (self, ntype = "breed", norm = te.Norm ()):
+        """Returns the temperament's complexity. """
         if not norm.order == 2:
             raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
         return self.__complexity (ntype, norm)
 
-    def error (self, ntype = "breed", norm = te.Norm ()): #in cents
+    def error (self, ntype = "breed", norm = te.Norm (), scalar = te.SCALAR.CENT): #in cents by default
+        """Returns the temperament's inherent inaccuracy regardless of the actual tuning"""
         if not norm.order == 2:
             raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
         return self.__error (ntype, norm)
@@ -190,16 +191,17 @@ class Temperament:
             pass
         else:
             warnings.warn ("normalizer not supported, using default (\"breed\")")
-            return self.__complexity (ntype = "breed", norm = norm)
+            return self.__complexity ("breed", norm)
         return complexity
 
-    def __error (self, ntype, norm):
+    def __error (self, ntype, norm, scalar):
+        just_tuning_map = np.log2 (self.subgroup) * scalar
         # standard L2 error
         error = linalg.norm (
-            norm.tuning_x (self.just_tuning_map, self.subgroup)
+            norm.tuning_x (just_tuning_map, self.subgroup)
             @ linalg.pinv (norm.tuning_x (self.mapping, self.subgroup))
             @ norm.tuning_x (self.mapping, self.subgroup)
-            - norm.tuning_x (self.just_tuning_map, self.subgroup))
+            - norm.tuning_x (just_tuning_map, self.subgroup))
         if ntype == "breed": #Graham Breed's RMS (default)
             error *= 1/np.sqrt (self.mapping.shape[1])
         elif ntype == "smith": #Gene Ward Smith's RMS
@@ -211,44 +213,45 @@ class Temperament:
             pass
         else:
             warnings.warn ("normalizer not supported, using default (\"breed\")")
-            return self.__error (ntype = "breed", norm = norm)
+            return self.__error ("breed", norm, scalar)
         return error
 
-    def badness (self, ntype = "breed", norm = te.Norm (), logflat = False): #in octaves
+    def badness (self, ntype = "breed", norm = te.Norm (), 
+            logflat = False, scalar = te.SCALAR.OCTAVE): #in octaves by default
         if not norm.order == 2:
             raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
         if logflat:
-            return self.__badness_logflat (ntype, norm)
+            return self.__badness_logflat (ntype, norm, scalar)
         else:
-            return self.__badness (ntype, norm)
+            return self.__badness (ntype, norm, scalar)
 
-    def __badness (self, ntype, norm):
-        return (self.__error (ntype, norm)
-            * self.__complexity (ntype, norm)
-            / te.SCALAR.CENT)
+    def __badness (self, ntype, norm, scalar):
+        return (self.__error (ntype, norm, scalar)
+            * self.__complexity (ntype, norm))
 
-    def __badness_logflat (self, ntype, norm): #in octaves
+    def __badness_logflat (self, ntype, norm, scalar):
         try:
-            return (self.__error (ntype, norm)
-                * self.__complexity (ntype, norm)**(self.mapping.shape[1]/(self.mapping.shape[1] - self.mapping.shape[0]))
-                / te.SCALAR.CENT)
+            return (self.__error (ntype, norm, scalar)
+                * self.__complexity (ntype, norm)
+                **(self.mapping.shape[1]/(self.mapping.shape[1] - self.mapping.shape[0])))
         except ZeroDivisionError:
             return np.nan
 
-    def temperament_measures (self, ntype = "breed", norm = te.Norm (), badness_scale = 1000):
+    def temperament_measures (self, ntype = "breed", norm = te.Norm (), 
+            error_scale = te.SCALAR.CENT, badness_scale = te.SCALAR.OCTAVE):
         """Shows the temperament measures."""
         if not norm.order == 2:
             raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
-        return self.__temperament_measures (ntype, norm, badness_scale)
+        return self.__temperament_measures (ntype, norm, error_scale, badness_scale)
 
-    def __temperament_measures (self, ntype, norm, badness_scale):
+    def __temperament_measures (self, ntype, norm, error_scale, badness_scale):
         self.__show_header (norm = norm, ntype = ntype)
-        error = self.__error (ntype, norm)
         complexity = self.__complexity (ntype, norm)
-        badness = self.__badness (ntype, norm) * badness_scale
-        badness_logflat = self.__badness_logflat (ntype, norm) * badness_scale
+        error = self.__error (ntype, norm, error_scale)
+        badness = self.__badness (ntype, norm, badness_scale)
+        badness_logflat = self.__badness_logflat (ntype, norm, badness_scale)
         print (f"Complexity: {complexity:.6f}",
-            f"Error: {error:.6f} (¢)",
+            f"Error: {error:.6f} (oct/{error_scale})",
             f"Badness (simple): {badness:.6f} (oct/{badness_scale})",
             f"Badness (logflat): {badness_logflat:.6f} (oct/{badness_scale})", sep = "\n")
 

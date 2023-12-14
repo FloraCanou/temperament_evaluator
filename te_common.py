@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.27.0
+# © 2020-2023 Flora Canou | Version 0.27.2
 # This work is licensed under the GNU General Public License version 3.
 
 import functools, warnings
@@ -16,6 +16,7 @@ class AXIS:
 
 class SCALAR:
     OCTAVE = 1
+    MILLIOCTAVE = 1000
     CENT = 1200
 
 def as_list (main):
@@ -97,6 +98,8 @@ class Norm:
     def interval_x (self, main, subgroup):
         return self.__get_interval_skew (subgroup) @ self.__get_interval_weight (subgroup) @ main
 
+# canonicalization functions
+
 def __hnf (main, mode = AXIS.ROW):
     """Normalizes a matrix to HNF."""
     if mode == AXIS.ROW:
@@ -125,6 +128,8 @@ def canonicalize (main, saturate = True, normalize = True, axis = AXIS.ROW):
     return main
 
 canonicalise = canonicalize
+
+# initialization functions
 
 def __get_length (main, axis):
     """Gets the length along a certain axis."""
@@ -157,6 +162,8 @@ def setup (main, subgroup, axis):
                 main = main[:dim]
         subgroup = subgroup[:dim]
     return main, subgroup
+
+# conversion functions
 
 def monzo2ratio (monzo, subgroup = None):
     """
@@ -199,12 +206,6 @@ def ratio2monzo (ratio, subgroup = None):
 
     return np.trim_zeros (np.array (monzo), trim = "b") if trim else np.array (monzo)
 
-def bra (covector):
-    return "<" + " ".join (map (str, np.trim_zeros (covector, trim = "b"))) + "]"
-
-def ket (vector):
-    return "[" + " ".join (map (str, np.trim_zeros (vector, trim = "b"))) + ">"
-
 def matrix2array (main):
     """Takes a possibly fractional sympy matrix and converts it to an integer numpy array."""
     return np.array (main/functools.reduce (gcd, tuple (main)), dtype = int).squeeze ()
@@ -216,6 +217,14 @@ def nullspace (covectors):
 def antinullspace (vectors):
     frac_antinullspace_matrix = Matrix (np.flip (vectors.T)).nullspace ()
     return np.flip (np.row_stack ([matrix2array (entry) for entry in frac_antinullspace_matrix]))
+
+# annotation functions
+
+def bra (covector):
+    return "<" + " ".join (map (str, np.trim_zeros (covector, trim = "b"))) + "]"
+
+def ket (vector):
+    return "[" + " ".join (map (str, np.trim_zeros (vector, trim = "b"))) + ">"
 
 def show_monzo_list (monzos, subgroup):
     """

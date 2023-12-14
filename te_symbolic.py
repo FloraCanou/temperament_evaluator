@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.27.1
+# © 2020-2023 Flora Canou | Version 0.27.2
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -128,12 +128,12 @@ def optimizer_symbolic (breeds, subgroup = None, norm = te.Norm (), #NOTE: "map"
     gen = np.array (just_tuning_map @ tuning_projection @ breeds_copy.pinv (), dtype = float).squeeze ()
     tempered_tuning_map = np.array (just_tuning_map @ tuning_projection, dtype = float).squeeze ()
     error_projection = tuning_projection - Matrix.eye (len (subgroup))
-    mistuning_map = np.array (just_tuning_map @ error_projection, dtype = float).squeeze ()
+    error_map = np.array (just_tuning_map @ error_projection, dtype = float).squeeze ()
 
     if show:
         print (f"Generators: {gen} (¢)",
             f"Tuning map: {tempered_tuning_map} (¢)",
-            f"Mistuning map: {mistuning_map} (¢)", sep = "\n")
+            f"Error map: {error_map} (¢)", sep = "\n")
         if norm.wtype in te.ALGEBRAIC_WEIGHT_LIST and des_monzo is None:
             print ("Tuning projection map: ")
             pprint (tuning_projection)
@@ -149,4 +149,4 @@ def optimizer_symbolic (breeds, subgroup = None, norm = te.Norm (), #NOTE: "map"
         else:
             print ("Transcendental projection maps not shown. ")
 
-    return gen, tempered_tuning_map, mistuning_map
+    return gen, tempered_tuning_map, error_map

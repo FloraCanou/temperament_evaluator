@@ -56,7 +56,7 @@ Analyses tunings and computes temperament measures from the temperament map.
 Requires `te_common`, `te_optimizer`, and optionally `te_symbolic`. 
 
 Use `Temperament` to construct a temperament object. Methods: 
-- `tune`: calls `optimizer_main`/`symbolic` and shows the generator, tuning map, mistuning map, tuning error, and tuning bias. Parameters: 
+- `tune`: calls `optimizer_main`/`symbolic` and shows the generator, tuning map, error map, tuning error, and tuning bias. Parameters: 
 	- `optimizer`: *optional*. Specifies the optimizer. `"main"`: calls `optimizer_main`. `"sym"`: calls `symbolic`. Default is `"main"`. 
 	- `norm`: *optional*. Specifies the norm profile for the tuning space. See above. 
 	- `enforce`: *optional*. A shortcut to specify constraints and destretch targets, so you don't need to enter monzos. Default is empty. To add an enforcement, use `c` or `d` followed by the subgroup index. For example, if the subgroup is the prime harmonics: 

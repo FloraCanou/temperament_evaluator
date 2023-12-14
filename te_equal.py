@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.27.1
+# © 2020-2023 Flora Canou | Version 0.27.2
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -11,8 +11,8 @@ WARTS_LIST = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "
 
 def et_construct (et_list, subgroup):
     """Temperament construction function from equal temperaments."""
-    breed_list = np.array ([warts2breed (n, subgroup) for n in te.as_list (et_list)])
-    return te_tm.Temperament (breed_list, subgroup)
+    breeds = np.array ([warts2breed (n, subgroup) for n in te.as_list (et_list)])
+    return te_tm.Temperament (breeds, subgroup)
 
 def comma_construct (monzos, subgroup = None):
     """Temperament construction function from commas."""
@@ -53,9 +53,9 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
 
         et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
         if cond == "error":
-            current = et._Temperament__error (ntype, norm)
+            current = et._Temperament__error (ntype, norm, te.SCALAR.CENT)
         elif cond == "badness":
-            current = et._Temperament__badness (ntype, norm)
+            current = et._Temperament__badness (ntype, norm, te.SCALAR.OCTAVE)
         else:
             current = threshold
         if current <= threshold:

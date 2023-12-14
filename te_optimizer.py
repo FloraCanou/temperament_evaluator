@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 0.27.1
+# © 2020-2023 Flora Canou | Version 0.27.2
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -48,13 +48,13 @@ def optimizer_main (breeds, subgroup = None, norm = te.Norm (),
             gen *= (just_tuning_map @ des_monzo)/tempered_size
 
     tempered_tuning_map = gen @ breeds
-    mistuning_map = tempered_tuning_map - just_tuning_map
+    error_map = tempered_tuning_map - just_tuning_map
 
     if show:
         print (f"Generators: {gen} (¢)",
             f"Tuning map: {tempered_tuning_map} (¢)",
-            f"Mistuning map: {mistuning_map} (¢)", sep = "\n")
+            f"Error map: {error_map} (¢)", sep = "\n")
 
-    return gen, tempered_tuning_map, mistuning_map
+    return gen, tempered_tuning_map, error_map
 
 optimiser_main = optimizer_main
