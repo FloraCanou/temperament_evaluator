@@ -221,7 +221,7 @@ class Temperament:
             return np.nan
 
     def temperament_measures (self, ntype = "breed", norm = te.Norm (), inharmonic = False, 
-            error_scale = te.SCALAR.CENT, badness_scale = 1e3):
+            error_scale = te.SCALAR.CENT, badness_scale = te.SCALAR.OCTAVE):
         """Shows the temperament measures."""
         if not norm.order == 2:
             raise ValueError ("this measure is only defined on Euclidean norms. ")
