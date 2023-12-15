@@ -76,10 +76,10 @@ class Temperament:
         des_text = destretch.__str__ () + "-destretched" if destretch else ""
         enforce_text = " ".join ([cons_text, des_text]) if cons_text or des_text else "none"
         if is_trivial := (self.subgroup.is_prime ()
-                or norm.wtype == "tenney" and subgroup.is_prime_power ()):
-            mode_text = "prime-harmonic"
+                or norm.wtype == "tenney" and self.subgroup.is_prime_power ()):
+            mode_text = "trivial -- inharmonic and subgroup tunings are identical"
         else:
-            mode_text = "inharmonic" if inharmonic else "subgroup"
+            mode_text = "inharmonic tuning" if inharmonic else "subgroup tuning"
 
         # shows the header
         self.__show_header (norm = norm, mode_text = mode_text, enforce_text = enforce_text)

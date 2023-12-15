@@ -39,7 +39,7 @@ def wrapper_main (breeds, subgroup = None, norm = te.Norm (), inharmonic = False
             constraint = constraint, destretch = destretch
         )
         error_map_x = norm.tuning_x (error_map, subgroup)
-        print (error_map_x) #for debugging
+        # print (error_map_x) #for debugging
         error = __power_mean_norm (error_map_x)
         bias = __mean (error_map_x)
     else:
@@ -52,7 +52,7 @@ def wrapper_main (breeds, subgroup = None, norm = te.Norm (), inharmonic = False
             constraint = constraint, destretch = destretch
         )
         error_map_mp_x = norm.tuning_x (error_map_mp, subgroup_mp)
-        print (error_map_mp_x) #for debugging
+        # print (error_map_mp_x) #for debugging
         error = __power_mean_norm (error_map_mp_x)
         bias = __mean (error_map_mp_x)
 
