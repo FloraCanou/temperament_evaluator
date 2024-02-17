@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.2.0
+# © 2020-2023 Flora Canou | Version 1.2.1
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -31,7 +31,7 @@ class NormSym (te.Norm):
             case _:
                 warnings.warn ("weighter type not supported, using default (\"tenney\")")
                 self.wtype = "tenney"
-                return self.__get_weight_sym (primes)
+                return self.__get_interval_weight_sym (primes)
         return Matrix.diag (*weight_vec.applyfunc (lambda wi: Pow (wi, wamount)))
 
     def __get_tuning_weight_sym (self, primes):
