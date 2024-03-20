@@ -44,7 +44,7 @@ class Temperament:
                     skew_text = "skewed"
                     if norm.skew != 1:
                         skew_text += f"[{norm.skew}]"
-                    weightskew_text = "-".join (skew_text, weight_text)
+                    weightskew_text = "-".join ((skew_text, weight_text))
                 else:
                     weightskew_text = weight_text
 

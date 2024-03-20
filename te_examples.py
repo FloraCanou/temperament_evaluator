@@ -25,7 +25,7 @@ import te_lattice as te_lat
 #       destretch: destretches this ratio to pure
 #   temperament_measures: gives the temperament measures
 #     parameters:
-#       ntype: averaging normalizer. "breed", "smith", or "l2"
+#       ntype: averaging normalizer. "breed", "smith", or "none"
 #       norm: norm profile for the tuning space. see above
 #       error_scale: scales the error
 #       badness_scale: scales the badness
@@ -35,7 +35,7 @@ temp = te_tm.Temperament ([
     [1, 0, 2, -1], 
     [0, 5, 1, 12]
     ]) # septimal magic
-temp.tune (norm = te.Norm (skew = 1), constraint = te.Subgroup ("2")) # ctwe tuning
+temp.tune (norm = te.Norm (skew = 1), constraint = te.Subgroup ("2")) # cwe aka ke tuning
 temp.temperament_measures (ntype = "smith", badness_scale = 1) # te temperament measures
 temp.wedgie ()
 temp.comma_basis ()
