@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.2.1
+# © 2020-2024 Flora Canou | Version 1.3.0
 # This work is licensed under the GNU General Public License version 3.
 
 import re, functools,  itertools, warnings
@@ -189,7 +189,7 @@ class Norm:
             case "equilateral":
                 weight_vec = np.ones (len (primes))
             # case "hahn24": #pending better implementation
-            #     weight_vec = np.ceil (np.log2 (primes)/np.log2 (24))
+            #     weight_vec = np.reciprocal (np.floor (np.log2 (24)/np.log2 (primes)))
             case _:
                 warnings.warn ("weighter type not supported, using default (\"tenney\")")
                 self.wtype = "tenney"

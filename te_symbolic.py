@@ -1,11 +1,11 @@
-# © 2020-2023 Flora Canou | Version 1.2.1
+# © 2020-2024 Flora Canou | Version 1.3.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
 import numpy as np
 from scipy import linalg
 from sympy.matrices import Matrix, BlockMatrix
-from sympy import Rational, log, Pow, pprint, simplify
+from sympy import Rational, floor, log, Pow, pprint, simplify
 import te_common as te
 np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
@@ -27,7 +27,7 @@ class NormSym (te.Norm):
             case "equilateral":
                 weight_vec = Matrix.ones (len (primes), 1)
             # case "hahn24": #pending better implementation
-            #     weight_vec = Matrix (subgroup).applyfunc (lambda q: ceil (log (q, 24)))
+            #     weight_vec = Matrix (primes).applyfunc (lambda q: 1/floor (log (24, q)))
             case _:
                 warnings.warn ("weighter type not supported, using default (\"tenney\")")
                 self.wtype = "tenney"

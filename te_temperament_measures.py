@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.2.0
+# © 2020-2024 Flora Canou | Version 1.3.0
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -34,23 +34,27 @@ class Temperament:
             f"Mapping: \n{self.mapping}", sep = "\n")
 
         if norm: 
-            weight_text = norm.wtype
-            if norm.wamount != 1:
-                weight_text += f"[{norm.wamount}]"
+            if norm.wtype == "tenney" and norm.skew == 1:
+                weightskew_text = "weil"
+            else:
+                weight_text = norm.wtype
+                if norm.wamount != 1:
+                    weight_text += f"[{norm.wamount}]"
+                if norm.skew != 0:
+                    skew_text = "skewed"
+                    if norm.skew != 1:
+                        skew_text += f"[{norm.skew}]"
+                    weightskew_text = "-".join (skew_text, weight_text)
+                else:
+                    weightskew_text = weight_text
 
-            skew_text = ""
-            if norm.skew != 0:
-                skew_text += "-weil"
-                if norm.skew != 1:
-                    skew_text += f"[{norm.skew}]"
-
-            order_dict = {1: "-chebyshevian", 2: "-euclidean", np.inf: "-manhattan"}
+            order_dict = {1: "chebyshevian", 2: "euclidean", np.inf: "manhattan"}
             try:
                 order_text = order_dict[norm.order]
             except KeyError:
-                order_text = f"-L{norm.order}"
+                order_text = f"L{norm.order}"
 
-            print ("Norm: " + weight_text + skew_text + order_text)
+            print ("Norm: " + "-".join ((weightskew_text, order_text)))
         if mode_text:
             print ("Mode: " + mode_text)
         if enforce_text:
