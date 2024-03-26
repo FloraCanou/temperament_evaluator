@@ -1,4 +1,4 @@
-# © 2020-2024 Flora Canou | Version 1.3.0
+# © 2020-2024 Flora Canou | Version 1.3.1
 # This work is licensed under the GNU General Public License version 3.
 
 import re, functools,  itertools, warnings
@@ -330,9 +330,10 @@ def ratio2monzo (ratio, subgroup = None):
         return __ratio2monzo (ratio)
     else:
         result = (linalg.pinv (subgroup.basis_matrix) 
-            @ vec_pad (__ratio2monzo (ratio), length = len (subgroup)))
-        if all (entry.is_integer for entry in result):
-            return result.astype (int)
+            @ vec_pad (__ratio2monzo (ratio), length = subgroup.basis_matrix.shape[0]))
+        result_int = result.astype (int)
+        if np.all (result == result_int):
+            return result_int
         else:
             warnings.warn ("improper subgroup. ")
             return result
