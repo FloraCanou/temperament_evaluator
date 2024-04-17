@@ -1,4 +1,4 @@
-# © 2020-2024 Flora Canou | Version 1.3.1
+# © 2020-2024 Flora Canou | Version 1.4.0
 # This work is licensed under the GNU General Public License version 3.
 
 import re, functools,  itertools, warnings
@@ -80,7 +80,7 @@ def as_ratio (n):
     if isinstance (n, Ratio):
         return n
     elif isinstance (n, str):
-        match = re.match ("^(\d*)\/?(\d*)$", n)
+        match = re.match (r"^(\d*)\/?(\d*)$", n)
         num = match.group (1) or "1"
         den = match.group (2) or "1"
         return Ratio (int (num), int (den))

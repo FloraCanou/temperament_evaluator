@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.2.0
+# © 2020-2023 Flora Canou | Version 1.4.0
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -41,25 +41,27 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
         raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
 
     print ("\nOptimal GPV sequence: ")
-    gpv_infra = [0]*len (subgroup) #initialize with the all-zeroes breed
+    just_tuning_map = subgroup.just_tuning_map ()
+    gpv_infra = [0]*len (just_tuning_map) #initialize with the all-zeroes breed
     search_flag = 1
-    while (gpv_infra := __gpv_roll (gpv_infra, subgroup, 1))[0] == 0: #skip zero-equave breeds
+    while (gpv_infra := __gpv_roll (gpv_infra, just_tuning_map))[0] == 0: #skip zero-equave breeds
         gpv = gpv_infra
-    while (gpv := __gpv_roll (gpv, subgroup, 1))[0] <= search_range:
+    while (gpv := __gpv_roll (gpv, just_tuning_map))[0] <= search_range:
         # notification at multiples of 1200
         if gpv[0] % te.SCALAR.CENT == 0 and gpv[0] / te.SCALAR.CENT == search_flag: 
             print (f"Currently searching: {gpv[0]}")
             search_flag += 1
         # condition of further analysis
-        if (pv and not is_pv (gpv, subgroup) # non-patent val if pv is set
+        if (pv and not __is_pv (gpv, just_tuning_map) # non-patent val if pv is set
             or np.gcd.reduce (gpv) > 1 #enfactored
             or np.any ([gpv] @ monzos)): #not tempering out the commas
                 continue
 
-        et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
         if cond == "error":
+            et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
             current = et._Temperament__error (ntype, norm, do_inharmonic, te.SCALAR.CENT)
         elif cond == "badness":
+            et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
             current = et._Temperament__badness (ntype, norm, do_inharmonic, te.SCALAR.OCTAVE)
         else:
             current = threshold
@@ -70,18 +72,34 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
     print ("Search complete. ")
 
 def is_gpv (breed, subgroup = None):
-    """Checks if a breed is a GPV."""
+    """Checks if a breed is a GPV on a subgroup."""
     breed, subgroup = te.setup (breed, subgroup, axis = te.AXIS.VEC)
     just_tuning_map = subgroup.just_tuning_map ()
-    lower_bounds = (np.asarray (breed) - 0.5) / just_tuning_map
-    upper_bounds = (np.asarray (breed) + 0.5) / just_tuning_map
+    return __is_gpv (breed, just_tuning_map)
+
+def __is_gpv (breed, tuning_map):
+    """
+    Checks if a breed is a GPV for an arbitrary tuning map. 
+    To be used in gpv_roll to avoid repeatedly computing the just tuning map, 
+    which is expensive.
+    """
+    lower_bounds = (np.asarray (breed) - 0.5) / tuning_map
+    upper_bounds = (np.asarray (breed) + 0.5) / tuning_map
     return max (lower_bounds) < min (upper_bounds)
 
 def is_pv (breed, subgroup = None):
-    """Checks if a breed is a patent val."""
+    """Checks if a breed is a patent val on a subgroup."""
     breed, subgroup = te.setup (breed, subgroup, axis = te.AXIS.VEC)
     just_tuning_map = subgroup.just_tuning_map ()
-    return all (breed == np.rint (breed[0]*just_tuning_map/just_tuning_map[0]))
+    return __is_pv (breed, just_tuning_map)
+
+def __is_pv (breed, tuning_map):
+    """
+    Checks if a breed is a patent val for an arbitrary tuning map. 
+    To be used in et_sequence to avoid repeatedly computing the just tuning map, 
+    which is expensive.
+    """
+    return all (breed == np.rint (breed[0]*tuning_map/tuning_map[0]))
 
 def gpv_roll (breed, subgroup = None, n = 1):
     """
@@ -89,23 +107,24 @@ def gpv_roll (breed, subgroup = None, n = 1):
     Doesn't handle some nontrivial subgroups. 
     """
     breed, subgroup = te.setup (breed, subgroup, axis = te.AXIS.VEC)
-    if not is_gpv (breed, subgroup): #verify input
+    just_tuning_map = subgroup.just_tuning_map ()
+    if not __is_gpv (breed, just_tuning_map): #verify input
         raise ValueError ("input is not a GPV. ")
     if not isinstance (n, (int, np.integer)):
         raise TypeError ("n must be an integer. ")
-    return __gpv_roll (breed, subgroup, n)
+    return __gpv_roll (breed, just_tuning_map, n)
 
-def __gpv_roll (breed, subgroup, n):
+def __gpv_roll (breed, tuning_map, n = 1):
     if n == 0:
         return breed
     else:
-        for i in range (1, len (subgroup) + 1):
+        for i in range (1, len (tuning_map) + 1):
             breed_copy = np.array (breed)
             breed_copy[-i] += np.copysign (1, n).astype (int)
-            if is_gpv (breed_copy, subgroup):
-                return __gpv_roll (breed_copy, subgroup, n - np.copysign (1, n).astype (int))
+            if __is_gpv (breed_copy, tuning_map):
+                return __gpv_roll (breed_copy, tuning_map, n - np.copysign (1, n).astype (int))
         else:
-            raise NotImplementedError ("this nontrivial subgroup cannot be processed. ")
+            raise NotImplementedError ("this nontrivial tuning map cannot be processed. ")
 
 def __just_tuning_map_n (n, equave, subgroup):
     """Finds the just tuning map in terms of edostep numbers of n-ed-p."""
@@ -125,7 +144,7 @@ def breed2warts (breed, subgroup = None):
     if equave == 2: #octave equave
         prefix = ""
     elif equave in te.PRIME_LIST: #non-octave prime equave
-        prefix = str (WARTS_LIST[te.PRIME_LIST.index (equave.value ())])
+        prefix = str (WARTS_LIST[te.PRIME_LIST.index (equave)])
     else: #nonprime equave
         prefix = "*"
 
@@ -160,7 +179,7 @@ def warts2breed (warts, subgroup):
         raise TypeError ("Enter a string or number. ")
 
 def __warts2breed (warts, subgroup):
-    match = re.match ("(^[a-x]?)(\d+)([a-x]*)", str (warts))
+    match = re.match (r"^([a-x]?)(\d+)([a-x]*)", str (warts))
     if not match or (match.group (1) and re.match (match.group (1), match.group (3))):
         raise ValueError ("Invalid wart notation. ")
 
