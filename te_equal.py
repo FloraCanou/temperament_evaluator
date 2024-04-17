@@ -3,6 +3,7 @@
 
 import re, warnings
 import numpy as np
+from tqdm import tqdm
 import te_common as te
 import te_temperament_measures as te_tm
 
@@ -42,33 +43,34 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
 
     print ("\nOptimal GPV sequence: ")
     just_tuning_map = subgroup.just_tuning_map ()
-    gpv_infra = [0]*len (just_tuning_map) #initialize with the all-zeroes breed
-    search_flag = 1
-    while (gpv_infra := __gpv_roll (gpv_infra, just_tuning_map))[0] == 0: #skip zero-equave breeds
-        gpv = gpv_infra
-    while (gpv := __gpv_roll (gpv, just_tuning_map))[0] <= search_range:
-        # notification at multiples of 1200
-        if gpv[0] % te.SCALAR.CENT == 0 and gpv[0] / te.SCALAR.CENT == search_flag: 
-            print (f"Currently searching: {gpv[0]}")
-            search_flag += 1
-        # condition of further analysis
-        if (pv and not __is_pv (gpv, just_tuning_map) # non-patent val if pv is set
-            or np.gcd.reduce (gpv) > 1 #enfactored
-            or np.any ([gpv] @ monzos)): #not tempering out the commas
-                continue
-
-        if cond == "error":
-            et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
-            current = et._Temperament__error (ntype, norm, do_inharmonic, te.SCALAR.CENT)
-        elif cond == "badness":
-            et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
-            current = et._Temperament__badness (ntype, norm, do_inharmonic, te.SCALAR.OCTAVE)
-        else:
-            current = threshold
-        if current <= threshold:
-            if prog:
-                threshold = current
-            print (f"{te.bra (gpv)} ({breed2warts (gpv, subgroup)})")
+    gpv = [0]*len (just_tuning_map) #initialize with the all-zeroes breed
+    while (gpv := __gpv_roll (gpv, just_tuning_map))[0] == 0: #skip zero-equave breeds
+        pass
+    with tqdm (total = search_range) as progress_bar:
+        search_flag = 1
+        while gpv[0] <= search_range:
+            if (not pv or __is_pv (gpv, just_tuning_map) # patent val or pv isn't set
+                    and np.gcd.reduce (gpv) == 1 #not enfactored
+                    and not np.any ([gpv] @ monzos)): #tempering out the commas
+                if cond == "error":
+                    et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
+                    current = et._Temperament__error (ntype, norm, do_inharmonic, te.SCALAR.CENT)
+                elif cond == "badness":
+                    et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
+                    current = et._Temperament__badness (ntype, norm, do_inharmonic, te.SCALAR.OCTAVE)
+                else:
+                    current = threshold
+                if current <= threshold:
+                    progress_bar.write (f"{te.bra (gpv)} ({breed2warts (gpv, subgroup)})")
+                    if prog:
+                        threshold = current
+            
+            # update the progress bar
+            if gpv[0] == search_flag: 
+                progress_bar.update ()
+                search_flag += 1
+            # roll to the next gpv
+            gpv = __gpv_roll (gpv, just_tuning_map)
     print ("Search complete. ")
 
 def is_gpv (breed, subgroup = None):

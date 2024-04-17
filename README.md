@@ -6,6 +6,12 @@
 	- various tasks including optimization, temperament measures, wedgie, etc. 
 - [SymPy](https://www.sympy.org/en/index.html)
 	- various tasks including symbolic solution, mapping normalization, comma basis, etc. 
+- [tqdm](https://tqdm.github.io/)
+	- to render the progress bar for et_sequence
+
+```
+pip install scipy sympy tqdm
+```
 
 ## `te_common.py`
 
