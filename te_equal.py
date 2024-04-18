@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.4.0
+# © 2020-2024 Flora Canou | Version 1.4.1
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -49,7 +49,7 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
     with tqdm (total = search_range) as progress_bar:
         search_flag = 1
         while gpv[0] <= search_range:
-            if (not pv or __is_pv (gpv, just_tuning_map) # patent val or pv isn't set
+            if ((not pv or __is_pv (gpv, just_tuning_map)) # patent val or pv isn't set
                     and np.gcd.reduce (gpv) == 1 #not enfactored
                     and not np.any ([gpv] @ monzos)): #tempering out the commas
                 if cond == "error":
