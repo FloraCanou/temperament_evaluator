@@ -1,4 +1,4 @@
-# © 2020-2024 Flora Canou | Version 1.4.0
+# © 2020-2024 Flora Canou | Version 1.4.2
 # This work is licensed under the GNU General Public License version 3.
 
 import re, functools,  itertools, warnings
@@ -361,10 +361,17 @@ def matrix2array (main):
     return np.array (main/functools.reduce (gcd, tuple (main)), dtype = int).squeeze ()
 
 def nullspace (covectors):
+    """Row-style nullspace."""
     frac_nullspace_matrix = Matrix (covectors).nullspace ()
     return np.column_stack ([matrix2array (entry) for entry in frac_nullspace_matrix])
 
 def antinullspace (vectors):
+    """
+    Column-style nullspace. 
+    *Antinullspace* is a term that's supposed to be eliminated.
+    It's antitranspose--nullspace--antitranspose 
+    where *antitranspose* refers to flip and transpose. 
+    """
     frac_antinullspace_matrix = Matrix (np.flip (vectors.T)).nullspace ()
     return np.flip (np.row_stack ([matrix2array (entry) for entry in frac_antinullspace_matrix]))
 

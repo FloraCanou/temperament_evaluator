@@ -1,4 +1,4 @@
-# © 2020-2024 Flora Canou | Version 1.3.0
+# © 2020-2024 Flora Canou | Version 1.4.2
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -109,14 +109,21 @@ class Temperament:
     analyse = tune
 
     def wedgie (self, norm = te.Norm (wtype = "equilateral"), show = True):
-        combinations = itertools.combinations (range (self.mapping.shape[1]), self.mapping.shape[0])
-        wedgie = np.array ([
-            linalg.det (norm.tuning_x (self.mapping, self.subgroup)[:, entry]) for entry in combinations
-        ])
+        combinations = itertools.combinations (
+            range (self.mapping.shape[1] + (1 if norm.skew else 0)), self.mapping.shape[0])
+        wedgie = np.array (
+            [linalg.det (norm.tuning_x (self.mapping, self.subgroup)[:, entry]) for entry in combinations])
         wedgie *= np.copysign (1, wedgie[0])
+
+        # convert to integer type if possible
+        wedgie_int = wedgie.astype (int)
+        if all (wedgie == wedgie_int):
+            wedgie = wedgie_int
+        
         if show:
             self.__show_header ()
             print (f"Wedgie: {wedgie}", sep = "\n")
+        
         return wedgie
 
     def complexity (self, ntype = "breed", norm = te.Norm (), inharmonic = False):
@@ -157,7 +164,7 @@ class Temperament:
             norm.tuning_x (mapping, subgroup)
             @ norm.tuning_x (mapping, subgroup).T
         )) / index
-        # complexity = linalg.norm (self.wedgie (norm = norm, show = False)) #same
+        # complexity = linalg.norm (self.wedgie (norm = norm)) #same
         if ntype == "breed": #Graham Breed's RMS (default)
             complexity *= 1/np.sqrt (mapping.shape[1]**mapping.shape[0])
         elif ntype == "smith": #Gene Ward Smith's RMS
