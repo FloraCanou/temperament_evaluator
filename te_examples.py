@@ -25,7 +25,7 @@ import te_lattice as te_lat
 #       destretch: destretches this ratio to pure
 #   temperament_measures: gives the temperament measures
 #     parameters:
-#       ntype: averaging normalizer. "breed", "smith", or "none"
+#       ntype: averaging normalizer. "breed", "smith", "dirichlet", or "none"
 #       norm: norm profile for the tuning space. see above
 #       error_scale: scales the error
 #       badness_scale: scales the badness
@@ -60,10 +60,10 @@ temp.temperament_measures (ntype = "smith", badness_scale = 1)
 # et_sequence
 # parameters:
 #   subgroup: custom ji subgroup
-#   ntype: averaging normalizer. "breed", "smith", or "none"
+#   ntype: averaging normalizer. "breed", "smith", "dirichlet", or "none"
 #   norm: norm profile for the tuning space. see above
 #   inharmonic: for subgroup temps, treats the basis as if they were primes
-#   cond: "error" or "badness"
+#   cond: "error", "badness", or "logflat badness"
 #   threshold: temperaments failing this will not be shown
 #   prog: if true, threshold will be updated
 #   pv: if true, only patent vals will be considered
