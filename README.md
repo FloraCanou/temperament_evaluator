@@ -1,6 +1,8 @@
 # Temperament Evaluator
 
-## Dependencies
+This Python 3 script can be used to compute various regular temperament data.
+
+## Requirements
 
 - [SciPy](https://scipy.org/)
 	- various tasks including optimization, temperament measures, wedgie, etc. 
@@ -77,11 +79,11 @@ Use `Temperament` to construct a temperament object. Methods:
 	- `constraint`: *optional*. Constrains this subgroup to pure. Default is empty. 
 	- `destretch`: *optional*. Destretches this ratio to pure. Default is empty. 
 - `temperament_measures`: shows the complexity, error, and badness (simple and logflat). Parameters: 
-	- `ntype`: *optional*. Averaging normalizer. Has `"breed"` (default), `"smith"` and `"none"`. 
+	- `ntype`: *optional*. Averaging normalizer. Has `"breed"` (default), `"smith"`, `"dirichlet"` and `"none"`. 
 	- `norm`: *optional*. Norm profile for the tuning space. See above. 
 	- `inharmonic`: *optional*. For subgroup temperaments, treats the basis as if they were primes. Default is `False`. 
 	- `error_scale`: *optional*. Scales the error. Default is `1200` (cents).
-	- `badness_scale`: *optional*. Scales the badness. Default is `1000` (millioctaves). 
+	- `badness_scale`: *optional*. Scales the badness. Default is `1` (octaves). 
 - `wedgie`: returns and shows the wedgie of the temperament. 
 - `comma_basis`: returns and shows the comma basis of the temperament. 
 
@@ -106,7 +108,7 @@ Use `et_sequence` to iterate through all GPVs. Parameters:
 - `ntype`: *optional*. Averaging normalizer. See above. 
 - `norm`: *optional*. Norm profile for the tuning space. See above. 
 - `inharmonic`: *optional*. For subgroup temperaments, treats the basis as if they were primes. Default is `False`. 
-- `cond`: *optional*. Either `"error"` or `"badness"`. Default is `"error"`. 
+- `cond`: *optional*. Supports `"error"`, `"badness"`, or `"logflat badness"`. Default is `"error"`. 
 - `pv`: *optional*. If `True`, only patent vals will be considered. Default is `False`. 
 - `prog`: *optional*. If `True`, threshold will be updated. Default is `True`. 
 - `threshold`: *optional*. Temperaments failing this will not be shown. Default is `20`. 

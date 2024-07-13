@@ -1,4 +1,4 @@
-# © 2020-2024 Flora Canou | Version 1.4.2
+# © 2020-2024 Flora Canou | Version 1.5.0
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -159,31 +159,38 @@ class Temperament:
             subgroup = self.subgroup.minimal_prime_subgroup ()
             mapping = te.antinullspace (self.subgroup.basis_matrix_to (subgroup) @ te.nullspace (self.mapping))
             index = self.subgroup.index ()
+        r, d = mapping.shape #rank and dimensionality
+
         # standard L2 complexity
         complexity = np.sqrt (linalg.det (
             norm.tuning_x (mapping, subgroup)
             @ norm.tuning_x (mapping, subgroup).T
-        )) / index
+            )) / index
         # complexity = linalg.norm (self.wedgie (norm = norm)) #same
-        if ntype == "breed": #Graham Breed's RMS (default)
-            complexity *= 1/np.sqrt (mapping.shape[1]**mapping.shape[0])
-        elif ntype == "smith": #Gene Ward Smith's RMS
-            complexity *= 1/np.sqrt (len (tuple (itertools.combinations (range (mapping.shape[1]), mapping.shape[0]))))
-        elif ntype == "none":
-            pass
-        else:
-            warnings.warn ("normalizer not supported, using default (\"breed\")")
-            return self.__complexity (ntype = "breed", norm = norm, inharmonic = inharmonic)
+        match ntype:
+            case "breed": #Graham Breed's RMS (default)
+                complexity *= 1/np.sqrt (d**r)
+            case "smith": #Gene Ward Smith's RMS
+                complexity *= 1/np.sqrt (len (tuple (itertools.combinations (range (d), r))))
+            case "dirichlet": #Sintel's Dirichlet coefficient
+                complexity *= 1/linalg.det (norm.tuning_x (np.eye (d), subgroup)[:,:d])**(r/d)
+            case "none":
+                pass
+            case _:
+                warnings.warn ("normalizer not supported, using default (\"breed\")")
+                return self.__complexity (ntype = "breed", norm = norm, inharmonic = inharmonic)
         return complexity
 
     def __error (self, ntype, norm, inharmonic, scalar):
         if inharmonic:
-            mapping = self.mapping
             subgroup = self.subgroup
+            mapping = self.mapping
         else:
             subgroup = self.subgroup.minimal_prime_subgroup ()
             mapping = te.antinullspace (self.subgroup.basis_matrix_to (subgroup) @ te.nullspace (self.mapping))
+        r, d = mapping.shape #rank and dimensionality
         just_tuning_map = subgroup.just_tuning_map (scalar)
+
         # standard L2 error
         error = linalg.norm (
             norm.tuning_x (just_tuning_map, subgroup)
@@ -191,18 +198,22 @@ class Temperament:
             @ norm.tuning_x (mapping, subgroup)
             - norm.tuning_x (just_tuning_map, subgroup)
         )
-        if ntype == "breed": #Graham Breed's RMS (default)
-            error *= 1/np.sqrt (mapping.shape[1])
-        elif ntype == "smith": #Gene Ward Smith's RMS
-            try:
-                error *= np.sqrt ((mapping.shape[0] + 1) / (mapping.shape[1] - mapping.shape[0]))
-            except ZeroDivisionError:
-                error = np.nan
-        elif ntype == "none":
-            pass
-        else:
-            warnings.warn ("normalizer not supported, using default (\"breed\")")
-            return self.__error ("breed", norm, inharmonic, scalar)
+        match ntype: 
+            case "breed": #Graham Breed's RMS (default)
+                error *= 1/np.sqrt (d)
+            case "smith": #Gene Ward Smith's RMS
+                try:
+                    error *= np.sqrt ((r + 1)/(d - r))
+                except ZeroDivisionError:
+                    error = np.nan
+            case "dirichlet": #Sintel's Dirichlet coefficient
+                error *= 1/(np.sqrt (d)
+                    * linalg.det (norm.tuning_x (np.eye (d), subgroup)[:,:d])**(1/d))
+            case "none":
+                pass
+            case _:
+                warnings.warn ("normalizer not supported, using default (\"breed\")")
+                return self.__error ("breed", norm, inharmonic, scalar)
         return error
 
     def badness (self, ntype = "breed", norm = te.Norm (), inharmonic = False, 
@@ -224,10 +235,12 @@ class Temperament:
             * self.__complexity (ntype, norm, inharmonic))
 
     def __badness_logflat (self, ntype, norm, inharmonic, scalar):
+        r, d = self.mapping.shape #rank and dimensionality
+        norm_jtm = 1/linalg.det (norm.tuning_x (np.eye (d), self.subgroup)[:,:d])**(1/d)
         try:
             return (self.__error (ntype, norm, inharmonic, scalar)
-                * self.__complexity (ntype, norm, inharmonic)
-                **(self.mapping.shape[1]/(self.mapping.shape[1] - self.mapping.shape[0])))
+                * self.__complexity (ntype, norm, inharmonic)**(d/(d - r))
+                / norm_jtm)
         except ZeroDivisionError:
             return np.nan
 
