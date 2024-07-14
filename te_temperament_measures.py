@@ -1,4 +1,4 @@
-# © 2020-2024 Flora Canou | Version 1.5.0
+# © 2020-2024 Flora Canou | Version 1.5.1
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
