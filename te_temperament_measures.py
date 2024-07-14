@@ -236,13 +236,21 @@ class Temperament:
 
     def __badness_logflat (self, ntype, norm, inharmonic, scalar):
         r, d = self.mapping.shape #rank and dimensionality
-        norm_jtm = 1/linalg.det (norm.tuning_x (np.eye (d), self.subgroup)[:,:d])**(1/d)
         try:
-            return (self.__error (ntype, norm, inharmonic, scalar)
-                * self.__complexity (ntype, norm, inharmonic)**(d/(d - r))
-                / norm_jtm)
+            res = (self.__error (ntype, norm, inharmonic, scalar)
+                * self.__complexity (ntype, norm, inharmonic)**(d/(d - r)))
         except ZeroDivisionError:
-            return np.nan
+            res = np.nan
+        match ntype:
+            case "dirichlet":
+                norm_jtm = 1/linalg.det (norm.tuning_x (np.eye (d), self.subgroup)[:,:d])**(1/d)
+                res /= norm_jtm
+            case "breed" | "smith" | "none":
+                pass
+            case _:
+                warnings.warn ("normalizer not supported, using default (\"breed\")")
+                return self.__badness_logflat ("breed", norm, inharmonic, scalar)
+        return res
 
     def temperament_measures (self, ntype = "breed", norm = te.Norm (), inharmonic = False, 
             error_scale = te.SCALAR.CENT, badness_scale = te.SCALAR.OCTAVE):
