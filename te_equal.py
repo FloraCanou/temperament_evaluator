@@ -7,7 +7,7 @@ from tqdm import tqdm
 import te_common as te
 import te_temperament_measures as te_tm
 
-WARTS_LIST = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"]
+WARTS_LIST = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y"]
 
 def et_construct (et_list, subgroup):
     """Temperament construction function from equal temperaments."""
