@@ -7,7 +7,7 @@ from tqdm import tqdm
 import te_common as te
 import te_temperament_measures as te_tm
 
-WARTS_LIST = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x"]
+WARTS_LIST = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"]
 
 def et_construct (et_list, subgroup):
     """Temperament construction function from equal temperaments."""
@@ -52,18 +52,17 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
             if ((not pv or __is_pv (gpv, just_tuning_map)) # patent val or pv isn't set
                     and np.gcd.reduce (gpv) == 1 #not enfactored
                     and not np.any ([gpv] @ monzos)): #tempering out the commas
-                match cond:
-                    case "error":
-                        et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
-                        current = et._Temperament__error (ntype, norm, do_inharmonic, te.SCALAR.CENT)
-                    case "badness":
-                        et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
-                        current = et._Temperament__badness (ntype, norm, do_inharmonic, te.SCALAR.OCTAVE)
-                    case "logflat badness":
-                        et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
-                        current = et._Temperament__badness_logflat (ntype, norm, do_inharmonic, te.SCALAR.OCTAVE)
-                    case _:
-                        current = threshold
+                if cond=="error":
+                    et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
+                    current = et._Temperament__error (ntype, norm, do_inharmonic, te.SCALAR.CENT)
+                elif cond=="badness":
+                    et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
+                    current = et._Temperament__badness (ntype, norm, do_inharmonic, te.SCALAR.OCTAVE)
+                elif cond=="logflat badness":
+                    et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
+                    current = et._Temperament__badness_logflat (ntype, norm, do_inharmonic, te.SCALAR.OCTAVE)
+                else:
+                    current = threshold
                 if current <= threshold:
                     progress_bar.write (f"{te.bra (gpv)} ({breed2warts (gpv, subgroup)})")
                     if prog:
