@@ -7,7 +7,7 @@ from scipy import linalg
 from sympy.matrices import Matrix, normalforms
 from sympy import gcd
 
-PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89]
+PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 113]
 RATIONAL_WEIGHT_LIST = ["equilateral"]
 ALGEBRAIC_WEIGHT_LIST = RATIONAL_WEIGHT_LIST + ["wilson", "benedetti"]
 
@@ -181,19 +181,18 @@ class Norm:
 
     def __get_interval_weight (self, primes):
         """Returns the weight matrix for a list of formal primes. """
-        match self.wtype:
-            case "tenney":
-                weight_vec = np.log2 (primes)
-            case "wilson" | "benedetti":
-                weight_vec = np.asarray (primes)
-            case "equilateral":
-                weight_vec = np.ones (len (primes))
-            # case "hahn24": #pending better implementation
-            #     weight_vec = np.reciprocal (np.floor (np.log2 (24)/np.log2 (primes)))
-            case _:
-                warnings.warn ("weighter type not supported, using default (\"tenney\")")
-                self.wtype = "tenney"
-                return self.__get_interval_weight (primes)
+        if self.wtype=="tenney":
+            weight_vec = np.log2 (primes)
+        elif self.wtype in ["wilson", "benedetti"]:
+            weight_vec = np.asarray (primes)
+        elif self.wtype=="equilateral":
+            weight_vec = np.ones (len (primes))
+        # elif self.wtype=="hahn24": #pending better implementation
+        #     weight_vec = np.reciprocal (np.floor (np.log2 (24)/np.log2 (primes)))
+        else:
+            warnings.warn ("weighter type not supported, using default (\"tenney\")")
+            self.wtype = "tenney"
+            return self.__get_interval_weight (primes)
         return np.diag (weight_vec**self.wamount)
 
     def __get_tuning_weight (self, primes):
@@ -266,13 +265,12 @@ canonicalise = canonicalize
 
 def __get_length (main, axis):
     """Gets the length along a certain axis."""
-    match axis:
-        case AXIS.ROW:
-            return main.shape[1]
-        case AXIS.COL:
-            return main.shape[0]
-        case AXIS.VEC:
-            return main.size
+    if axis==AXIS.ROW:
+        return main.shape[1]
+    elif axis==AXIS.COL:
+        return main.shape[0]
+    elif axis==AXIS.VEC:
+        return main.size
 
 def get_subgroup (main, axis):
     """Gets the default subgroup along a certain axis."""
@@ -286,13 +284,12 @@ def setup (main, subgroup, axis):
     elif (length_main := __get_length (main, axis)) != len (subgroup):
         warnings.warn ("dimension does not match. Casting to the smaller dimension. ")
         dim = min (length_main, len (subgroup))
-        match axis:
-            case AXIS.ROW:
-                main = main[:, :dim]
-            case AXIS.COL:
-                main = main[:dim, :]
-            case AXIS.VEC:
-                main = main[:dim]
+        if axis==AXIS.ROW:
+            main = main[:, :dim]
+        elif axis==AXIS.COL:
+            main = main[:dim, :]
+        elif axis==AXIS.VEC:
+            main = main[:dim]
         subgroup.basis_matrix = subgroup.basis_matrix[:, :dim]
     return main, subgroup
 
