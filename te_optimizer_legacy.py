@@ -21,17 +21,16 @@ class Norm:
         self.order = order
 
     def __get_tuning_weight (self, subgroup):
-        match self.wtype:
-            case "tenney":
-                weight_vec = np.reciprocal (np.log2 (subgroup, dtype = float))
-            case "wilson" | "benedetti":
-                weight_vec = np.reciprocal (np.array (subgroup, dtype = float))
-            case "equilateral":
-                weight_vec = np.ones (len (subgroup))
-            case _:
-                warnings.warn ("weighter type not supported, using default (\"tenney\")")
-                self.wtype = "tenney"
-                return self.__get_weight (subgroup)
+        if self.wtype=="tenney":
+            weight_vec = np.reciprocal (np.log2 (subgroup, dtype = float))
+        elif self.wtype in ["wilson", "benedetti"]:
+            weight_vec = np.reciprocal (np.array (subgroup, dtype = float))
+        elif self.wtype=="equilateral":
+            weight_vec = np.ones (len (subgroup))
+        else:
+            warnings.warn ("weighter type not supported, using default (\"tenney\")")
+            self.wtype = "tenney"
+            return self.__get_weight (subgroup)
         return np.diag (weight_vec**self.wamount)
 
     def __get_tuning_skew (self, subgroup):
