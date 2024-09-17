@@ -18,20 +18,19 @@ class NormSym (te.Norm):
     def __get_interval_weight_sym (self, primes):
         """Returns the weight matrix for a list of formal primes. """
         wamount = Rational (self.wamount).limit_denominator (1e3)
-        match self.wtype:
-            case "tenney":
-                warnings.warn ("transcendental weight can be slow. Main optimizer recommended. ")
-                weight_vec = Matrix (primes).applyfunc (lambda q: log (q, 2))
-            case "wilson" | "benedetti":
-                weight_vec = Matrix (primes)
-            case "equilateral":
-                weight_vec = Matrix.ones (len (primes), 1)
-            # case "hahn24": #pending better implementation
-            #     weight_vec = Matrix (primes).applyfunc (lambda q: 1/floor (log (24, q)))
-            case _:
-                warnings.warn ("weighter type not supported, using default (\"tenney\")")
-                self.wtype = "tenney"
-                return self.__get_interval_weight_sym (primes)
+        if self.wtype=="tenney":
+            warnings.warn ("transcendental weight can be slow. Main optimizer recommended. ")
+            weight_vec = Matrix (primes).applyfunc (lambda q: log (q, 2))
+        elif self.wtype in ["wilson", "benedetti"]:
+            weight_vec = Matrix (primes)
+        elif self.wtype=="equilateral":
+            weight_vec = Matrix.ones (len (primes), 1)
+        # elif self.wtype=="hahn24": #pending better implementation
+        #     weight_vec = Matrix (primes).applyfunc (lambda q: 1/floor (log (24, q)))
+        else:
+            warnings.warn ("weighter type not supported, using default (\"tenney\")")
+            self.wtype = "tenney"
+            return self.__get_interval_weight_sym (primes)
         return Matrix.diag (*weight_vec.applyfunc (lambda wi: Pow (wi, wamount)))
 
     def __get_tuning_weight_sym (self, primes):
