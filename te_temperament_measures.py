@@ -167,18 +167,17 @@ class Temperament:
             @ norm.tuning_x (mapping, subgroup).T
             )) / index
         # complexity = linalg.norm (self.wedgie (norm = norm)) #same
-        match ntype:
-            case "breed": #Graham Breed's RMS (default)
-                complexity *= 1/np.sqrt (d**r)
-            case "smith": #Gene Ward Smith's RMS
-                complexity *= 1/np.sqrt (len (tuple (itertools.combinations (range (d), r))))
-            case "dirichlet": #Sintel's Dirichlet coefficient
-                complexity *= 1/linalg.det (norm.tuning_x (np.eye (d), subgroup)[:,:d])**(r/d)
-            case "none":
-                pass
-            case _:
-                warnings.warn ("normalizer not supported, using default (\"breed\")")
-                return self.__complexity (ntype = "breed", norm = norm, inharmonic = inharmonic)
+        if ntype=="breed": #Graham Breed's RMS (default)
+            complexity *= 1/np.sqrt (d**r)
+        elif ntype=="smith": #Gene Ward Smith's RMS
+            complexity *= 1/np.sqrt (len (tuple (itertools.combinations (range (d), r))))
+        elif ntype=="dirichlet": #Sintel's Dirichlet coefficient
+            complexity *= 1/linalg.det (norm.tuning_x (np.eye (d), subgroup)[:,:d])**(r/d)
+        elif ntype=="none":
+            pass
+        else:
+            warnings.warn ("normalizer not supported, using default (\"breed\")")
+            return self.__complexity (ntype = "breed", norm = norm, inharmonic = inharmonic)
         return complexity
 
     def __error (self, ntype, norm, inharmonic, scalar):
@@ -198,22 +197,21 @@ class Temperament:
             @ norm.tuning_x (mapping, subgroup)
             - norm.tuning_x (just_tuning_map, subgroup)
         )
-        match ntype: 
-            case "breed": #Graham Breed's RMS (default)
-                error *= 1/np.sqrt (d)
-            case "smith": #Gene Ward Smith's RMS
-                try:
-                    error *= np.sqrt ((r + 1)/(d - r))
-                except ZeroDivisionError:
-                    error = np.nan
-            case "dirichlet": #Sintel's Dirichlet coefficient
-                error *= 1/(np.sqrt (d)
-                    * linalg.det (norm.tuning_x (np.eye (d), subgroup)[:,:d])**(1/d))
-            case "none":
-                pass
-            case _:
-                warnings.warn ("normalizer not supported, using default (\"breed\")")
-                return self.__error ("breed", norm, inharmonic, scalar)
+        if ntype=="breed": #Graham Breed's RMS (default)
+            error *= 1/np.sqrt (d)
+        elif ntype=="smith": #Gene Ward Smith's RMS
+            try:
+                error *= np.sqrt ((r + 1)/(d - r))
+            except ZeroDivisionError:
+                error = np.nan
+        elif ntype=="dirichlet": #Sintel's Dirichlet coefficient
+            error *= 1/(np.sqrt (d)
+                * linalg.det (norm.tuning_x (np.eye (d), subgroup)[:,:d])**(1/d))
+        elif ntype=="none":
+            pass
+        else:
+            warnings.warn ("normalizer not supported, using default (\"breed\")")
+            return self.__error ("breed", norm, inharmonic, scalar)
         return error
 
     def badness (self, ntype = "breed", norm = te.Norm (), inharmonic = False, 
@@ -241,15 +239,14 @@ class Temperament:
                 * self.__complexity (ntype, norm, inharmonic)**(d/(d - r)))
         except ZeroDivisionError:
             res = np.nan
-        match ntype:
-            case "dirichlet":
-                norm_jtm = 1/linalg.det (norm.tuning_x (np.eye (d), self.subgroup)[:,:d])**(1/d)
-                res /= norm_jtm
-            case "breed" | "smith" | "none":
-                pass
-            case _:
-                warnings.warn ("normalizer not supported, using default (\"breed\")")
-                return self.__badness_logflat ("breed", norm, inharmonic, scalar)
+        if ntype=="dirichlet":
+            norm_jtm = 1/linalg.det (norm.tuning_x (np.eye (d), self.subgroup)[:,:d])**(1/d)
+            res /= norm_jtm
+        elif ntype in ["breed", "smith", "none"]:
+            pass
+        else:
+            warnings.warn ("normalizer not supported, using default (\"breed\")")
+            return self.__badness_logflat ("breed", norm, inharmonic, scalar)
         return res
 
     def temperament_measures (self, ntype = "breed", norm = te.Norm (), inharmonic = False, 
