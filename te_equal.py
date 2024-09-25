@@ -1,4 +1,4 @@
-# © 2020-2024 Flora Canou | Version 1.5.0
+# © 2020-2024 Flora Canou | Version 1.6.0
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -7,7 +7,12 @@ from tqdm import tqdm
 import te_common as te
 import te_temperament_measures as te_tm
 
-WARTS_LIST = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x"]
+WARTS_DICT = {
+    2: "a", 3: "b", 5: "c", 7: "d", 11: "e", 13: "f", 
+    17: "g", 19: "h", 23: "i", 29: "j", 31: "k", 37: "l", 
+    41: "m", 43: "n", 47: "o", 53: "p", 59: "q", 61: "r", 
+    67: "s", 71: "t", 73: "u", 79: "v", 83: "w", 89: "x"
+}
 
 def et_construct (et_list, subgroup):
     """Temperament construction function from equal temperaments."""
@@ -150,14 +155,14 @@ def breed2warts (breed, subgroup = None):
     equave = subgroup.ratios ()[0].value ()
     if equave == 2: #octave equave
         prefix = ""
-    elif equave in te.PRIME_LIST: #non-octave prime equave
-        prefix = str (WARTS_LIST[te.PRIME_LIST.index (equave)])
-    else: #nonprime equave
+    elif equave in WARTS_DICT: #non-octave wartable equave
+        prefix = WARTS_DICT[equave]
+    else: #unwartable equave
         prefix = "*"
 
     if is_pv (breed, subgroup): #patent val
         postfix = ""
-    elif all (entry in te.PRIME_LIST for entry in subgroup.ratios (evaluate = True)): #nonpatent val in prime subgroup
+    elif all (entry in WARTS_DICT for entry in subgroup.ratios (evaluate = True)): #nonpatent val in a wartable subgroup
         just_tuning_map_n = __just_tuning_map_n (breed[0], equave, subgroup) #just tuning map in edostep numbers
         pv = np.rint (just_tuning_map_n) #corresponding patent val
         warts_number_list = (
@@ -165,8 +170,8 @@ def breed2warts (breed, subgroup = None):
             ).astype (int)
         postfix = ""
         for i, si in enumerate (subgroup.ratios (evaluate = True)):
-            postfix += warts_number_list[i]*str (WARTS_LIST[te.PRIME_LIST.index (si)])
-    else: #nonpatent val in nonprime subgroup
+            postfix += warts_number_list[i]*str (WARTS_DICT[si])
+    else: #nonpatent val in an unwartable subgroup
         postfix = "*"
 
     return prefix + str (breed[0]) + postfix
@@ -190,11 +195,22 @@ def __warts2breed (warts, subgroup):
     if not match or (match.group (1) and re.match (match.group (1), match.group (3))):
         raise ValueError ("Invalid wart notation. ")
 
-    wart_equave = te.PRIME_LIST[WARTS_LIST.index (match.group (1))] if match.group (1) else 2
+    # find the equave from the wart prefix
+    if match.group (1):
+        for i, wi in WARTS_DICT.items ():
+            if wi == match.group (1):
+                wart_equave = i
+                break
+    else:
+        wart_equave = 2
+
+    # find the number of each wart letter
     warts_number_list = np.zeros (len (subgroup))
     for i, si in enumerate (subgroup.ratios (evaluate = True)):
-        if si in te.PRIME_LIST:
-            warts_number_list[i] = len (re.findall (WARTS_LIST[te.PRIME_LIST.index (si)], match.group (3)))
+        if si in WARTS_DICT: # wart is supported
+            warts_number_list[i] = len (re.findall (WARTS_DICT[si], match.group (3)))
+    
+    # create the breed to add to the patent val
     just_tuning_map_n = __just_tuning_map_n (int (match.group (2)), wart_equave, subgroup) #just tuning map in edostep numbers
     pv = np.rint (just_tuning_map_n) #corresponding patent val
     alt_breed = np.copysign (np.ceil (warts_number_list/2), (1 - 2*(warts_number_list % 2))*(pv - just_tuning_map_n))

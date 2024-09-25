@@ -47,6 +47,9 @@ temp.comma_basis ()
 temp = te_et.et_construct (["14c", "17c"], te.Subgroup ([2, 3, 5, 7])) # squares
 temp.temperament_measures (ntype = "smith", badness_scale = 1)
 
+temp = te_et.et_construct (["b4", "b13"], te.Subgroup ([3, 5, 7])) # bps
+temp.temperament_measures (ntype = "smith", badness_scale = 1)
+
 # comma_construct
 # parameters:
 #   subgroup: custom ji subgroup
