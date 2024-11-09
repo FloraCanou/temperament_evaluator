@@ -1,4 +1,4 @@
-# © 2020-2024 Flora Canou | Version 1.3.0
+# © 2020-2024 Flora Canou | Version 1.6.1
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -43,14 +43,14 @@ class NormSym (te.Norm):
             return Matrix.eye (len (primes))
         else:
             return Matrix.eye (len (primes)).col_join (
-                Matrix.ones (len (primes), 1)
+                Matrix.ones (1, len (primes))
             )
 
     def __get_tuning_skew_sym (self, primes):
-        skew = Rational (self.skew).limit_denominator (1e3)
         if self.skew == 0:
             return Matrix.eye (len (primes))
         else:
+            skew = Rational (self.skew).limit_denominator (1e3)
             return (Matrix.eye (len (primes)) 
                 - (skew**2/(len (primes)*skew**2 + 1))*Matrix.ones (len (primes), len (primes))).row_join (
                 (skew/(len (primes)*skew**2 + 1))*Matrix.ones (len (primes), 1)
