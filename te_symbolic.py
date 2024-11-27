@@ -43,18 +43,22 @@ class NormSym (te.Norm):
             return Matrix.eye (len (primes))
         else:
             return Matrix.eye (len (primes)).col_join (
-                Matrix.ones (1, len (primes))
+                self.skew*Matrix.ones (1, len (primes))
             )
 
     def __get_tuning_skew_sym (self, primes):
         if self.skew == 0:
             return Matrix.eye (len (primes))
+        elif self.skew == np.inf:
+            raise NotImplementedError ("Infinite skew not supported yet.")
         else:
             skew = Rational (self.skew).limit_denominator (1e3)
-            return (Matrix.eye (len (primes)) 
-                - (skew**2/(len (primes)*skew**2 + 1))*Matrix.ones (len (primes), len (primes))).row_join (
-                (skew/(len (primes)*skew**2 + 1))*Matrix.ones (len (primes), 1)
-            )
+        r = 1/(len (primes)*skew + 1/skew)
+        kr = 1/(len (primes) + 1/skew**2)
+        return (Matrix.eye (len (primes)) 
+            - kr*Matrix.ones (len (primes), len (primes))).row_join (
+            r*Matrix.ones (len (primes), 1)
+        )
 
     def tuning_x_sym (self, main, subgroup):
         primes = Matrix (subgroup.ratios (evaluate = True))
