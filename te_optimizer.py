@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.2.0
+# © 2020-2023 Flora Canou | Version 1.6.2
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -6,7 +6,6 @@ import numpy as np
 from scipy import optimize, linalg
 from sympy.matrices import Matrix, normalforms
 import te_common as te
-np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
 def wrapper_main (breeds, subgroup = None, norm = te.Norm (), inharmonic = False, 
         constraint = None, destretch = None, show = True):

@@ -1,4 +1,4 @@
-# © 2020-2024 Flora Canou | Version 1.5.1
+# © 2020-2024 Flora Canou | Version 1.6.2
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -7,7 +7,6 @@ from scipy import linalg
 from sympy.matrices import Matrix, BlockMatrix
 from sympy import gcd
 import te_common as te
-np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
 class Temperament:
     def __init__ (self, breeds, subgroup = None, saturate = True, normalize = True): #NOTE: "map" is a reserved word

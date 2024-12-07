@@ -1,11 +1,12 @@
-# © 2020-2024 Flora Canou | Version 1.6.0
+# © 2020-2024 Flora Canou | Version 1.6.2
 # This work is licensed under the GNU General Public License version 3.
 
-import re, functools,  itertools, warnings
+import re, functools, itertools, warnings
 import numpy as np
 from scipy import linalg
 from sympy.matrices import Matrix, normalforms
 from sympy import gcd
+np.set_printoptions (suppress = True, linewidth = 256, precision = 3)
 
 PRIME_LIST = [
     2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 

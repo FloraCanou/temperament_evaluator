@@ -1,4 +1,4 @@
-# © 2020-2024 Flora Canou | Version 1.6.1
+# © 2020-2024 Flora Canou | Version 1.6.2
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -7,7 +7,6 @@ from scipy import linalg
 from sympy.matrices import Matrix, BlockMatrix
 from sympy import Rational, floor, log, Pow, pprint, simplify
 import te_common as te
-np.set_printoptions (suppress = True, linewidth = 256, precision = 4)
 
 class NormSym (te.Norm):
     """Specialized norm class for symbolic calculations."""

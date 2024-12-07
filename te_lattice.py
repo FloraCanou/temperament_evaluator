@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.1.0
+# © 2020-2023 Flora Canou | Version 1.6.2
 # This work is licensed under the GNU General Public License version 3.
 
 import math, warnings
@@ -6,7 +6,6 @@ import numpy as np
 from scipy import linalg
 import te_common as te
 import te_temperament_measures as te_tm
-np.set_printoptions (suppress = True, linewidth = 256)
 
 class TemperamentLattice (te_tm.Temperament):
     def find_temperamental_norm (self, monzo, norm = te.Norm (), oe = False, show = True):
@@ -33,7 +32,7 @@ class TemperamentLattice (te_tm.Temperament):
             print ("\nComplexity spectrum: ")
         for entry in spectrum:
             ratio = te.monzo2ratio (entry[0], self.subgroup)
-            print (f"{ratio}\t{entry[1]:.4f}")
+            print (f"{ratio}\t{entry[1]:.3f}")
 
     find_spectrum = find_complexity_spectrum
 
