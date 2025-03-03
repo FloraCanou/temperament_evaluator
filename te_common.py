@@ -97,7 +97,7 @@ class Subgroup:
     """Subgroup profile of ji."""
 
     def __init__ (self, ratios = None, monzos = None, saturate = False, normalize = True):
-        if ratios is None == monzos is None: 
+        if (ratios is None) == (monzos is None): 
             raise ValueError ("Either ratios or monzos must be provided.")
         
         # construct the basis matrix
