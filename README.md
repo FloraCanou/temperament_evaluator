@@ -110,7 +110,7 @@ Use `et_sequence` to iterate through all GPVs. Parameters:
 - `inharmonic`: *optional*. For subgroup temperaments, treats the basis as if they were primes. Default is `False`. 
 - `cond`: *optional*. Supports `"error"`, `"badness"`, or `"logflat badness"`. Default is `"error"`. 
 - `pv`: *optional*. If `True`, only patent vals will be considered. Default is `False`. 
-- `prog`: *optional*. If `True`, threshold will be updated. Default is `True`. 
+- `prog`: *optional*. If `True`, threshold will be updated on iteration. Default is `True`. 
 - `threshold`: *optional*. Temperaments failing this will not be shown. Default is `20`. 
 - `search_range`: *optional*. Specifies the upper bound where to stop searching. Default is `1200`. 
 

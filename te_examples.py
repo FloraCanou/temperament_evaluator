@@ -4,6 +4,9 @@ import te_temperament_measures as te_tm
 import te_equal as te_et
 import te_lattice as te_lat
 
+# Set precision here
+np.set_printoptions (precision = 3)
+
 # Important: a single monzo should be entered as a vector; a monzo list should be entered as composed by column vectors
 
 # Norm
@@ -68,7 +71,7 @@ temp.temperament_measures (ntype = "smith", badness_scale = 1)
 #   inharmonic: for subgroup temps, treats the basis as if they were primes
 #   cond: "error", "badness", or "logflat badness"
 #   threshold: temperaments failing this will not be shown
-#   prog: if true, threshold will be updated
+#   prog: if true, threshold will be updated on iteration
 #   pv: if true, only patent vals will be considered
 #   search_range: upper bound where to stop searching
 

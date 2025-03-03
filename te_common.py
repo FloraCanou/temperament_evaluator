@@ -1,4 +1,4 @@
-# © 2020-2024 Flora Canou | Version 1.6.2
+# © 2020-2024 Flora Canou | Version 1.7.0
 # This work is licensed under the GNU General Public License version 3.
 
 import re, functools, itertools, warnings
@@ -97,13 +97,20 @@ class Subgroup:
     """Subgroup profile of ji."""
 
     def __init__ (self, ratios = None, monzos = None, saturate = False, normalize = True):
-        if not ratios is None: 
-            self.basis_matrix = canonicalize (column_stack_pad (
+        if ratios is None == monzos is None: 
+            raise ValueError ("Either ratios or monzos must be provided.")
+        
+        # construct the basis matrix
+        self.basis_matrix = canonicalize (
+                monzos or column_stack_pad (
                 [ratio2monzo (as_ratio (entry)) for entry in ratios]
-                ), saturate, normalize, axis = AXIS.COL
-            )
-        elif not monzos is None: 
-            self.basis_matrix = canonicalize (monzos, saturate, normalize, axis = AXIS.COL)
+                ), saturate, normalize, axis = AXIS.COL)
+
+        # normalize to positive pitches
+        for i, si in enumerate (self.basis_matrix.T):
+            ratio = monzo2ratio (si)
+            if ratio.num < ratio.den: 
+                self.basis_matrix[:, i] *= -1
 
     def basis_matrix_to (self, other):
         """

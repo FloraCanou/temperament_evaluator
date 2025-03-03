@@ -1,4 +1,4 @@
-# © 2020-2024 Flora Canou | Version 1.6.0
+# © 2020-2024 Flora Canou | Version 1.7.0
 # This work is licensed under the GNU General Public License version 3.
 
 import re, warnings
@@ -116,6 +116,7 @@ def __is_pv (breed, tuning_map):
 def gpv_roll (breed, subgroup = None, n = 1):
     """
     Enter a GPV, finds the n-th next GPV. 
+    The subgroup basis must be normalized to all-positive pitches. 
     Doesn't handle some nontrivial subgroups. 
     """
     breed, subgroup = te.setup (breed, subgroup, axis = te.AXIS.VEC)
