@@ -1,4 +1,4 @@
-# © 2020-2024 Flora Canou | Version 1.6.2
+# © 2020-2024 Flora Canou | Version 1.6.3
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -206,6 +206,11 @@ class Temperament:
                 except ZeroDivisionError:
                     error = np.nan
             case "dirichlet": #Sintel's Dirichlet coefficient
+                # Dirichlet--Breed, actually
+                # as an extra factor of 1/(np.sqrt (d) is added here
+                # which isn't in Sintel's implementation
+                # this factor will be canceled out in logflat badness
+                # when we divide it by the norm of jtm
                 error *= 1/(np.sqrt (d)
                     * linalg.det (norm.tuning_x (np.eye (d), subgroup)[:,:d])**(1/d))
             case "none":
