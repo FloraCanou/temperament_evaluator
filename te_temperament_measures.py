@@ -177,13 +177,13 @@ class Temperament:
 
             # deprecated, to be removed in the next version
             case "dirichlet": 
-                warnings.warn ("\"dirichlet\" is deprecated; please use (\"sintel\")")
+                warnings.warn ("\"dirichlet\" is deprecated; please use \"sintel\". ")
                 return self.__complexity ("sintel", norm, inharmonic)
 
             case "none":
                 pass
             case _:
-                warnings.warn ("normalizer not supported, using default (\"breed\")")
+                warnings.warn ("normalizer not supported, using default (\"breed\"). ")
                 return self.__complexity ("breed", norm, inharmonic)
         return complexity
 
@@ -222,13 +222,13 @@ class Temperament:
 
             # deprecated, to be removed in the next version
             case "dirichlet":
-                warnings.warn ("\"dirichlet\" is deprecated; please use (\"sintel\")")
+                warnings.warn ("\"dirichlet\" is deprecated; please use \"sintel\". ")
                 return self.__error ("sintel", norm, inharmonic, scalar)
             
             case "none":
                 pass
             case _:
-                warnings.warn ("normalizer not supported, using default (\"breed\")")
+                warnings.warn ("normalizer not supported, using default (\"breed\"). ")
                 return self.__error ("breed", norm, inharmonic, scalar)
         return error
 
@@ -264,13 +264,13 @@ class Temperament:
             
             # deprecated, to be removed in the next version
             case "dirichlet":
-                warnings.warn ("\"dirichlet\" is deprecated; please use (\"sintel\")")
+                warnings.warn ("\"dirichlet\" is deprecated; please use \"sintel\". ")
                 return self.__badness_logflat ("sintel", norm, inharmonic, scalar)
             
             case "breed" | "smith" | "none":
                 pass
             case _:
-                warnings.warn ("normalizer not supported, using default (\"breed\")")
+                warnings.warn ("normalizer not supported, using default (\"breed\"). ")
                 return self.__badness_logflat ("breed", norm, inharmonic, scalar)
         return res
 
