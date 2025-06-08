@@ -22,6 +22,7 @@ np.set_printoptions (precision = 3)
 # methods:
 #   tune: gives the tuning
 #     parameters:
+#       optimizer: "main", for the main solver, or "sym", for the symbolic solver
 #       norm: norm profile of the tuning space. see above
 #       inharmonic: for subgroup temps, treats the basis as if they were primes
 #       constraint: constrains this subgroup to pure
@@ -39,7 +40,7 @@ temp = te_tm.Temperament ([
     [0, 5, 1, 12]
     ]) # septimal magic
 temp.tune (norm = te.Norm (skew = 1), constraint = te.Subgroup ("2")) # cwe a.k.a. ke tuning
-temp.temperament_measures (ntype = "smith", badness_scale = 1) # te temperament measures
+temp.temperament_measures (ntype = "sintel", badness_scale = 1) # te temperament measures
 temp.wedgie ()
 temp.comma_basis ()
 
@@ -48,10 +49,10 @@ temp.comma_basis ()
 #   subgroup: custom ji subgroup
 
 temp = te_et.et_construct (["14c", "17c"], te.Subgroup ([2, 3, 5, 7])) # squares
-temp.temperament_measures (ntype = "smith", badness_scale = 1)
+temp.temperament_measures (ntype = "sintel", badness_scale = 1)
 
 temp = te_et.et_construct (["b4", "b13"], te.Subgroup ([3, 5, 7])) # bps
-temp.temperament_measures (ntype = "smith", badness_scale = 1)
+temp.temperament_measures (ntype = "sintel", badness_scale = 1)
 
 # comma_construct
 # parameters:
@@ -61,7 +62,7 @@ temp = te_et.comma_construct (te.Subgroup ([
     "126/125", 
     "245/243"
     ]).basis_matrix) # septimal sensi
-temp.temperament_measures (ntype = "smith", badness_scale = 1)
+temp.temperament_measures (ntype = "sintel", badness_scale = 1)
 
 # et_sequence
 # parameters:

@@ -73,13 +73,13 @@ Requires `te_common`, `te_optimizer`, and optionally `te_symbolic`.
 
 Use `Temperament` to construct a temperament object. Methods: 
 - `tune`: calls `wrapper_main`/`wrapper_symbolic` and shows the generator, tuning map, error map, tuning error, and tuning bias. Parameters: 
-	- `optimizer`: *optional*. Optimizer. `"main"`: calls `wrapper_main`. `"sym"`: calls `wrapper_symbolic`. Default is `"main"`. 
+	- `optimizer`: *optional*. Optimizer. `"main"`: calls the main solver. `"sym"`: calls the symbolic solver. Default is `"main"`. 
 	- `norm`: *optional*. Norm profile for the tuning space. See above. 
 	- `inharmonic`: *optional*. For subgroup temperaments, treats the basis as if they were primes. Default is `False`. 
 	- `constraint`: *optional*. Constrains this subgroup to pure. Default is empty. 
 	- `destretch`: *optional*. Destretches this ratio to pure. Default is empty. 
 - `temperament_measures`: shows the complexity, error, and badness (simple and logflat). Parameters: 
-	- `ntype`: *optional*. Averaging normalizer. Has `"breed"` (default), `"smith"`, `"dirichlet"` and `"none"`. 
+	- `ntype`: *optional*. Averaging normalizer. Has `"breed"` (default), `"smith"`, `"sintel"` and `"none"`. 
 	- `norm`: *optional*. Norm profile for the tuning space. See above. 
 	- `inharmonic`: *optional*. For subgroup temperaments, treats the basis as if they were primes. Default is `False`. 
 	- `error_scale`: *optional*. Scales the error. Default is `1200` (cents).

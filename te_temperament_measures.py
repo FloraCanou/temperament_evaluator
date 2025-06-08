@@ -15,7 +15,7 @@ class Temperament:
         self.mapping = te.canonicalize (np.rint (breeds).astype (int), saturate, normalize)
 
     def __check_sym (self, order):
-        """Checks the availability of the symbolic solver."""
+        """Checks the applicability and availability of the symbolic solver."""
         if order == 2:
             try:
                 global te_sym
