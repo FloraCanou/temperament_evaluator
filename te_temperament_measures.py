@@ -1,4 +1,4 @@
-# © 2020-2024 Flora Canou | Version 1.6.3
+# © 2020-2025 Flora Canou | Version 1.8.0
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -161,23 +161,30 @@ class Temperament:
         r, d = mapping.shape #rank and dimensionality
 
         # standard L2 complexity
+        # complexity = linalg.norm (self.wedgie (norm = norm)) #same
         complexity = np.sqrt (linalg.det (
             norm.tuning_x (mapping, subgroup)
             @ norm.tuning_x (mapping, subgroup).T
             )) / index
-        # complexity = linalg.norm (self.wedgie (norm = norm)) #same
+        
         match ntype:
             case "breed": #Graham Breed's RMS (default)
                 complexity *= 1/np.sqrt (d**r)
             case "smith": #Gene Ward Smith's RMS
                 complexity *= 1/np.sqrt (len (tuple (itertools.combinations (range (d), r))))
-            case "dirichlet": #Sintel's Dirichlet coefficient
+            case "sintel": #Sintel--Breed
                 complexity *= 1/linalg.det (norm.tuning_x (np.eye (d), subgroup)[:,:d])**(r/d)
+
+            # deprecated, to be removed in the next version
+            case "dirichlet": 
+                warnings.warn ("\"dirichlet\" is deprecated; please use (\"sintel\")")
+                return self.__complexity ("sintel", norm, inharmonic)
+
             case "none":
                 pass
             case _:
                 warnings.warn ("normalizer not supported, using default (\"breed\")")
-                return self.__complexity (ntype = "breed", norm = norm, inharmonic = inharmonic)
+                return self.__complexity ("breed", norm, inharmonic)
         return complexity
 
     def __error (self, ntype, norm, inharmonic, scalar):
@@ -205,14 +212,19 @@ class Temperament:
                     error *= np.sqrt ((r + 1)/(d - r))
                 except ZeroDivisionError:
                     error = np.nan
-            case "dirichlet": #Sintel's Dirichlet coefficient
-                # Dirichlet--Breed, actually
-                # as an extra factor of 1/(np.sqrt (d) is added here
+            case "sintel": #Sintel--Breed
+                # an extra factor of 1/(np.sqrt (d)) is added here
                 # which isn't in Sintel's implementation
                 # this factor will be canceled out in logflat badness
                 # when we divide it by the norm of jtm
                 error *= 1/(np.sqrt (d)
                     * linalg.det (norm.tuning_x (np.eye (d), subgroup)[:,:d])**(1/d))
+
+            # deprecated, to be removed in the next version
+            case "dirichlet":
+                warnings.warn ("\"dirichlet\" is deprecated; please use (\"sintel\")")
+                return self.__error ("sintel", norm, inharmonic, scalar)
+            
             case "none":
                 pass
             case _:
@@ -246,9 +258,15 @@ class Temperament:
         except ZeroDivisionError:
             res = np.nan
         match ntype:
-            case "dirichlet":
+            case "sintel":
                 norm_jtm = 1/linalg.det (norm.tuning_x (np.eye (d), self.subgroup)[:,:d])**(1/d)
                 res /= norm_jtm
+            
+            # deprecated, to be removed in the next version
+            case "dirichlet":
+                warnings.warn ("\"dirichlet\" is deprecated; please use (\"sintel\")")
+                return self.__badness_logflat ("sintel", norm, inharmonic, scalar)
+            
             case "breed" | "smith" | "none":
                 pass
             case _:

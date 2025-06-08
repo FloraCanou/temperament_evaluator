@@ -28,7 +28,7 @@ np.set_printoptions (precision = 3)
 #       destretch: destretches this ratio to pure
 #   temperament_measures: gives the temperament measures
 #     parameters:
-#       ntype: averaging normalizer. "breed", "smith", "dirichlet", or "none"
+#       ntype: averaging normalizer. "breed", "smith", "sintel", or "none"
 #       norm: norm profile for the tuning space. see above
 #       error_scale: scales the error
 #       badness_scale: scales the badness
@@ -38,7 +38,7 @@ temp = te_tm.Temperament ([
     [1, 0, 2, -1], 
     [0, 5, 1, 12]
     ]) # septimal magic
-temp.tune (norm = te.Norm (skew = 1), constraint = te.Subgroup ("2")) # cwe aka ke tuning
+temp.tune (norm = te.Norm (skew = 1), constraint = te.Subgroup ("2")) # cwe a.k.a. ke tuning
 temp.temperament_measures (ntype = "smith", badness_scale = 1) # te temperament measures
 temp.wedgie ()
 temp.comma_basis ()
@@ -66,7 +66,7 @@ temp.temperament_measures (ntype = "smith", badness_scale = 1)
 # et_sequence
 # parameters:
 #   subgroup: custom ji subgroup
-#   ntype: averaging normalizer. "breed", "smith", "dirichlet", or "none"
+#   ntype: averaging normalizer. "breed", "smith", "sintel", or "none"
 #   norm: norm profile for the tuning space. see above
 #   inharmonic: for subgroup temps, treats the basis as if they were primes
 #   cond: "error", "badness", or "logflat badness"
