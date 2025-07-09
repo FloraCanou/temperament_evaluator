@@ -1,4 +1,4 @@
-# © 2020-2024 Flora Canou | Version 0.27.3
+# © 2020-2025 Flora Canou | Version 0.28.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -6,7 +6,10 @@ import numpy as np
 from scipy import optimize, linalg
 np.set_printoptions (suppress = True, linewidth = 256, precision = 3)
 
-PRIME_LIST = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89]
+PRIME_LIST = [
+    2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 
+    41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 
+]
 
 class SCALAR:
     CENT = 1200
@@ -74,13 +77,13 @@ def optimizer_main (breeds, subgroup = None, norm = Norm (),
         gen = res[0]
         print ("Euclidean tuning without constraints, solved using lstsq. ")
     else:
-        gen0 = [SCALAR.CENT]*breeds.shape[0] #initial guess
-        cons = () if cons_monzo_list is None else {
-            'type': 'eq', 
-            'fun': lambda gen: (gen @ breeds - just_tuning_map) @ cons_monzo_list
-        }
+        gen0 = just_tuning_map[:breeds.shape[0]] #initial guess
+        cons = optimize.LinearConstraint ((breeds @ cons_monzo_list).T, 
+            lb = (just_tuning_map @ cons_monzo_list).T, 
+            ub = (just_tuning_map @ cons_monzo_list).T
+        )
         res = optimize.minimize (lambda gen: linalg.norm (gen @ breeds_x - just_tuning_map_x, ord = norm.order), gen0, 
-            method = "SLSQP", options = {'ftol': 1e-9}, constraints = cons)
+            method = "COBYQA", constraints = cons)
         print (res.message)
         if res.success:
             gen = res.x

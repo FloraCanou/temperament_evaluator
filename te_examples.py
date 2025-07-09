@@ -7,9 +7,7 @@ import te_lattice as te_lat
 # set precision here
 np.set_printoptions (precision = 3)
 
-# NOTE: a single monzo should be entered as a vector; a monzo list should be entered as composed by column vectors
-
-# Basic usages
+# basic usages
 
 ## to construct a temperament
 ## we're showing septimal magic here
@@ -40,7 +38,7 @@ temp.comma_basis ()
 ## to find the optimal GPV sequence of the temperament
 te_et.et_sequence (temp.comma_basis (show = False), cond = "error", search_range = 300)
 
-# Alternative ways to construct temperaments
+# alternative ways to construct temperaments
 
 ## to construct a temperament from equal temperaments
 ### squares
@@ -59,11 +57,11 @@ temp = te_et.comma_construct (te.Subgroup ([
     ]).basis_matrix)
 temp.temperament_measures (ntype = "sintel")
 
-# Lattice-related functions
+# lattice-related functions
 
-## This is mainly used to find the octave-equivalent interval complexity spectrum. 
-## To do this, we need to construct the temperament with `te_lat.TemperamentLattice`. 
-## Here we're using tridecimal history. 
+## this is mainly used to find the octave-equivalent interval complexity spectrum
+## to do this, we need to construct the temperament with te_lat.TemperamentLattice
+## here we're demonstrating with tridecimal history
 temp = te_lat.TemperamentLattice ([
     [1, 2, 0, 0, 1, 2], 
     [0, 6, 0, -7, -2, 9], 

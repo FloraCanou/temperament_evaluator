@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.6.2
+# © 2020-2025 Flora Canou | Version 1.9.0
 # This work is licensed under the GNU General Public License version 3.
 
 import warnings
@@ -79,17 +79,17 @@ def optimizer_main (breeds, target = None, norm = te.Norm (),
         gen = res[0]
         print ("Euclidean tuning without constraints, solved using lstsq. ")
     else:
-        gen0 = [te.SCALAR.CENT]*breeds.shape[0] #initial guess
+        gen0 = just_tuning_map[:breeds.shape[0]] #initial guess
         if constraint is None:
             cons = ()
         else:
             cons_monzo_list = constraint.basis_matrix_to (target)
-            cons = {
-                'type': 'eq', 
-                'fun': lambda gen: (gen @ breeds - just_tuning_map) @ cons_monzo_list
-            }
+            cons = optimize.LinearConstraint ((breeds @ cons_monzo_list).T, 
+                lb = (just_tuning_map @ cons_monzo_list).T, 
+                ub = (just_tuning_map @ cons_monzo_list).T
+            )
         res = optimize.minimize (lambda gen: linalg.norm (gen @ breeds_x - just_tuning_map_x, ord = norm.order), gen0, 
-            method = "SLSQP", options = {'ftol': 1e-9}, constraints = cons)
+            method = "COBYQA", constraints = cons)
         print (res.message)
         if res.success:
             gen = res.x

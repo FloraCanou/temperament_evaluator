@@ -27,6 +27,11 @@ import te_common as te
 import te_temperament_measures as te_tm
 import te_equal as te_et
 import te_lattice as te_lat
+```
+
+Set precision level ([note](https://github.com/FloraCanou/temperament_evaluator/wiki/Precision-limits))
+
+```
 np.set_printoptions (precision = 3)
 ```
 
@@ -78,7 +83,7 @@ To find a comma basis of the temperament
 temp.comma_basis ()
 ```
 
-To find the optimal GPV sequence of a temperament
+To find the optimal GPV sequence of the temperament
 
 ```
 te_et.et_sequence (temp.comma_basis (show = False), cond = "error", search_range = 300)
@@ -113,7 +118,7 @@ temp = te_et.comma_construct (te.Subgroup ([
 
 ### Lattice-related functions
 
-This is mainly used to find the octave-equivalent interval complexity spectrum. To do this, we need to construct the temperament with `te_lat.TemperamentLattice`. Here we're using tridecimal history. 
+This is mainly used to find the octave-equivalent interval complexity spectrum. To do this, we need to construct the temperament with `te_lat.TemperamentLattice`. Here we're demonstrating using tridecimal history. 
 
 ```
 temp = te_lat.TemperamentLattice ([
