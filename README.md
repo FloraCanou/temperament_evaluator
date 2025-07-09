@@ -15,115 +15,111 @@ This Python 3 script can be used to compute various regular temperament data.
 pip install scipy sympy tqdm
 ```
 
-## `te_common.py`
+## Usage Guide
 
-Common functions. Required by virtually all subsequent modules. 
+See our [wiki](https://github.com/FloraCanou/temperament_evaluator/wiki) for technical references. 
 
-Use the `Subgroup` class to create a just intonation subgroup. Parameters: 
-- `ratios`: list of ratios, fractional notation supported. 
-- `monzos`: matrix of monzos, alternative way to initialize it. 
+### Setup
 
-Use the `Norm` class to create a norm profile for the tuning space. Parameters: 
-- `wtype`: Weight method. Has `"tenney"` (default), `"equilateral"`, and `"wilson"`/`"benedetti"`. 
-- `wamount`: Weight scaling factor. Default is `1`. 
-- `skew`: Skew. This is Mike Battaglia's *k*. Default is `0`, meaning no skew. For **Weil**, use `1`. 
-- `order`: Order. Default is `2`, meaning **Euclidean**. For **XOP tuning**, use `np.inf`. 
+```
+import numpy as np
+import te_common as te
+import te_temperament_measures as te_tm
+import te_equal as te_et
+import te_lattice as te_lat
+np.set_printoptions (precision = 3)
+```
 
-## `te_optimizer.py`
+### Basic usages
 
-Optimizes tunings. Custom norm profile, constraints and destretch are supported. *It is recommended to use `te_temperament_measures` instead since it calls this module and it has a more accessible interface.*
+To construct a temperament (we're showing septimal magic here)
 
-Requires `te_common`. 
+```
+temp = te_tm.Temperament ([
+    [1, 0, 2, -1], 
+    [0, 5, 1, 12]
+    ]) 
+```
 
-Use `wrapper_main` to optimize a temperament. Parameters: 
-- `breeds`: *first positional*, *required*. The map of the temperament. 
-- `subgroup`: *optional*. Custom subgroup for the map. Default is prime harmonics. 
-- `norm`: *optional*. Norm profile for the tuning space. See above. 
-- `inharmonic`: *optional*. For subgroup temperaments, treats the basis as if they were primes. Default is `False`. 
-- `constraint`: *optional*. Constrains this subgroup to pure. Default is empty. 
-- `destretch`: *optional*. Destretches this ratio to pure. Default is empty. 
-- `show`: *optional*. Displays the result. Default is `True`. 
+To tune the temperament
 
-**Important: a single monzo should be entered as a vector. A monzo list should be entered as an array of column vectors.** 
+- CTE tuning
 
-## `te_optimizer_legacy.py`
+```
+temp.tune (constraint = te.Subgroup ("2")) 
+```
 
-Legacy single-file edition (doesn't require `te_common.py`). Support for subgroup tuning is limited. 
+- CWE tuning
 
-## `te_symbolic.py`
+```
+temp.tune (norm = te.Norm (skew = 1), constraint = te.Subgroup ("2")) 
+```
 
-Solves Euclidean tunings symbolically. *It is recommended to use `te_temperament_measures` instead since it calls this module and it has a more accessible interface.*
+- POTE tuning
 
-Requires `te_common`. 
+```
+temp.tune (destretch = te.Ratio (2, 1)) 
+```
 
-Use `wrapper_symbolic` to solve for a Euclidean tuning of a temperament. Parameters: 
-- `breeds`: *first positional*, *required*. The map of the temperament. 
-- `subgroup`: *optional*. Custom subgroup for the map. Default is prime harmonics. 
-- `norm`: *optional*. Norm profile for the tuning space. See above. 
-- `inharmonic`: *optional*. For subgroup temperaments, treats the basis as if they were primes. Default is `False`. 
-- `constraint`: *optional*. Constrains this subgroup to pure. Default is empty. 
-- `destretch`: *optional*. Destretches this ratio to pure. Default is empty. 
-- `show`: *optional*. Displays the result. Default is `True`. 
+To find the temperament measures
 
-## `te_temperament_measures.py`
+```
+temp.temperament_measures (ntype = "sintel") 
+```
 
-Analyses tunings and computes temperament measures from the temperament mapping matrix. 
+To find the wedgie of the temperament
 
-Requires `te_common`, `te_optimizer`, and optionally `te_symbolic`. 
+```
+temp.wedgie ()
+```
 
-Use `Temperament` to construct a temperament object. Methods: 
-- `tune`: calls `wrapper_main`/`wrapper_symbolic` and shows the generator, tuning map, error map, tuning error, and tuning bias. Parameters: 
-	- `optimizer`: *optional*. Optimizer. `"main"`: calls the main solver. `"sym"`: calls the symbolic solver. Default is `"main"`. 
-	- `norm`: *optional*. Norm profile for the tuning space. See above. 
-	- `inharmonic`: *optional*. For subgroup temperaments, treats the basis as if they were primes. Default is `False`. 
-	- `constraint`: *optional*. Constrains this subgroup to pure. Default is empty. 
-	- `destretch`: *optional*. Destretches this ratio to pure. Default is empty. 
-- `temperament_measures`: shows the complexity, error, and badness (simple and logflat). Parameters: 
-	- `ntype`: *optional*. Averaging normalizer. Has `"breed"` (default), `"smith"`, `"sintel"` and `"none"`. 
-	- `norm`: *optional*. Norm profile for the tuning space. See above. 
-	- `inharmonic`: *optional*. For subgroup temperaments, treats the basis as if they were primes. Default is `False`. 
-	- `error_scale`: *optional*. Scales the error. Default is `1200` (cents).
-	- `badness_scale`: *optional*. Scales the badness. Default is `1` (octaves). 
-- `wedgie`: returns and shows the wedgie of the temperament. 
-- `comma_basis`: returns and shows the comma basis of the temperament. 
+To find a comma basis of the temperament
+```
+temp.comma_basis ()
+```
 
-**Important: a single monzo should be entered as a vector. A monzo list should be entered as an array of column vectors.** 
+To find the optimal GPV sequence of a temperament
 
-## `te_equal.py`
+```
+te_et.et_sequence (temp.comma_basis (show = False), cond = "error", search_range = 300)
+```
 
-Tools related to equal temperaments. 
-- Constructs higher-rank temperaments using equal temperaments. 
-- Finds the GPVs from the comma list. 
+### Alternative ways to construct temperaments
 
-Requires `te_common`, `te_optimizer`, and `te_temperament_measures`. 
+To construct a temperament from equal temperaments
 
-Use `et_construct` to quickly construct temperaments from equal temperaments. Parameters: 
-- `et_list`: *first positional*, *required*. The equal temperament list. 
-- `subgroup`: *second positional*, *required*. The subgroup for the equal temperament list. 
+- squares
 
-Use `et_sequence` to iterate through all GPVs. Parameters: 
-- `monzos`: *optional\**. Specifies the commas to be tempered out. Default is empty, implying **JI**. 
-- `subgroup`: *optional\**. Custom subgroup for the map. Default is prime harmonics. 
-	- \* At least one of the above must be specified, for the script to know the dimension. 
-- `ntype`: *optional*. Averaging normalizer. See above. 
-- `norm`: *optional*. Norm profile for the tuning space. See above. 
-- `inharmonic`: *optional*. For subgroup temperaments, treats the basis as if they were primes. Default is `False`. 
-- `cond`: *optional*. Supports `"error"`, `"badness"`, or `"logflat badness"`. Default is `"error"`. 
-- `pv`: *optional*. If `True`, only patent vals will be considered. Default is `False`. 
-- `prog`: *optional*. If `True`, threshold will be updated on iteration. Default is `True`. 
-- `threshold`: *optional*. Temperaments failing this will not be shown. Default is `20`. 
-- `search_range`: *optional*. Specifies the upper bound where to stop searching. Default is `1200`. 
+```
+temp = te_et.et_construct (["14c", "17c"], te.Subgroup ([2, 3, 5, 7]))
+```
 
-**Important: a single monzo should be entered as a vector. A monzo list should be entered as an array of column vectors.** 
+- BPS
 
-## `te_lattice.py`
+```
+temp = te_et.et_construct (["b4", "b13"], te.Subgroup ([3, 5, 7]))
+```
 
-Not fully functional yet. Currently able to find the complexity spectrum from the temperament map. 
+To construct a temperament from a comma basis
 
-Support for subgroup temperaments is limited. 
+- septimal sensi
 
-Requires `te_common` and `te_temperament_measures`. 
+```
+temp = te_et.comma_construct (te.Subgroup ([
+    "126/125", 
+    "245/243"
+    ]).basis_matrix)
+```
 
-Use `TemperamentLattice` to construct a temperament object. Methods: 
-- `find_temperamental_norm`: shows the temperamental complexity of an interval. 
-- `find_complexity_spectrum`: shows the complexity spectrum of a temperament
+### Lattice-related functions
+
+This is mainly used to find the octave-equivalent interval complexity spectrum. To do this, we need to construct the temperament with `te_lat.TemperamentLattice`. Here we're using tridecimal history. 
+
+```
+temp = te_lat.TemperamentLattice ([
+    [1, 2, 0, 0, 1, 2], 
+    [0, 6, 0, -7, -2, 9], 
+    [0, 0, 1, 1, 1, 1]
+    ])
+temp.find_complexity_spectrum (te_lat.odd_limit_monzos_gen (15), oe = True)
+```
