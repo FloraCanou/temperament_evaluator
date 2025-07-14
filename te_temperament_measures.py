@@ -1,4 +1,4 @@
-# © 2020-2025 Flora Canou | Version 1.8.0
+# © 2020-2025 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
 
 import itertools, re, warnings
@@ -9,7 +9,9 @@ from sympy import gcd
 import te_common as te
 
 class Temperament:
-    def __init__ (self, breeds, subgroup = None, saturate = True, normalize = True): #NOTE: "map" is a reserved word
+    # NOTE: "map" is a reserved word
+
+    def __init__ (self, breeds, subgroup = None, saturate = True, normalize = True):
         breeds, subgroup = te.setup (breeds, subgroup, axis = te.AXIS.ROW)
         self.subgroup = subgroup
         self.mapping = te.canonicalize (np.rint (breeds).astype (int), saturate, normalize)
@@ -174,12 +176,6 @@ class Temperament:
                 complexity *= 1/np.sqrt (len (tuple (itertools.combinations (range (d), r))))
             case "sintel": #Sintel--Breed
                 complexity *= 1/linalg.det (norm.tuning_x (np.eye (d), subgroup)[:,:d])**(r/d)
-
-            # deprecated, to be removed in the next version
-            case "dirichlet": 
-                warnings.warn ("\"dirichlet\" is deprecated; please use \"sintel\". ")
-                return self.__complexity ("sintel", norm, inharmonic)
-
             case "none":
                 pass
             case _:
@@ -219,12 +215,6 @@ class Temperament:
                 # when we divide it by the norm of jtm
                 error *= 1/(np.sqrt (d)
                     * linalg.det (norm.tuning_x (np.eye (d), subgroup)[:,:d])**(1/d))
-
-            # deprecated, to be removed in the next version
-            case "dirichlet":
-                warnings.warn ("\"dirichlet\" is deprecated; please use \"sintel\". ")
-                return self.__error ("sintel", norm, inharmonic, scalar)
-            
             case "none":
                 pass
             case _:
@@ -261,12 +251,6 @@ class Temperament:
             case "sintel":
                 norm_jtm = 1/linalg.det (norm.tuning_x (np.eye (d), self.subgroup)[:,:d])**(1/d)
                 res /= norm_jtm
-            
-            # deprecated, to be removed in the next version
-            case "dirichlet":
-                warnings.warn ("\"dirichlet\" is deprecated; please use \"sintel\". ")
-                return self.__badness_logflat ("sintel", norm, inharmonic, scalar)
-            
             case "breed" | "smith" | "none":
                 pass
             case _:

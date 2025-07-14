@@ -1,5 +1,6 @@
-# © 2020-2025 Flora Canou | Version 0.28.0
+# © 2020-2025 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
+# Version 0.28.0
 
 import warnings
 import numpy as np

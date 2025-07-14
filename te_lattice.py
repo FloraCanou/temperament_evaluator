@@ -1,4 +1,4 @@
-# © 2020-2023 Flora Canou | Version 1.6.2
+# © 2020-2025 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
 
 import math, warnings
