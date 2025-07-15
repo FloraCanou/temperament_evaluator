@@ -1,6 +1,6 @@
 # © 2020-2025 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 1.9.1
+# Version 1.10.0
 
 import re, functools, itertools, warnings
 import numpy as np
@@ -64,8 +64,10 @@ class Ratio:
     def value (self):
         return self.num if self.den == 1 else np.divide (self.num, self.den)
 
-    def octave_reduce (self): #NOTE: "oct" is a reserved word
+    def octave_reduce (self): 
         """Returns the octave-reduced ratio."""
+        # NOTE: "oct" is a reserved word
+
         num_oct = np.floor (np.log2 (self.value ())).astype (int)
         if num_oct == 0:
             return self

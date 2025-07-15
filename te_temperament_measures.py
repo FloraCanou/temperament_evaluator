@@ -64,8 +64,49 @@ class Temperament:
             print ("Normalizer: " + ntype)
         return
 
+    def form (self, ftype = "none"):
+        """
+        Returns the mapping renormalized to various forms. 
+        \"none\": does nothing. 
+        \"flip\": flips negative generators. 
+        \"shift\": equave-reduces negative generators. 
+        \"reduce\": equave-reduces all generators. 
+        """
+
+        def __fx ():
+            """
+            Returns the fast approximate generator map in octaves.
+            """
+            r = self.mapping.shape[0]
+            return self.subgroup.just_tuning_map ()[:r] @ linalg.inv (self.mapping[:, :r])
+
+        mapping = self.mapping.copy ()
+        match ftype:
+            case "none":
+                pass
+            case "flip":
+                gen = __fx ()
+                for i, gi in enumerate (gen):
+                    if gi < 0:
+                        mapping[i] *= -1
+            case "shift":
+                gen = __fx ()
+                ppe = mapping[0][0] # number of periods per equave
+                for i, gi in enumerate (gen):
+                    if gi < 0:
+                        mapping[0] += mapping[i]*ppe*np.floor (gi).astype (int)
+            case "reduce":
+                gen = __fx ()
+                ppe = mapping[0][0] # number of periods per equave
+                for i, gi in enumerate (gen[1:], start = 1):
+                    mapping[0] += mapping[i]*ppe*np.floor (gi).astype (int)
+            case _:
+                warnings.warn ("form not supported, using default (\"none\"). ")
+                return self.form ("none")
+        return mapping
+
     def tune (self, optimizer = "main", norm = te.Norm (), inharmonic = False, 
-            constraint = None, destretch = None): 
+            constraint = None, destretch = None, ftype = None): 
         """
         Gives the tuning. 
         Calls either wrapper_main or wrapper_symbolic. 
@@ -76,7 +117,7 @@ class Temperament:
             return self.tune (optimizer = "main", norm = norm, inharmonic = inharmonic, 
                 constraint = constraint, destretch = destretch)
 
-        # gets the enforcement text
+        # gets the text for enforcement & mode
         cons_text = constraint.__str__ () + "-constrained" if constraint else ""
         des_text = destretch.__str__ () + "-destretched" if destretch else ""
         enforce_text = " ".join ([cons_text, des_text]) if cons_text or des_text else "none"
@@ -89,16 +130,24 @@ class Temperament:
         # shows the header
         self.__show_header (norm = norm, mode_text = mode_text, enforce_text = enforce_text)
 
-        # optimization
+        # gets the specified form
+        if ftype:
+            mapping = self.form (ftype)
+            print ("The generators will be found for the following mapping form:", 
+                mapping, sep = "\n")
+        else:
+            mapping = self.mapping
+
+        # starts optimization
         if optimizer == "main":
             import te_optimizer as te_opt
             gen, tempered_tuning_map, error_map = te_opt.wrapper_main (
-                self.mapping, subgroup = self.subgroup, norm = norm, 
+                mapping, subgroup = self.subgroup, norm = norm, 
                 inharmonic = inharmonic or is_trivial, constraint = constraint, destretch = destretch
             )
         elif optimizer == "sym":
             gen, tempered_tuning_map, error_map = te_sym.wrapper_symbolic (
-                self.mapping, subgroup = self.subgroup, norm = te_sym.NormSym (norm), 
+                mapping, subgroup = self.subgroup, norm = te_sym.NormSym (norm), 
                 inharmonic = inharmonic or is_trivial, constraint = constraint, destretch = destretch
             )
 
