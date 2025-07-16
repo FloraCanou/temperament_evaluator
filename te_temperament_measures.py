@@ -74,9 +74,7 @@ class Temperament:
         """
 
         def __fx ():
-            """
-            Returns the fast approximate generator map in octaves.
-            """
+            """Returns the fast approximate generator map in octaves."""
             r = self.mapping.shape[0]
             return self.subgroup.just_tuning_map ()[:r] @ linalg.inv (self.mapping[:, :r])
 
@@ -91,15 +89,15 @@ class Temperament:
                         mapping[i] *= -1
             case "shift":
                 gen = __fx ()
-                ppe = mapping[0][0] # number of periods per equave
-                for i, gi in enumerate (gen):
+                ploid = mapping[0][0] # number of periods per equave
+                for i, gi in enumerate (gen[1:], start = 1):
                     if gi < 0:
-                        mapping[0] += mapping[i]*ppe*np.floor (gi).astype (int)
+                        mapping[0] += mapping[i]*ploid*np.floor (gi/gen[0]).astype (int)
             case "reduce":
                 gen = __fx ()
-                ppe = mapping[0][0] # number of periods per equave
+                ploid = mapping[0][0] # number of periods per equave
                 for i, gi in enumerate (gen[1:], start = 1):
-                    mapping[0] += mapping[i]*ppe*np.floor (gi).astype (int)
+                    mapping[0] += mapping[i]*ploid*np.floor (gi/gen[0]).astype (int)
             case _:
                 warnings.warn ("form not supported, using default (\"none\"). ")
                 return self.form ("none")
