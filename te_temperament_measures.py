@@ -69,8 +69,12 @@ class Temperament:
         Returns the mapping renormalized to various forms. 
         \"none\": does nothing. 
         \"flip\": flips negative generators. 
-        \"shift\": equave-reduces negative generators. 
-        \"reduce\": equave-reduces all generators. 
+        \"shift\": 
+            flips negative generators if the generator is (-1)-sheared, 
+            equave-reduces negative generators otherwise. 
+        \"reduce\": 
+            flips negative generators if the generator is (-1)-sheared, 
+            equave-reduces all generators. 
         """
 
         def __fx ():
@@ -92,11 +96,24 @@ class Temperament:
                 ploid = mapping[0][0] # number of periods per equave
                 for i, gi in enumerate (gen[1:], start = 1):
                     if gi < 0:
-                        mapping[0] += mapping[i]*ploid*np.floor (gi/gen[0]).astype (int)
+                        # these are generalized cot & shear that work for any rank
+                        cot = mapping[i][i]
+                        shear = np.floor (ploid*cot*gi/gen[0]).astype (int) % cot
+                        if shear == cot - 1: 
+                            mapping[i] *= -1
+                        else:
+                            mapping[0] += mapping[i]*ploid*np.floor (gi/gen[0]).astype (int)
             case "reduce":
                 gen = __fx ()
                 ploid = mapping[0][0] # number of periods per equave
                 for i, gi in enumerate (gen[1:], start = 1):
+                    if gi < 0:
+                        # these are generalized cot & shear that work for any rank
+                        cot = mapping[i][i]
+                        shear = np.floor (ploid*cot*gi/gen[0]).astype (int) % cot
+                        if shear == cot - 1: 
+                            mapping[i] *= -1
+                            gi *= -1 # updates the gen for use below
                     mapping[0] += mapping[i]*ploid*np.floor (gi/gen[0]).astype (int)
             case _:
                 warnings.warn ("form not supported, using default (\"none\"). ")
