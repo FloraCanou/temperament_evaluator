@@ -11,7 +11,7 @@ import te_common as te
 class Temperament:
     # NOTE: "map" is a reserved word
 
-    def __init__ (self, breeds, subgroup = None, saturate = True, normalize = True):
+    def __init__ (self, breeds, subgroup = None, *, saturate = True, normalize = True):
         breeds, subgroup = te.setup (breeds, subgroup, axis = te.AXIS.ROW)
         self.subgroup = subgroup
         self.mapping = te.canonicalize (np.rint (breeds).astype (int), saturate, normalize)
@@ -78,7 +78,10 @@ class Temperament:
         """
 
         def __fx ():
-            """Returns the fast approximate generator map in octaves."""
+            """
+            Returns the fast approximate generator map in octaves.
+            The mapping must be in HNF. 
+            """
             cols = [next (j for j, bj in enumerate (self.mapping[i]) if bj != 0) for i in range (self.mapping.shape[0])]
             return self.subgroup.just_tuning_map ()[cols] @ linalg.inv (self.mapping[:, cols])
 
@@ -139,7 +142,7 @@ class Temperament:
         # checks optimizer availability
         if optimizer == "sym" and not self.__check_sym (norm.order):
             return self.tune (optimizer = "main", norm = norm, inharmonic = inharmonic, 
-                constraint = constraint, destretch = destretch)
+                constraint = constraint, destretch = destretch, ftype = ftype)
 
         # gets the text for enforcement & mode
         cons_text = constraint.__str__ () + "-constrained" if constraint else ""
