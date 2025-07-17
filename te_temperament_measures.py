@@ -79,8 +79,8 @@ class Temperament:
 
         def __fx ():
             """Returns the fast approximate generator map in octaves."""
-            r = self.mapping.shape[0]
-            return self.subgroup.just_tuning_map ()[:r] @ linalg.inv (self.mapping[:, :r])
+            cols = [next (j for j, bj in enumerate (self.mapping[i]) if bj != 0) for i in range (self.mapping.shape[0])]
+            return self.subgroup.just_tuning_map ()[cols] @ linalg.inv (self.mapping[:, cols])
 
         mapping = self.mapping.copy ()
         match ftype:
@@ -92,29 +92,38 @@ class Temperament:
                     if gi < 0:
                         mapping[i] *= -1
             case "shift":
+                # to determine when to flip
+                # we define a generalized ploidacot that works for any rank & subgroup
+                # ploid: number of periods per formal equave
+                #   which equals the first entry of the mapping
+                # cot: number of gens to reach the interval indicated by the current row
+                #   which equals the first nonzero entry of the current row
+                # shear: number of whole periods the interval has, modulo cot
+                # to perform equave reduction on the mapping
+                # we add to the first row the current row times the number
+                # of whole periods of the number of whole equaves the gen has
                 gen = __fx ()
-                ploid = mapping[0][0] # number of periods per equave
+                ploid = mapping[0][0]
                 for i, gi in enumerate (gen[1:], start = 1):
                     if gi < 0:
-                        # these are generalized cot & shear that work for any rank
-                        cot = mapping[i][i]
-                        shear = np.floor (ploid*cot*gi/gen[0]).astype (int) % cot
+                        cot = next (entry for entry in mapping[i] if entry != 0)
+                        shear = np.floor (cot*gi/gen[0]).astype (int) % cot
                         if shear == cot - 1: 
                             mapping[i] *= -1
                         else:
-                            mapping[0] += mapping[i]*ploid*np.floor (gi/gen[0]).astype (int)
+                            mapping[0] += mapping[i]*ploid*np.floor (gi/(ploid*gen[0])).astype (int)
             case "reduce":
+                # similar to above, but equave reduction is done on every row
                 gen = __fx ()
-                ploid = mapping[0][0] # number of periods per equave
+                ploid = mapping[0][0]
                 for i, gi in enumerate (gen[1:], start = 1):
                     if gi < 0:
-                        # these are generalized cot & shear that work for any rank
-                        cot = mapping[i][i]
-                        shear = np.floor (ploid*cot*gi/gen[0]).astype (int) % cot
+                        cot = next (entry for entry in mapping[i] if entry != 0)
+                        shear = np.floor (cot*gi/gen[0]).astype (int) % cot
                         if shear == cot - 1: 
                             mapping[i] *= -1
-                            gi *= -1 # updates the gen for use below
-                    mapping[0] += mapping[i]*ploid*np.floor (gi/gen[0]).astype (int)
+                            gi *= -1 #updates the gen for use below
+                    mapping[0] += mapping[i]*ploid*np.floor (gi/(ploid*gen[0])).astype (int)
             case _:
                 warnings.warn ("form not supported, using default (\"none\"). ")
                 return self.form ("none")
