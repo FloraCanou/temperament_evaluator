@@ -1,6 +1,6 @@
 # © 2020-2025 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 1.10.0
+# Version 1.11.0
 
 import re, functools, itertools, warnings
 import numpy as np
@@ -64,17 +64,63 @@ class Ratio:
     def value (self):
         return self.num if self.den == 1 else np.divide (self.num, self.den)
 
-    def octave_reduce (self): 
+    def is_oct_reduced (self): 
+        """Returns whether the ratio is octave reduced."""
+        # NOTE: "oct" is a reserved word
+        oct_count = np.floor (np.log2 (self.value ())).astype (int)
+        return oct_count == 0
+
+    def is_eq_reduced (self, eq): 
+        """Enter a ratio for the equave, returns whether the ratio is equave reduced."""
+        if eq == 2: 
+            return self.is_oct_reduced ()
+        else:
+            eq = as_ratio (eq)
+            eq_count = (np.log2 (self.value ())//np.log2 (eq.value ())).astype (int)
+            return eq_count == 0
+
+    def oct_reduce (self): 
         """Returns the octave-reduced ratio."""
         # NOTE: "oct" is a reserved word
-
-        num_oct = np.floor (np.log2 (self.value ())).astype (int)
-        if num_oct == 0:
+        oct_count = np.floor (np.log2 (self.value ())).astype (int)
+        if oct_count == 0:
             return self
-        elif num_oct > 0:
-            return Ratio (self.num, self.den*2**num_oct)
-        elif num_oct < 0:
-            return Ratio (self.num*2**(-num_oct), self.den)
+        elif oct_count > 0:
+            return Ratio (self.num, self.den*2**oct_count)
+        else:
+            return Ratio (self.num*2**(-oct_count), self.den)
+
+    def octave_reduce (self):
+        """Same as above. Deprecated since 1.11.0. """
+        warnings.warn ("`octave_reduce` has been deprecated. Use `oct_reduce` instead. ")
+        return self.oct_reduce ()
+
+    def eq_reduce (self, eq):
+        """Enter a ratio for the equave, returns the equave-reduced ratio."""
+        if eq == 2:
+            return self.oct_reduce ()
+        else:
+            eq = as_ratio (eq)
+            eq_count = (np.log2 (self.value ())//np.log2 (eq.value ())).astype (int)
+            if eq_count == 0:
+                return self
+            elif eq_count > 0:
+                return Ratio (self.num*eq.den**eq_count, self.den*eq.num**eq_count)
+            else:
+                return Ratio (self.num*eq.num**(-eq_count), self.den*eq.den**(-eq_count))
+
+    def oct_complement (self):
+        """Returns the octave-complement ratio."""
+        # NOTE: "oct" is a reserved word
+        return Ratio (self.den*2, self.num)
+
+    def eq_complement (self, eq):
+        """Enter a ratio for the equave, returns the equave-complement ratio."""
+        if eq == 2:
+            return self.oct_complement ()
+        else:
+            eq = as_ratio (eq)
+            return Ratio (self.den*eq.num, self.num*eq.den)
 
     def __str__ (self):
         return f"{self.num}" if self.den == 1 else f"{self.num}/{self.den}"
