@@ -61,6 +61,25 @@ class Ratio:
             self.num = np.divide (self.num, self.den)
             self.den = 1
 
+    @classmethod
+    def from_string (cls, s):
+        match = re.match (r"^(\d*)\/?(\d*)$", s)
+        num = int (match.group (1) or "1")
+        den = int (match.group (2) or "1")
+        return cls (num, den)
+    
+    @classmethod
+    def from_tuple (cls, t):
+        match len (t):
+            case 0:
+                return cls (1, 1)
+            case 1:
+                return cls (t[0], 1)
+            case 2: 
+                return cls (t[0], t[1])
+            case _:
+                raise IndexError ("Too many values provided.")
+
     def value (self):
         return self.num if self.den == 1 else np.divide (self.num, self.den)
 
@@ -72,10 +91,10 @@ class Ratio:
 
     def is_eq_reduced (self, eq): 
         """Enter a ratio for the equave, returns whether the ratio is equave reduced."""
+        eq = as_ratio (eq)
         if eq == 2: 
             return self.is_oct_reduced ()
         else:
-            eq = as_ratio (eq)
             eq_count = (np.log2 (self.value ())//np.log2 (eq.value ())).astype (int)
             return eq_count == 0
 
@@ -97,10 +116,10 @@ class Ratio:
 
     def eq_reduce (self, eq):
         """Enter a ratio for the equave, returns the equave-reduced ratio."""
+        eq = as_ratio (eq)
         if eq == 2:
             return self.oct_reduce ()
         else:
-            eq = as_ratio (eq)
             eq_count = (np.log2 (self.value ())//np.log2 (eq.value ())).astype (int)
             if eq_count == 0:
                 return self
@@ -116,10 +135,10 @@ class Ratio:
 
     def eq_complement (self, eq):
         """Enter a ratio for the equave, returns the equave-complement ratio."""
+        eq = as_ratio (eq)
         if eq == 2:
             return self.oct_complement ()
         else:
-            eq = as_ratio (eq)
             return Ratio (self.den*eq.num, self.num*eq.den)
 
     def __str__ (self):
@@ -133,14 +152,13 @@ def as_ratio (n):
     if isinstance (n, Ratio):
         return n
     elif isinstance (n, str):
-        match = re.match (r"^(\d*)\/?(\d*)$", n)
-        num = match.group (1) or "1"
-        den = match.group (2) or "1"
-        return Ratio (int (num), int (den))
+        return Ratio.from_string (n)
+    elif isinstance (n, (list, tuple)):
+        return Ratio.from_tuple (n)
     elif np.asarray (n).size == 1: 
         return Ratio (n, 1)
     else:
-        raise IndexError ("only one value is allowed.")
+        raise TypeError ("unsupported type.")
 
 class Subgroup:
     """Subgroup profile of ji."""
