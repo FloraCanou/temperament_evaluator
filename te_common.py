@@ -48,28 +48,41 @@ class Ratio:
     """Ratio in fraction."""
 
     def __init__ (self, num, den):
-        self.num = num
-        self.den = den
-        self.__reduce ()
+        if not self.__is_regular (num, den): 
+            raise ValueError ("irregular number not supported yet. ")
+        self.pos, self.num, self.den = self.__reduce (num, den)
 
-    def __reduce (self):
-        if isinstance (self.num, (int, np.integer)) and isinstance (self.den, (int, np.integer)):
-            gcd = np.gcd (self.num, self.den)
-            self.num = round (self.num/gcd)
-            self.den = round (self.den/gcd)
+    @staticmethod
+    def __is_regular (num, den):
+        """Checks whether the ratio is nonzero and finite."""
+        return all (np.isfinite ((num, den))) and all ((num, den))
+
+    @staticmethod
+    def __reduce (num, den):
+        """Determines the sign and eliminates the common factors."""
+        pos = (num > 0) == (den > 0)
+        if isinstance (num, (int, np.integer)) and isinstance (den, (int, np.integer)):
+            gcd = np.gcd (num, den)
+            num = abs (num//gcd)
+            den = abs (den//gcd)
         else:
-            self.num = np.divide (self.num, self.den)
-            self.den = 1
+            warnings.warn ("non-integer input. ")
+            num = abs (np.divide (num, den))
+            den = 1
+        return pos, num, den
 
     @classmethod
     def from_string (cls, s):
-        match = re.match (r"^(\d*)\/?(\d*)$", s)
-        num = int (match.group (1) or "1")
-        den = int (match.group (2) or "1")
+        """Creates a ratio from a string."""
+        match = re.match (r"^(-?)(\d*)\/?(\d*)$", s)
+        num = int (match.group (2) or "1")
+        den = int (match.group (3) or "1")
+        if match.group (1): num = -num
         return cls (num, den)
     
     @classmethod
     def from_tuple (cls, t):
+        """Creates a ratio from a list/tuple."""
         match len (t):
             case 0:
                 return cls (1, 1)
@@ -78,10 +91,12 @@ class Ratio:
             case 2: 
                 return cls (t[0], t[1])
             case _:
-                raise IndexError ("Too many values provided.")
+                raise IndexError ("too many values provided.")
 
     def value (self):
-        return self.num if self.den == 1 else np.divide (self.num, self.den)
+        """Returns the value of the ratio as a float."""
+        v = np.divide (self.num, self.den)
+        return v if self.pos else -v
 
     def is_oct_reduced (self): 
         """Returns whether the ratio is octave reduced."""
@@ -92,7 +107,7 @@ class Ratio:
     def is_eq_reduced (self, eq): 
         """Enter a ratio for the equave, returns whether the ratio is equave reduced."""
         eq = as_ratio (eq)
-        if eq == 2: 
+        if eq == 2.: 
             return self.is_oct_reduced ()
         else:
             eq_count = (np.log2 (self.value ())//np.log2 (eq.value ())).astype (int)
@@ -117,7 +132,7 @@ class Ratio:
     def eq_reduce (self, eq):
         """Enter a ratio for the equave, returns the equave-reduced ratio."""
         eq = as_ratio (eq)
-        if eq == 2:
+        if eq == 2.:
             return self.oct_reduce ()
         else:
             eq_count = (np.log2 (self.value ())//np.log2 (eq.value ())).astype (int)
@@ -136,13 +151,14 @@ class Ratio:
     def eq_complement (self, eq):
         """Enter a ratio for the equave, returns the equave-complement ratio."""
         eq = as_ratio (eq)
-        if eq == 2:
+        if eq == 2.:
             return self.oct_complement ()
         else:
             return Ratio (self.den*eq.num, self.num*eq.den)
 
     def __str__ (self):
-        return f"{self.num}" if self.den == 1 else f"{self.num}/{self.den}"
+        s = f"{self.num}" if self.den == 1 else f"{self.num}/{self.den}"
+        return s if self.pos else "-" + s
 
     def __eq__ (self, other):
         return self.value () == (other.value () if isinstance (other, Ratio) else other)
