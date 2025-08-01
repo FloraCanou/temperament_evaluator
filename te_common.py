@@ -417,20 +417,24 @@ def ratio2monzo (ratio, subgroup = None):
     Takes a ratio object, returns the monzo, 
     subgroup monzo supported.
     """
-    value = ratio.value ()
-    if value == np.inf or value == 0 or value == np.nan:
+    if ratio.value () < 0:
         raise ValueError ("invalid ratio. ")
-    elif subgroup is None:
-        return __ratio2monzo (ratio)
+
+    monzo = __ratio2monzo (ratio)
+    if subgroup is None:
+        return monzo
     else:
-        result = (linalg.pinv (subgroup.basis_matrix) 
-            @ vec_pad (__ratio2monzo (ratio), length = subgroup.basis_matrix.shape[0]))
-        result_int = result.astype (int)
-        if np.all (result == result_int):
-            return result_int
+        subgroup_monzo = (linalg.pinv (subgroup.basis_matrix) 
+            @ vec_pad (monzo, length = subgroup.basis_matrix.shape[0]))
+
+        # convert to integer type if possible
+        subgroup_monzo_int = subgroup_monzo.astype (int)
+        if np.all (subgroup_monzo == subgroup_monzo_int):
+            subgroup_monzo = subgroup_monzo_int
         else:
             warnings.warn ("improper subgroup. ")
-            return result
+        
+        return subgroup_monzo
 
 def __ratio2monzo (ratio):
     monzo = []
