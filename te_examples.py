@@ -36,7 +36,8 @@ temp.wedgie ()
 temp.comma_basis ()
 
 ## to find the optimal GPV sequence of the temperament
-te_et.et_sequence (temp.comma_basis (show = False), cond = "error", search_range = 300)
+te_et.et_sequence (
+    temp.comma_basis (show = False), cond = "error", search_range = 300)
 
 # alternative ways to construct temperaments
 
@@ -51,10 +52,8 @@ temp.temperament_measures (ntype = "sintel")
 
 ## to construct a temperament from a comma basis
 ### septimal sensi
-temp = te_et.comma_construct (te.Subgroup ([
-    "126/125", 
-    "245/243"
-    ]).basis_matrix)
+temp = te_et.comma_construct (
+    te.Subgroup (["126/125", "245/243"]).basis_matrix)
 temp.temperament_measures (ntype = "sintel")
 
 # lattice-related functions
@@ -67,4 +66,5 @@ temp = te_lat.TemperamentLattice ([
     [0, 6, 0, -7, -2, 9], 
     [0, 0, 1, 1, 1, 1]
     ]) 
-temp.find_complexity_spectrum (te_lat.odd_limit_monzos_gen (15), oe = True)
+temp.find_complexity_spectrum (
+    te_lat.diamond_monzos_gen (15, eq = 2, comp = False), oe = True)

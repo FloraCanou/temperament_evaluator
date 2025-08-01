@@ -9,7 +9,8 @@ import te_temperament_measures as te_tm
 
 class TemperamentLattice (te_tm.Temperament):
     def find_temperamental_norm (self, monzo, norm = te.Norm (), oe = False, show = True):
-        mapping_copy = self.mapping[1:] if oe else self.mapping # octave equivalence
+        """Takes a monzo and returns its temperamental norm."""
+        mapping_copy = self.mapping[1:] if oe else self.mapping # formal-octave equivalence
         mapping_x = norm.tuning_x (mapping_copy, self.subgroup)
         projection_x = linalg.pinv (mapping_x) @ mapping_x
         monzo_x = norm.interval_x (monzo, self.subgroup)
@@ -20,6 +21,7 @@ class TemperamentLattice (te_tm.Temperament):
         return interval_temperamental_norm
 
     def find_complexity_spectrum (self, monzos, norm = te.Norm (), oe = True):
+        """Takes a monzo list and displays the temperamental norms."""
         monzos, _ = te.setup (monzos, self.subgroup, axis = te.AXIS.COL)
         spectrum = [[monzos[:, i], self.find_temperamental_norm (
             monzos[:, i], norm, oe, show = False
@@ -36,8 +38,40 @@ class TemperamentLattice (te_tm.Temperament):
 
     find_spectrum = find_complexity_spectrum
 
+def diamond_monzos_gen (limit, eq = None, excl = [], comp = True, sort = None):
+    """
+    Enter a limit and an equave, returns an array of monzos
+    for the corresponding tonality diamond. 
+    """
+    excl = te.as_list (excl)
+    ratio_list = []
+    for num in range (1, limit + 1):
+        if num in excl or eq and num % eq == 0:
+            continue
+        for den in range (1, num + 1):
+            if (den in excl or eq and den % eq == 0 
+                    or math.gcd (num, den) != 1):
+                continue
+            ratio = te.Ratio (num, den)
+            if eq: 
+                ratio_list.append (ratio.eq_reduce (eq))
+                if comp: 
+                    ratio_list.append (ratio.eq_reduce (eq).eq_complement (eq))
+            else: 
+                ratio_list.append (ratio)
+                
+    if sort == "size":
+        ratio_list.sort (key = lambda c: c.value ())
+    return te.column_stack_pad ([te.ratio2monzo (entry) for entry in ratio_list])
+
 def odd_limit_monzos_gen (odd_limit, excl = [], sort = None):
-    """Enter an odd limit, returns the array of monzos."""
+    """
+    Enter an odd limit, returns an array of monzos
+    for the corresponding tonality diamond. 
+    Deprecated since 1.11.0. 
+    """
+    warnings.warn ("`odd_limit_monzos_gen` has been deprecated. Use `diamond_monzos_gen` instead. ")
+
     ratio_list = []
     for num in range (1, odd_limit + 1, 2):
         if num in te.as_list (excl):
@@ -51,7 +85,14 @@ def odd_limit_monzos_gen (odd_limit, excl = [], sort = None):
     return te.column_stack_pad ([te.ratio2monzo (entry) for entry in ratio_list])
 
 def integer_limit_monzos_gen (integer_limit, excl = [], sort = None):
-    """Enter an integer limit, returns the array of monzos."""
+    """
+    Enter an integer limit, returns an array of monzos
+    for the corresponding tonality diamond. 
+    Deprecated since 1.11.0. 
+    """
+
+    warnings.warn ("`integer_limit_monzos_gen` has been deprecated. Use `diamond_monzos_gen` instead. ")
+
     ratio_list = []
     for num in range (1, integer_limit + 1):
         if num in te.as_list (excl):
