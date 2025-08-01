@@ -98,25 +98,29 @@ class Ratio:
         v = np.divide (self.num, self.den)
         return v if self.pos else -v
 
-    def is_oct_reduced (self): 
-        """Returns whether the ratio is octave reduced."""
+    def oct_count (self): 
+        """Returns the number of full octaves the ratio has."""
         # NOTE: "oct" is a reserved word
-        oct_count = np.floor (np.log2 (self.value ())).astype (int)
-        return oct_count == 0
+        return np.floor (np.log2 (self.value ())).astype (int)
 
-    def is_eq_reduced (self, eq): 
-        """Enter a ratio for the equave, returns whether the ratio is equave reduced."""
+    def eq_count (self, eq): 
+        """
+        Enter a ratio for the equave, 
+        returns the number of full equaves the ratio has.
+        """
         eq = as_ratio (eq)
         if eq == 2.: 
-            return self.is_oct_reduced ()
+            return self.oct_count ()
         else:
-            eq_count = (np.log2 (self.value ())//np.log2 (eq.value ())).astype (int)
-            return eq_count == 0
+            return self.__eq_count (eq)
+            
+    def __eq_count (self, eq):
+        return (np.log2 (self.value ())//np.log2 (eq.value ())).astype (int)
 
     def oct_reduce (self): 
         """Returns the octave-reduced ratio."""
         # NOTE: "oct" is a reserved word
-        oct_count = np.floor (np.log2 (self.value ())).astype (int)
+        oct_count = self.oct_count ()
         if oct_count == 0:
             return self
         elif oct_count > 0:
@@ -135,13 +139,16 @@ class Ratio:
         if eq == 2.:
             return self.oct_reduce ()
         else:
-            eq_count = (np.log2 (self.value ())//np.log2 (eq.value ())).astype (int)
-            if eq_count == 0:
-                return self
-            elif eq_count > 0:
-                return Ratio (self.num*eq.den**eq_count, self.den*eq.num**eq_count)
-            else:
-                return Ratio (self.num*eq.num**(-eq_count), self.den*eq.den**(-eq_count))
+            return self.__eq_reduce (eq)
+
+    def __eq_reduce (self, eq):
+        eq_count = self.__eq_count (eq)
+        if eq_count == 0:
+            return self
+        elif eq_count > 0:
+            return Ratio (self.num*eq.den**eq_count, self.den*eq.num**eq_count)
+        else:
+            return Ratio (self.num*eq.num**(-eq_count), self.den*eq.den**(-eq_count))
 
     def oct_complement (self):
         """Returns the octave-complement ratio."""
@@ -154,7 +161,10 @@ class Ratio:
         if eq == 2.:
             return self.oct_complement ()
         else:
-            return Ratio (self.den*eq.num, self.num*eq.den)
+            return sefl.__eq_complement (eq)
+
+    def __eq_complement (self, eq):    
+        return Ratio (self.den*eq.num, self.num*eq.den)
 
     def __str__ (self):
         s = f"{self.num}" if self.den == 1 else f"{self.num}/{self.den}"
