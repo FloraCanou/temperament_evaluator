@@ -58,7 +58,7 @@ temp.temperament_measures (ntype = "sintel")
 
 # lattice-related functions
 
-## this is mainly used to find the octave-equivalent interval complexity spectrum
+## this is mainly used to find the octave-equivalent interval temperamental complexity spectrum
 ## to do this, we need to construct the temperament with te_lat.TemperamentLattice
 ## here we're demonstrating with tridecimal history
 temp = te_lat.TemperamentLattice ([
@@ -66,5 +66,5 @@ temp = te_lat.TemperamentLattice ([
     [0, 6, 0, -7, -2, 9], 
     [0, 0, 1, 1, 1, 1]
     ]) 
-temp.find_complexity_spectrum (
+temp.temperamental_complexity_spectrum (
     te_lat.diamond_monzos_gen (15, eq = 2, comp = False), oe = True)

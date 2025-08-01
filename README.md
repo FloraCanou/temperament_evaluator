@@ -9,7 +9,7 @@ This Python 3 script can be used to compute various regular temperament data.
 - [SymPy](https://www.sympy.org/en/index.html)
 	- various tasks including symbolic solution, mapping normalization, comma basis, etc. 
 - [tqdm](https://tqdm.github.io/)
-	- to render the progress bar for et_sequence
+	- to render the progress bar for `te.equal.et_sequence`. 
 
 ```
 pip install scipy sympy tqdm
@@ -117,7 +117,7 @@ temp = te_et.comma_construct (
 
 ### Lattice-related functions
 
-This is mainly used to find the octave-equivalent interval complexity spectrum. To do this, we need to construct the temperament with `te_lat.TemperamentLattice`. Here we're demonstrating using tridecimal history. 
+This is mainly used to find the octave-equivalent interval temperamental complexity spectrum. To do this, we need to construct the temperament with `te_lat.TemperamentLattice`. Here we're demonstrating using tridecimal history. 
 
 ```
 temp = te_lat.TemperamentLattice ([
@@ -125,6 +125,6 @@ temp = te_lat.TemperamentLattice ([
     [0, 6, 0, -7, -2, 9], 
     [0, 0, 1, 1, 1, 1]
     ])
-temp.find_complexity_spectrum (
+temp.temperamental_complexity_spectrum (
     te_lat.diamond_monzos_gen (15, eq = 2, comp = False), oe = True)
 ```

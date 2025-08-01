@@ -130,7 +130,8 @@ class Ratio:
 
     def octave_reduce (self):
         """Same as above. Deprecated since 1.11.0. """
-        warnings.warn ("`octave_reduce` has been deprecated. Use `oct_reduce` instead. ")
+        warnings.warn ("`octave_reduce` has been deprecated. "
+            "Use `oct_reduce` instead. ", FutureWarning)
         return self.oct_reduce ()
 
     def eq_reduce (self, eq):
@@ -161,7 +162,7 @@ class Ratio:
         if eq == 2.:
             return self.oct_complement ()
         else:
-            return sefl.__eq_complement (eq)
+            return self.__eq_complement (eq)
 
     def __eq_complement (self, eq):    
         return Ratio (self.den*eq.num, self.num*eq.den)
