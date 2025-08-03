@@ -1,6 +1,6 @@
 # © 2020-2025 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 1.11.0
+# Version 1.11.1
 
 import re, functools, itertools, warnings
 import numpy as np
@@ -211,13 +211,28 @@ class Subgroup:
         Returns the basis matrix with respect to another subgroup.
         Also useful for padding zeros.
         """
-        result = (linalg.pinv (other.basis_matrix) 
-            @ column_stack_pad (self.basis_matrix.T, length = other.basis_matrix.shape[0]))
-        if all (entry.is_integer () for entry in result.flat):
-            return result.astype (int)
+
+        # pad zeros
+        max_length = max (self.basis_matrix.shape[0], other.basis_matrix.shape[0])
+        self_basis_matrix = column_stack_pad (self.basis_matrix.T, length = max_length)
+        other_basis_matrix = column_stack_pad (other.basis_matrix.T, length = max_length)
+
+        # find the subgroup basis matrix
+        result = linalg.pinv (other_basis_matrix) @ self_basis_matrix
+
+        # test for disjoint or degenerate subgroup
+        # NOTE: linalg.pinv can introduce small numerical errors
+        if not np.allclose (other_basis_matrix @ result, self_basis_matrix, rtol = 0, atol = 1e-6): 
+            raise ValueError ("disjoint or degenerate subgroup. ")
+        
+        # convert to integer type if possible
+        result_rd = np.rint (result)
+        if np.allclose (result, result_rd, rtol = 0, atol = 1e-6):
+            result = result_rd.astype (int)
         else:
-            warnings.warn ("non-integer basis. Maybe you entered an improper parent group?")
-            return result
+            warnings.warn ("non-integer subgroup basis. Possibly improper subgroup. ")
+
+        return result
     
     def ratios (self, evaluate = False):
         """Returns a list of ratio objects or floats."""
@@ -249,7 +264,7 @@ class Subgroup:
 
     def minimal_prime_subgroup (self):
         """Returns the smallest prime subgroup that contains this subgroup. """
-        group = PRIME_LIST
+        group = PRIME_LIST[:self.basis_matrix.shape[0]]
         selector = self.basis_matrix.any (axis = 1)
         return Subgroup (ratios = list (itertools.compress (group, selector)))
 
@@ -269,7 +284,7 @@ class Subgroup:
         return ".".join (entry.__str__ () for entry in self.ratios ())
 
     def __len__ (self):
-        """Returns its own dimensionality."""
+        """Returns its own rank."""
         return self.basis_matrix.shape[1]
 
     def __eq__ (self, other):
@@ -414,13 +429,13 @@ def monzo2ratio (monzo, subgroup = None):
         return __monzo2ratio (subgroup.basis_matrix @ vec_pad (monzo, length = len (subgroup)))
 
 def __monzo2ratio (monzo):
-    group = PRIME_LIST
+    primes = PRIME_LIST[:len (monzo)]
     num, den = 1, 1
     for i, mi in enumerate (monzo):
         if mi > 0:
-            num *= group[i]**mi
+            num *= primes[i]**mi
         elif mi < 0:
-            den *= group[i]**(-mi)
+            den *= primes[i]**(-mi)
     return Ratio (num, den)
 
 def ratio2monzo (ratio, subgroup = None):
@@ -435,22 +450,32 @@ def ratio2monzo (ratio, subgroup = None):
     if subgroup is None:
         return monzo
     else:
-        subgroup_monzo = (linalg.pinv (subgroup.basis_matrix) 
-            @ vec_pad (monzo, length = subgroup.basis_matrix.shape[0]))
+        # pad zeros
+        max_length = max (len (monzo), subgroup.basis_matrix.shape[0])
+        monzo = vec_pad (monzo, length = max_length)
+        subgroup_basis_matrix = column_stack_pad (subgroup.basis_matrix.T, length = max_length)
 
+        # find the subgroup monzo
+        subgroup_monzo = linalg.pinv (subgroup_basis_matrix) @ monzo
+
+        # test for disjoint or degenerate subgroup
+        # NOTE: linalg.pinv can introduce small numerical errors
+        if not np.allclose (subgroup_basis_matrix @ subgroup_monzo, monzo, rtol = 0, atol = 1e-6): 
+            raise ValueError ("disjoint or degenerate subgroup. ")
+        
         # convert to integer type if possible
-        subgroup_monzo_int = subgroup_monzo.astype (int)
-        if np.all (subgroup_monzo == subgroup_monzo_int):
-            subgroup_monzo = subgroup_monzo_int
+        subgroup_monzo_rd = np.rint (subgroup_monzo)
+        if np.allclose (subgroup_monzo, subgroup_monzo_rd, rtol = 0, atol = 1e-6):
+            subgroup_monzo = subgroup_monzo_rd.astype (int)
         else:
-            warnings.warn ("improper subgroup. ")
+            warnings.warn ("non-integer subgroup monzo. Possibly improper subgroup. ")
         
         return subgroup_monzo
 
 def __ratio2monzo (ratio):
     monzo = []
-    group = PRIME_LIST
-    for entry in group:
+    primes = PRIME_LIST
+    for entry in primes:
         order = 0
         while ratio.num % entry == 0:
             order += 1
