@@ -1,6 +1,6 @@
 # © 2020-2025 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 1.11.1
+# Version 1.11.2
 
 import re, functools, itertools, warnings
 import numpy as np
@@ -196,7 +196,7 @@ class Subgroup:
         
         # construct the basis matrix
         self.basis_matrix = canonicalize (
-                monzos or column_stack_pad (
+                monzos if monzos is not None else column_stack_pad (
                 [ratio2monzo (as_ratio (entry)) for entry in ratios]
                 ), saturate, normalize, axis = AXIS.COL)
 
