@@ -16,7 +16,8 @@ class Temperament:
         self.subgroup = subgroup
         self.mapping = te.canonicalize (np.rint (breeds).astype (int), saturate, normalize)
 
-    def __check_sym (self, order):
+    @staticmethod
+    def __check_sym (order):
         """Checks the applicability and availability of the symbolic solver."""
         if order == 2:
             try:
@@ -139,7 +140,7 @@ class Temperament:
         Calls either wrapper_main or wrapper_symbolic. 
         """
 
-        # checks optimizer availability
+        # checks optimizer applicability and availability
         if optimizer == "sym" and not self.__check_sym (norm.order):
             return self.tune (optimizer = "main", norm = norm, inharmonic = inharmonic, 
                 constraint = constraint, destretch = destretch, ftype = ftype)
@@ -190,12 +191,13 @@ class Temperament:
             range (self.mapping.shape[1] + (1 if norm.skew else 0)), self.mapping.shape[0])
         wedgie = np.array (
             [linalg.det (norm.tuning_x (self.mapping, self.subgroup)[:, entry]) for entry in combinations])
-        wedgie *= np.copysign (1, wedgie[0])
+        if wedgie[0] < 0:
+            wedgie *= -1
 
         # convert to integer type if possible
-        wedgie_int = wedgie.astype (int)
-        if all (wedgie == wedgie_int):
-            wedgie = wedgie_int
+        wedgie_rd = np.rint (wedgie)
+        if np.allclose (wedgie, wedgie_rd, rtol = 0, atol = 1e-6):
+            wedgie = wedgie_rd.astype (int)
         
         if show:
             self.__show_header ()
