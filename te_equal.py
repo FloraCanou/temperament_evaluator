@@ -131,18 +131,18 @@ def __gpv_roll (breed, tuning_map, n = 1):
     if n == 0:
         return breed
     else:
+        u = 1 if n > 0 else -1
         for i in range (1, len (tuning_map) + 1):
             breed_copy = np.array (breed)
-            breed_copy[-i] += np.copysign (1, n).astype (int)
+            breed_copy[-i] += u
             if __is_gpv (breed_copy, tuning_map):
-                return __gpv_roll (breed_copy, tuning_map, n - np.copysign (1, n).astype (int))
+                return __gpv_roll (breed_copy, tuning_map, n - u)
         else:
             raise NotImplementedError ("this nontrivial tuning map cannot be processed. ")
 
-def __just_tuning_map_n (n, eq, subgroup):
-    """Finds the just tuning map in terms of edostep numbers of n-ed-p."""
-    just_tuning_map = subgroup.just_tuning_map ()
-    return n*just_tuning_map/np.log2 (eq)
+def __nt (n, eq, tuning_map):
+    """Finds the tuning map in terms of n-ed-p steps."""
+    return n*tuning_map/np.log2 (eq)
 
 def breed2warts (breed, subgroup = None):
     """
@@ -161,12 +161,13 @@ def breed2warts (breed, subgroup = None):
     else: #unwartable equave
         prefix = "*"
 
-    if is_pv (breed, subgroup): #patent val
+    just_tuning_map = subgroup.just_tuning_map ()
+    if __is_pv (breed, just_tuning_map): #patent val
         postfix = ""
     elif all (entry in WARTS_DICT for entry in subgroup.ratios (evaluate = True)): #nonpatent val in a wartable subgroup
-        # find the just tuning map in edostep numbers
+        # find the just tuning map in n-ed-p steps
         # and the corresponding patent val
-        nj = __just_tuning_map_n (breed[0], eq, subgroup) 
+        nj = __nt (breed[0], eq, just_tuning_map)
         pv = np.rint (nj)
 
         # find the number of wart letters for each prime
@@ -194,7 +195,7 @@ def warts2breed (warts, subgroup):
     if isinstance (warts, str):
         return __warts2breed (warts, subgroup)
     elif isinstance (warts, (int, float)):
-        return np.rint (__just_tuning_map_n (warts, 2, subgroup)).astype (int)
+        return np.rint (__nt (warts, 2, subgroup.just_tuning_map ())).astype (int)
     else:
         raise TypeError ("Enter a string or number. ")
 
@@ -218,9 +219,9 @@ def __warts2breed (warts, subgroup):
         if si in WARTS_DICT: # wart is supported
             warts_number_list[i] = len (re.findall (WARTS_DICT[si], match.group (3)))
 
-    # find the just tuning map in edostep numbers
+    # find the just tuning map in n-ed-p steps
     # and the corresponding patent val
-    nj = __just_tuning_map_n (int (match.group (2)), wart_eq, subgroup)
+    nj = __nt (int (match.group (2)), wart_eq, subgroup.just_tuning_map ())
     pv = np.rint (nj)
     
     # find the breed to add to the patent val
