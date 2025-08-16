@@ -139,36 +139,43 @@ def __gpv_roll (breed, tuning_map, n = 1):
         else:
             raise NotImplementedError ("this nontrivial tuning map cannot be processed. ")
 
-def __just_tuning_map_n (n, equave, subgroup):
+def __just_tuning_map_n (n, eq, subgroup):
     """Finds the just tuning map in terms of edostep numbers of n-ed-p."""
     just_tuning_map = subgroup.just_tuning_map ()
-    return n*just_tuning_map/np.log2 (equave)
+    return n*just_tuning_map/np.log2 (eq)
 
 def breed2warts (breed, subgroup = None):
     """
     Enter a breed, finds its wart notation. 
-    Zero equave is disallowed. 
+    Zero-step equave is disallowed. 
     """
     breed, subgroup = te.setup (breed, subgroup, axis = te.AXIS.VEC)
     if breed[0] == 0:
-        raise ValueError ("Wart is undefined. ")
+        raise ValueError ("wart is undefined. ")
 
-    equave = subgroup.ratios ()[0].value ()
-    if equave == 2: #octave equave
+    eq = subgroup.ratios ()[0].value ()
+    if eq == 2: #octave equave
         prefix = ""
-    elif equave in WARTS_DICT: #non-octave wartable equave
-        prefix = WARTS_DICT[equave]
+    elif eq in WARTS_DICT: #non-octave wartable equave
+        prefix = WARTS_DICT[eq]
     else: #unwartable equave
         prefix = "*"
 
     if is_pv (breed, subgroup): #patent val
         postfix = ""
     elif all (entry in WARTS_DICT for entry in subgroup.ratios (evaluate = True)): #nonpatent val in a wartable subgroup
-        just_tuning_map_n = __just_tuning_map_n (breed[0], equave, subgroup) #just tuning map in edostep numbers
-        pv = np.rint (just_tuning_map_n) #corresponding patent val
+        # find the just tuning map in edostep numbers
+        # and the corresponding patent val
+        nj = __just_tuning_map_n (breed[0], eq, subgroup) 
+        pv = np.rint (nj)
+
+        # find the number of wart letters for each prime
+        # which equals twice the difference between the values in our breed and the pv
+        # if it deviates from the pv value on the same side as the pv value deviates from just
+        # or that minus 1 otherwise
         warts_number_list = (
-            2*np.abs (breed - pv) + (np.copysign (1, (breed - pv)*(pv - just_tuning_map_n)) - 1)/2
-            ).astype (int)
+            2*np.fabs (breed - pv).astype (int) + np.where ((breed - pv)*(pv - nj) >= 0., 0, -1))
+
         postfix = ""
         for i, si in enumerate (subgroup.ratios (evaluate = True)):
             postfix += warts_number_list[i]*str (WARTS_DICT[si])
@@ -200,20 +207,29 @@ def __warts2breed (warts, subgroup):
     if match.group (1):
         for i, wi in WARTS_DICT.items ():
             if wi == match.group (1):
-                wart_equave = i
+                wart_eq = i
                 break
     else:
-        wart_equave = 2
+        wart_eq = 2
 
     # find the number of each wart letter
     warts_number_list = np.zeros (len (subgroup))
     for i, si in enumerate (subgroup.ratios (evaluate = True)):
         if si in WARTS_DICT: # wart is supported
             warts_number_list[i] = len (re.findall (WARTS_DICT[si], match.group (3)))
+
+    # find the just tuning map in edostep numbers
+    # and the corresponding patent val
+    nj = __just_tuning_map_n (int (match.group (2)), wart_eq, subgroup)
+    pv = np.rint (nj)
     
-    # create the breed to add to the patent val
-    just_tuning_map_n = __just_tuning_map_n (int (match.group (2)), wart_equave, subgroup) #just tuning map in edostep numbers
-    pv = np.rint (just_tuning_map_n) #corresponding patent val
-    alt_breed = np.copysign (np.ceil (warts_number_list/2), (1 - 2*(warts_number_list % 2))*(pv - just_tuning_map_n))
+    # find the breed to add to the patent val
+    # each entry equals half the number of wart letters for that prime
+    # but add 1 before halving if the number of wart letters is odd
+    # the sign is the same as how the pv value deviates from just
+    # if the number of wart letters is even
+    # or opposite otherwise
+    alt_breed = np.copysign (
+        np.ceil (warts_number_list/2), np.where (warts_number_list % 2 == 0, 1, -1)*(pv - nj))
 
     return (pv + alt_breed).astype (int)
