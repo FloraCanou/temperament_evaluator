@@ -1,8 +1,8 @@
 # © 2020-2025 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 1.11.2
+# Version 1.12.0
 
-import re, functools, itertools, warnings
+import re, functools, warnings
 import numpy as np
 from scipy import linalg
 from sympy.matrices import Matrix, normalforms
@@ -244,15 +244,6 @@ class Subgroup:
     def just_tuning_map (self, scalar = SCALAR.OCTAVE): #in octaves by default
         return scalar*np.log2 (self.ratios (evaluate = True))
 
-    def is_prime (self):
-        """
-        Returns whether the subgroup has a basis of only primes.
-        Such a basis allows no distinction between inharmonic and subgroup tunings
-        for all norms. 
-        """
-        ratios = self.ratios (evaluate = True)
-        return all (entry in PRIME_LIST for entry in ratios)
-
     def is_prime_power (self):
         """
         Returns whether the subgroup has a basis of only primes and/or their powers.
@@ -262,11 +253,21 @@ class Subgroup:
         return (all (np.count_nonzero (row) <= 1 for row in self.basis_matrix)
             and all (np.count_nonzero (row) <= 1 for row in self.basis_matrix.T))
 
+    def is_prime (self):
+        """
+        Returns whether the subgroup has a basis of only primes.
+        Such a basis allows no distinction between inharmonic and subgroup tunings
+        for all norms. 
+        """
+        return (self.is_prime_power ()
+            and np.all (self.basis_matrix[self.basis_matrix != 0] == 1))
+
     def minimal_prime_subgroup (self):
         """Returns the smallest prime subgroup that contains this subgroup. """
-        group = PRIME_LIST[:self.basis_matrix.shape[0]]
-        selector = self.basis_matrix.any (axis = 1)
-        return Subgroup (ratios = list (itertools.compress (group, selector)))
+        selector = self.basis_matrix.nonzero ()[0]
+        monzos = np.zeros ((self.basis_matrix.shape[0], len (selector)), dtype = int)
+        monzos[selector, np.arange (len (selector))] = 1
+        return Subgroup (monzos = monzos)
 
     def index (self):
         """
@@ -368,16 +369,13 @@ def __sat (main):
         ).astype (int)
 
 def canonicalize (main, saturate = True, normalize = True, axis = AXIS.ROW):
-    """
-    Saturation & normalization.
-    Normalization only checks multirank matrices.
-    """
+    """Saturation & normalization."""
     if axis == AXIS.ROW:
         main = __sat (main) if saturate else main
-        main = __hnf (main) if normalize and np.asarray (main).shape[0] > 1 else main
+        main = __hnf (main) if normalize else main
     elif axis == AXIS.COL:
         main = np.flip (__sat (np.flip (main).T)).T if saturate else main
-        main = np.flip (__hnf (np.flip (main).T)).T if normalize and np.asarray (main).shape[1] > 1 else main
+        main = np.flip (__hnf (np.flip (main).T)).T if normalize else main
     return main
 
 canonicalise = canonicalize

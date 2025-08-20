@@ -48,7 +48,7 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
 
     print ("\nOptimal GPV sequence: ")
     just_tuning_map = subgroup.just_tuning_map ()
-    gpv = [0]*len (just_tuning_map) #initialize with the all-zeroes breed
+    gpv = np.zeros (len (just_tuning_map), dtype = int) #initialize with the all-zeroes breed
     while (gpv := __gpv_roll (gpv, just_tuning_map))[0] == 0: #skip zero-equave breeds
         pass
     with tqdm (total = search_range) as progress_bar:
@@ -56,16 +56,16 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
         while gpv[0] <= search_range:
             if ((not pv or __is_pv (gpv, just_tuning_map)) # patent val or pv isn't set
                     and np.gcd.reduce (gpv) == 1 #not enfactored
-                    and not np.any ([gpv] @ monzos)): #tempering out the commas
+                    and not np.any (gpv[np.newaxis] @ monzos)): #tempering out the commas
                 match cond:
                     case "error":
-                        et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
+                        et = te_tm.Temperament (gpv[np.newaxis], subgroup, saturate = False, normalize = False)
                         current = et._Temperament__error (ntype, norm, do_inharmonic, te.SCALAR.CENT)
                     case "badness":
-                        et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
+                        et = te_tm.Temperament (gpv[np.newaxis], subgroup, saturate = False, normalize = False)
                         current = et._Temperament__badness (ntype, norm, do_inharmonic, te.SCALAR.OCTAVE)
                     case "logflat badness":
-                        et = te_tm.Temperament ([gpv], subgroup, saturate = False, normalize = False)
+                        et = te_tm.Temperament (gpv[np.newaxis], subgroup, saturate = False, normalize = False)
                         current = et._Temperament__badness_logflat (ntype, norm, do_inharmonic, te.SCALAR.OCTAVE)
                     case _:
                         current = threshold
@@ -95,8 +95,8 @@ def __is_gpv (breed, tuning_map):
     To be used in gpv_roll to avoid repeatedly computing the just tuning map, 
     which is expensive.
     """
-    lower_bounds = (np.asarray (breed) - 0.5) / tuning_map
-    upper_bounds = (np.asarray (breed) + 0.5) / tuning_map
+    lower_bounds = (breed - 0.5) / tuning_map
+    upper_bounds = (breed + 0.5) / tuning_map
     return max (lower_bounds) < min (upper_bounds)
 
 def is_pv (breed, subgroup = None):
@@ -133,7 +133,7 @@ def __gpv_roll (breed, tuning_map, n = 1):
     else:
         u = 1 if n > 0 else -1
         for i in range (1, len (tuning_map) + 1):
-            breed_copy = np.array (breed)
+            breed_copy = breed.copy ()
             breed_copy[-i] += u
             if __is_gpv (breed_copy, tuning_map):
                 return __gpv_roll (breed_copy, tuning_map, n - u)
@@ -234,3 +234,26 @@ def __warts2breed (warts, subgroup):
         np.ceil (warts_number_list/2), np.where (warts_number_list % 2 == 0, 1, -1)*(pv - nj))
 
     return (pv + alt_breed).astype (int)
+
+def is_monotonic (breed, monzos, show = False):
+    """
+    Enter a breed and a monzo matrix. 
+    Returns whether the breed is monotonic
+    with respect to the intervals represented by the monzos. 
+    """
+    subgroup = te.Subgroup (monzos = np.eye (monzos.shape[0], dtype = int))
+    just_tuning_map = subgroup.just_tuning_map ()
+    return __is_monotonic (breed, monzos, just_tuning_map, show = show)
+
+def __is_monotonic (breed, monzos, tuning_map, show = False):
+    monzos = monzos[:, np.argsort (tuning_map @ monzos)]
+    step_spectrum = np.squeeze (breed @ monzos)
+    if show: 
+        for i, si in enumerate (step_spectrum):
+            ratio = te.monzo2ratio (monzos.T[i])
+            print (f"{ratio}", si)
+    if len (step_spectrum) == 1:
+        return True 
+    else: 
+        return all (step_spectrum[k + 1] >= step_spectrum[k] 
+            for k in range (len (step_spectrum) - 1))
