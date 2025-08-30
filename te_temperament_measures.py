@@ -187,10 +187,11 @@ class Temperament:
     analyse = tune
 
     def wedgie (self, norm = te.Norm (wtype = "equilateral"), show = True):
-        combinations = itertools.combinations (
-            range (self.mapping.shape[1] + (1 if norm.skew else 0)), self.mapping.shape[0])
-        wedgie = np.array (
-            [linalg.det (norm.tuning_x (self.mapping, self.subgroup)[:, entry]) for entry in combinations])
+        """Finds the wedgie of the temperament. """
+        wedgie = self.__wedgie (self.mapping, self.subgroup, norm)
+
+        # normalize for a positive first entry
+        # unneeded if the mapping is in canonical form
         if wedgie[0] < 0:
             wedgie *= -1
 
@@ -205,29 +206,23 @@ class Temperament:
         
         return wedgie
 
+    @staticmethod
+    def __wedgie (mapping, subgroup, norm): 
+        r, d = mapping.shape #rank and dimensionality
+        if norm.skew: d += 1
+        combinations = itertools.combinations (range (d), r)
+        return np.array ([linalg.det (norm.tuning_x (mapping, subgroup)[:, entry]) for entry in combinations])
+
     def complexity (self, ntype = "breed", norm = te.Norm (), inharmonic = False):
         """
         Returns the temperament's complexity, 
         nondegenerate subgroup temperaments supported. 
         """
-        if not norm.order == 2:
-            raise ValueError ("this measure is only defined on Euclidean norms. ")
         do_inharmonic = (inharmonic or self.subgroup.is_prime ()
             or norm.wtype == "tenney" and self.subgroup.is_prime_power ())
         if not do_inharmonic and self.subgroup.index () == np.inf:
             raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
         return self.__complexity (ntype, norm, inharmonic = do_inharmonic)
-
-    def error (self, ntype = "breed", norm = te.Norm (), inharmonic = False, scalar = te.SCALAR.CENT): #in cents by default
-        """
-        Returns the temperament's inherent inaccuracy regardless of the actual tuning, 
-        all subgroup temperaments supported. 
-        """
-        if not norm.order == 2:
-            raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
-        do_inharmonic = (inharmonic or self.subgroup.is_prime ()
-            or norm.wtype == "tenney" and self.subgroup.is_prime_power ())
-        return self.__error (ntype, norm, inharmonic = do_inharmonic, scalar = scalar)
 
     def __complexity (self, ntype, norm, inharmonic):
         if inharmonic:
@@ -240,18 +235,21 @@ class Temperament:
             index = self.subgroup.index ()
         r, d = mapping.shape #rank and dimensionality
 
-        # standard L2 complexity
-        # complexity = linalg.norm (self.wedgie (norm = norm)) #same
-        complexity = np.sqrt (linalg.det (
-            norm.tuning_x (mapping, subgroup)
-            @ norm.tuning_x (mapping, subgroup).T
-            )) / index
+        if norm.order == 2: # standard L2 complexity
+            # complexity = linalg.norm (
+            #     self.__wedgie (mapping, subgroup, norm)) / index #same but less performant
+            complexity = np.sqrt (linalg.det (
+                norm.tuning_x (mapping, subgroup)
+                @ norm.tuning_x (mapping, subgroup).T)) / index
+        else:
+            complexity = linalg.norm (
+                self.__wedgie (mapping, subgroup, norm), ord = norm.order) / index
         
         match ntype:
             case "breed": #Graham Breed's RMS (default)
-                complexity *= 1/np.sqrt (d**r)
+                complexity *= 1/(d**r)**(1/norm.order)
             case "smith": #Gene Ward Smith's RMS
-                complexity *= 1/np.sqrt (len (tuple (itertools.combinations (range (d), r))))
+                complexity *= 1/(len (tuple (itertools.combinations (range (d), r))))**(1/norm.order)
             case "sintel": #Sintel--Breed
                 complexity *= 1/linalg.det (norm.tuning_x (np.eye (d), subgroup)[:,:d])**(r/d)
             case "none":
@@ -259,7 +257,19 @@ class Temperament:
             case _:
                 warnings.warn ("normalizer not supported, using default (\"breed\"). ")
                 return self.__complexity ("breed", norm, inharmonic)
+        
         return complexity
+
+    def error (self, ntype = "breed", norm = te.Norm (), inharmonic = False, scalar = te.SCALAR.CENT): #in cents by default
+        """
+        Returns the temperament's inherent inaccuracy regardless of the actual tuning, 
+        all subgroup temperaments supported. 
+        """
+        if not norm.order == 2:
+            raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
+        do_inharmonic = (inharmonic or self.subgroup.is_prime ()
+            or norm.wtype == "tenney" and self.subgroup.is_prime_power ())
+        return self.__error (ntype, norm, inharmonic = do_inharmonic, scalar = scalar)
 
     def __error (self, ntype, norm, inharmonic, scalar):
         if inharmonic:
