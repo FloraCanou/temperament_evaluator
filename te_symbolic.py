@@ -42,8 +42,7 @@ class NormSym (te.Norm):
             return Matrix.eye (len (primes))
         else:
             return Matrix.eye (len (primes)).col_join (
-                self.skew*Matrix.ones (1, len (primes))
-            )
+                self.skew*Matrix.ones (1, len (primes)))
 
     def __get_tuning_skew_sym (self, primes):
         if self.skew == 0:
@@ -56,8 +55,7 @@ class NormSym (te.Norm):
         kr = 1/(len (primes) + 1/skew**2)
         return (Matrix.eye (len (primes)) 
             - kr*Matrix.ones (len (primes), len (primes))).row_join (
-            r*Matrix.ones (len (primes), 1)
-        )
+                r*Matrix.ones (len (primes), 1))
 
     def tuning_x_sym (self, main, subgroup):
         primes = Matrix (subgroup.ratios (evaluate = True))
@@ -92,15 +90,14 @@ def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = F
         if norm.order == np.inf:
             return np.max (main)
         else:
-            return np.power (__mean (np.power (np.abs (main), norm.order)), np.reciprocal (float (norm.order)))
+            return __mean (np.fabs (main)**norm.order)**(1/norm.order)
 
     breeds, subgroup = te.setup (breeds, subgroup, axis = te.AXIS.ROW)
     if (inharmonic or subgroup.is_prime ()
             or norm.wtype == "tenney" and subgroup.is_prime_power ()):
         gen, tuning_projection, tempered_tuning_map, error_projection, error_map = optimizer_symbolic (
             breeds, target = subgroup, norm = norm, 
-            constraint = constraint, destretch = destretch
-        )
+            constraint = constraint, destretch = destretch, show = show)
         error_map_x = norm.tuning_x (error_map, subgroup)
         # print (error_map_x) #for debugging
         error = __power_mean_norm (error_map_x)
@@ -112,8 +109,7 @@ def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = F
 
         gen_mp, tuning_projection_mp, tempered_tuning_map_mp, error_projection_mp, error_map_mp = optimizer_symbolic (
             breeds_mp, target = subgroup_mp, norm = norm, 
-            constraint = constraint, destretch = destretch
-        )
+            constraint = constraint, destretch = destretch, show = show)
         error_map_mp_x = norm.tuning_x (error_map_mp, subgroup_mp)
         # print (error_map_mp_x) #for debugging
         error = __power_mean_norm (error_map_mp_x)
@@ -135,6 +131,7 @@ def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = F
             print ("Error projection map: ")
             pprint (error_projection)
             print ("Unchanged intervals: ")
+
             # this returns the eigenvalue, number of eigenvectors, 
             # and eigenvectors for each eigenvalue
             # but we're only interested in eigenvectors of unit eigenvalue
@@ -149,10 +146,9 @@ def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = F
     return gen, tempered_tuning_map, error_map
 
 def optimizer_symbolic (breeds, target = None, norm = te.Norm (), 
-        constraint = None, destretch = None):
-    # NOTE: "map" is a reserved word
-    # optimization is preferably done in the unit of octaves, but for precision reasons
-    
+        constraint = None, destretch = None, show = True):
+    """Returns the generator tuning map, tuning map, and error map inharmonically. """
+
     breeds, target = te.setup (breeds, target, axis = te.AXIS.ROW)
     norm = NormSym (norm)
     if norm.order != 2:
@@ -168,9 +164,11 @@ def optimizer_symbolic (breeds, target = None, norm = te.Norm (),
     else:
         cons_monzo_list = Matrix (constraint.basis_matrix_to (target))
         cons_monzo_list_x = norm.interval_x_sym (cons_monzo_list, target)
+
         # orthonormal complement basis of the weight-skewed constraints
         comp_monzo_list_x = Matrix (BlockMatrix (Matrix.orthogonalize (
             *cons_monzo_list_x.T.nullspace (), normalize = True)))
+        
         # weight-skewed working subgroup basis in terms of monzo list, isomorphic to the original
         # joined by weight-skewed constraint and its orthonormal complement
         subgroup_x = cons_monzo_list_x.row_join (comp_monzo_list_x)
@@ -178,25 +176,30 @@ def optimizer_symbolic (breeds, target = None, norm = te.Norm (),
         # weight-skewed map and constraints in the working basis
         breeds_xs = Matrix (breeds_x @ subgroup_x).rref ()[0]
         cons_monzo_list_xs = subgroup_x.inv () @ cons_monzo_list_x
-        # gets the weight-skewed tuning projection map in the working basis and copies the first r columns
+
+        # get the weight-skewed tuning projection map in the working basis and copy the first r columns
         tuning_projection_xs = breeds_xs.pinv () @ breeds_xs
         tuning_projection_xs_eigen = tuning_projection_xs @ cons_monzo_list_xs
 
-        # finds the minor tuning projection map
+        # find the minor tuning projection map
         r = cons_monzo_list.rank ()
         breeds_xs_minor = breeds_xs[r:, r:]
         tuning_projection_xs_minor = breeds_xs_minor.pinv () @ breeds_xs_minor
-        # composes the inverse of weight-skewed constrained tuning projection map in the working basis
+
+        # compose the inverse of weight-skewed constrained tuning projection map in the working basis
         tuning_projection_xs_inv = tuning_projection_xs_eigen.row_join (
             Matrix.zeros (r, breeds_xs_minor.shape[1]).col_join (tuning_projection_xs_minor))
+        
         # weight-skewed constrained tuning projection map in the working basis
         tuning_projection_xs = tuning_projection_xs_inv.pinv ()
-        # removes weight-skew and basis transformation
+
+        # remove weight-skew and basis transformation
         tuning_projection = simplify (
             weightskew @ subgroup_x @ tuning_projection_xs @ subgroup_x.inv () @ weightskew.pinv ())
-    print ("Solved. ")
+    if show: 
+        print ("Solved. ")
 
-    if not destretch is None:
+    if destretch is not None:
         des_monzo = Matrix (te.ratio2monzo (te.as_ratio (destretch), subgroup = target))
         if (tempered_size := (just_tuning_map @ tuning_projection @ des_monzo).det ()) == 0:
             raise ZeroDivisionError ("destretch target is in the nullspace. ")

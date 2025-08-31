@@ -1,6 +1,6 @@
 # © 2020-2025 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 0.28.0
+# Version 0.28.1
 
 import warnings
 import numpy as np
@@ -76,22 +76,27 @@ def optimizer_main (breeds, subgroup = None, norm = Norm (),
     if norm.order == 2 and cons_monzo_list is None: #simply using lstsq for better performance
         res = linalg.lstsq (breeds_x.T, just_tuning_map_x)
         gen = res[0]
-        print ("Euclidean tuning without constraints, solved using lstsq. ")
+        if show: 
+            print ("Euclidean tuning without constraints, solved using lstsq. ")
     else:
         gen0 = just_tuning_map[:breeds.shape[0]] #initial guess
-        cons = optimize.LinearConstraint ((breeds @ cons_monzo_list).T, 
-            lb = (just_tuning_map @ cons_monzo_list).T, 
-            ub = (just_tuning_map @ cons_monzo_list).T
-        )
-        res = optimize.minimize (lambda gen: linalg.norm (gen @ breeds_x - just_tuning_map_x, ord = norm.order), gen0, 
-            method = "COBYQA", constraints = cons)
-        print (res.message)
+        if cons_monzo_list is None:
+            cons = ()
+        else:
+            cons = optimize.LinearConstraint ((breeds @ cons_monzo_list).T, 
+                lb = (just_tuning_map @ cons_monzo_list).T, 
+                ub = (just_tuning_map @ cons_monzo_list).T)
+        res = optimize.minimize (
+            lambda gen: linalg.norm (gen @ breeds_x - just_tuning_map_x, ord = norm.order), 
+            gen0, method = "COBYQA", constraints = cons)
+        if show:
+            print (res.message)
         if res.success:
             gen = res.x
         else:
             raise ValueError ("infeasible optimization problem. ")
 
-    if not des_monzo is None:
+    if des_monzo is not None:
         if np.asarray (des_monzo).ndim > 1 and np.asarray (des_monzo).shape[1] != 1:
             raise IndexError ("only one destretch target is allowed. ")
         elif (tempered_size := gen @ breeds @ des_monzo) == 0:
