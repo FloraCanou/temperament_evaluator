@@ -1,6 +1,6 @@
 # © 2020-2025 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 1.12.1
+# Version 1.12.2
 
 import re, functools, warnings
 import numpy as np

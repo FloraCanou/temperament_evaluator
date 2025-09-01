@@ -222,7 +222,7 @@ class Temperament:
             or norm.wtype == "tenney" and self.subgroup.is_prime_power ())
         if not do_inharmonic and self.subgroup.index () == np.inf:
             raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
-        return self.__complexity (ntype, norm, inharmonic = do_inharmonic)
+        return self.__complexity (ntype, norm, do_inharmonic)
 
     def __complexity (self, ntype, norm, inharmonic):
         if inharmonic:
@@ -265,11 +265,9 @@ class Temperament:
         Returns the temperament's inherent inaccuracy regardless of the actual tuning, 
         all subgroup temperaments supported. 
         """
-        if not norm.order == 2:
-            raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
         do_inharmonic = (inharmonic or self.subgroup.is_prime ()
             or norm.wtype == "tenney" and self.subgroup.is_prime_power ())
-        return self.__error (ntype, norm, inharmonic = do_inharmonic, scalar = scalar)
+        return self.__error (ntype, norm, do_inharmonic, scalar)
 
     def __error (self, ntype, norm, inharmonic, scalar):
         if inharmonic:
@@ -281,19 +279,27 @@ class Temperament:
         r, d = mapping.shape #rank and dimensionality
         just_tuning_map = subgroup.just_tuning_map (scalar)
 
-        # standard L2 error
-        error = linalg.norm (
-            norm.tuning_x (just_tuning_map, subgroup)
-            @ linalg.pinv (norm.tuning_x (mapping, subgroup))
-            @ norm.tuning_x (mapping, subgroup)
-            - norm.tuning_x (just_tuning_map, subgroup)
-        )
+        if norm.order == 2: # standard L2 error
+            error_map_x = (norm.tuning_x (just_tuning_map, subgroup)
+                @ linalg.pinv (norm.tuning_x (mapping, subgroup))
+                @ norm.tuning_x (mapping, subgroup)
+                - norm.tuning_x (just_tuning_map, subgroup))
+            # error = linalg.norm (error_map_x) #same
+            error = np.sqrt (error_map_x @ error_map_x.T)
+        else:
+            import te_optimizer as te_opt
+            _, _, error_map = te_opt.optimizer_main (
+                mapping, target = subgroup, norm = norm, show = False)
+            error_map *= scalar / te.SCALAR.CENT #optimizer is always in cents
+            error_map_x = norm.tuning_x (error_map, subgroup)
+            error = linalg.norm (error_map_x, ord = norm.order)
+        
         match ntype: 
             case "breed": #Graham Breed's RMS (default)
-                error *= 1/np.sqrt (d)
+                error *= 1/d**(1/norm.order)
             case "smith": #Gene Ward Smith's RMS
                 try:
-                    error *= np.sqrt ((r + 1)/(d - r))
+                    error *= ((r + 1)/(d - r))**(1/norm.order)
                 except ZeroDivisionError:
                     error = np.nan
             case "sintel": #Sintel--Breed
@@ -301,7 +307,7 @@ class Temperament:
                 # which isn't in Sintel's implementation
                 # this factor will be canceled out in logflat badness
                 # when we divide it by the norm of jtm
-                error *= 1/(np.sqrt (d)
+                error *= 1/(d**(1/norm.order)
                     * linalg.det (norm.tuning_x (np.eye (d), subgroup)[:,:d])**(1/d))
             case "none":
                 pass
@@ -312,8 +318,7 @@ class Temperament:
 
     def badness (self, ntype = "breed", norm = te.Norm (), inharmonic = False, 
             logflat = False, scalar = te.SCALAR.OCTAVE): #in octaves by default
-        if not norm.order == 2:
-            raise ValueError ("this measure is only defined on Euclidean norms. ")
+
         do_inharmonic = (inharmonic or self.subgroup.is_prime ()
             or norm.wtype == "tenney" and self.subgroup.is_prime_power ())
         if not do_inharmonic and self.subgroup.index () == np.inf:
@@ -349,8 +354,6 @@ class Temperament:
     def temperament_measures (self, ntype = "breed", norm = te.Norm (), inharmonic = False, 
             error_scale = te.SCALAR.CENT, badness_scale = te.SCALAR.OCTAVE):
         """Shows the temperament measures."""
-        if not norm.order == 2:
-            raise ValueError ("this measure is only defined on Euclidean norms. ")
         do_inharmonic = (inharmonic or self.subgroup.is_prime ()
             or norm.wtype == "tenney" and self.subgroup.is_prime_power ())
         if not do_inharmonic and self.subgroup.index () == np.inf:
