@@ -416,15 +416,16 @@ def setup (main, subgroup, axis):
 
 # conversion functions
 
-def monzo2ratio (monzo, subgroup = None):
+def monzo2ratio (subgroup_monzo, subgroup = None):
     """
     Takes a monzo, returns the ratio object, 
     subgroup monzo supported.
     """
     if subgroup is None: 
-        return __monzo2ratio (monzo)
+        monzo = subgroup_monzo
     else: 
-        return __monzo2ratio (subgroup.basis_matrix @ vec_pad (monzo, length = len (subgroup)))
+        monzo = subgroup.basis_matrix @ vec_pad (subgroup_monzo, length = len (subgroup))
+    return __monzo2ratio (monzo)
 
 def __monzo2ratio (monzo):
     primes = PRIME_LIST[:len (monzo)]
@@ -446,7 +447,7 @@ def ratio2monzo (ratio, subgroup = None):
 
     monzo = __ratio2monzo (ratio)
     if subgroup is None:
-        return monzo
+        subgroup_monzo = monzo
     else:
         # pad zeros
         max_length = max (len (monzo), subgroup.basis_matrix.shape[0])
@@ -468,21 +469,22 @@ def ratio2monzo (ratio, subgroup = None):
         else:
             warnings.warn ("non-integer subgroup monzo. Possibly improper subgroup. ")
         
-        return subgroup_monzo
+    return subgroup_monzo
 
 def __ratio2monzo (ratio):
-    monzo = []
     primes = PRIME_LIST
+    num, den = ratio.num, ratio.den
+    monzo = []
     for entry in primes:
         order = 0
-        while ratio.num % entry == 0:
+        while num % entry == 0:
             order += 1
-            ratio.num /= entry
-        while ratio.den % entry == 0:
+            num //= entry
+        while den % entry == 0:
             order -= 1
-            ratio.den /= entry
+            den //= entry
         monzo.append (order)
-        if ratio.num == 1 and ratio.den == 1:
+        if num == 1 and den == 1:
             break
     else:
         raise ValueError ("improper subgroup. ")
