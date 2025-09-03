@@ -1,18 +1,35 @@
 # © 2020-2025 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 1.12.2
+# Version 1.13.0
 
-import re, functools, warnings
+import re, itertools, functools, warnings
 import numpy as np
 from scipy import linalg
 from sympy.matrices import Matrix, normalforms
 from sympy import gcd
 np.set_printoptions (suppress = True, linewidth = 256, precision = 3)
 
-PRIME_LIST = [
-    2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 
-    41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 
-]
+def primes_gen ():
+    """
+    Prime number generator. Infinite sieve of Erathosthenes
+    from https://eli.thegreenplace.net/2023/my-favorite-prime-number-generator/. 
+    """
+    composites = {}
+    q = 2
+    while True:
+        if q not in composites:
+            composites[q**2] = [q]
+            yield q
+        else:
+            for p in composites[q]:
+                composites.setdefault(p + q, []).append(p)
+            del composites[q]
+        q += 1
+
+# stock prime list, up to the 24th
+# create on start
+PRIME_LIST = list (itertools.islice (primes_gen (), 24))
+
 RATIONAL_WEIGHT_LIST = ["equilateral"]
 ALGEBRAIC_WEIGHT_LIST = RATIONAL_WEIGHT_LIST + ["wilson", "benedetti"]
 
@@ -127,12 +144,6 @@ class Ratio:
             return Ratio (self.num, self.den*2**oct_count)
         else:
             return Ratio (self.num*2**(-oct_count), self.den)
-
-    def octave_reduce (self):
-        """Same as above. Deprecated since 1.11.0. """
-        warnings.warn ("`octave_reduce` has been deprecated. "
-            "Use `oct_reduce` instead. ", FutureWarning)
-        return self.oct_reduce ()
 
     def eq_reduce (self, eq):
         """Enter a ratio for the equave, returns the equave-reduced ratio."""
@@ -330,17 +341,16 @@ class Norm:
             raise NotImplementedError ("Skew only works with Euclidean norm as of now.")
 
     def __get_tuning_skew (self, primes):
-        # return linalg.pinv (self.__get_interval_skew (primes)) # same but for skew = np.inf
         if self.skew == 0:
             return np.eye (len (primes))
         elif self.order == 2:
+            # return linalg.pinv (self.__get_interval_skew (primes))
+            # same but for skew = np.inf and for better performance
             r = 1/(len (primes)*self.skew + 1/self.skew)
             kr = 1/(len (primes) + 1/self.skew**2)
             return np.append (
                 np.eye (len (primes)) - kr*np.ones ((len (primes), len (primes))),
-                r*np.ones ((len (primes), 1)), 
-                axis = 1
-            )
+                r*np.ones ((len (primes), 1)), axis = 1)
         else:
             raise NotImplementedError ("Skew only works with Euclidean norm as of now.")
 
@@ -392,17 +402,20 @@ def __get_length (main, axis):
         case AXIS.VEC:
             return main.size
 
-def get_subgroup (main, axis):
-    """Gets the default subgroup along a certain axis."""
-    return Subgroup (PRIME_LIST[:__get_length (main, axis)])
-
 def setup (main, subgroup, axis):
-    """Tries to match the dimensions along a certain axis."""
+    """
+    Returns the default subgroup for a main array if the subgroup is not provided. 
+    Otherwise, tries to match the dimensionalities for a main matrix and a subgroup
+    along a certain axis. 
+    """
     main = np.asarray (main)
     if subgroup is None:
-        subgroup = get_subgroup (main, axis)
+        if (length_main := __get_length (main, axis)) <= len (PRIME_LIST): 
+            subgroup = Subgroup (PRIME_LIST[:length_main])
+        else: 
+            subgroup = Subgroup (list (itertools.islice (primes_gen (), length_main)))
     elif (length_main := __get_length (main, axis)) != len (subgroup):
-        warnings.warn ("dimension does not match. Casting to the smaller dimension. ")
+        warnings.warn ("dimensionalities do not match. Casting to the smaller dimensionality. ")
         dim = min (length_main, len (subgroup))
         match axis:
             case AXIS.ROW:
@@ -427,15 +440,19 @@ def monzo2ratio (subgroup_monzo, subgroup = None):
         monzo = subgroup.basis_matrix @ vec_pad (subgroup_monzo, length = len (subgroup))
     return __monzo2ratio (monzo)
 
-def __monzo2ratio (monzo):
-    primes = PRIME_LIST[:len (monzo)]
-    num, den = 1, 1
-    for i, mi in enumerate (monzo):
-        if mi > 0:
-            num *= primes[i]**mi
-        elif mi < 0:
-            den *= primes[i]**(-mi)
-    return Ratio (num, den)
+def __monzo2ratio (monzo, *, primes = PRIME_LIST):
+    if (length := len (monzo)) <= len (primes): 
+        primes = primes[:length]
+        num, den = 1, 1
+        for i, mi in enumerate (monzo):
+            if mi > 0:
+                num *= primes[i]**mi
+            elif mi < 0:
+                den *= primes[i]**(-mi)
+        ratio = Ratio (num, den)
+    else: #retry using the prime number generator
+        ratio = __monzo2ratio (monzo, primes = list (itertools.islice (primes_gen (), length)))
+    return ratio
 
 def ratio2monzo (ratio, subgroup = None):
     """
@@ -471,8 +488,7 @@ def ratio2monzo (ratio, subgroup = None):
         
     return subgroup_monzo
 
-def __ratio2monzo (ratio):
-    primes = PRIME_LIST
+def __ratio2monzo (ratio, *, primes = PRIME_LIST):
     num, den = ratio.num, ratio.den
     monzo = []
     for entry in primes:
@@ -486,8 +502,8 @@ def __ratio2monzo (ratio):
         monzo.append (order)
         if num == 1 and den == 1:
             break
-    else:
-        raise ValueError ("improper subgroup. ")
+    else: #retry using the prime number generator
+        monzo = __ratio2monzo (ratio, primes = primes_gen ())
     return np.array (monzo)
 
 def matrix2array (main):
