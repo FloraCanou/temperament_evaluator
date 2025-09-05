@@ -32,9 +32,7 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
     Can be used to find optimal PVs and/or GPVs. 
     Comma list should be entered as column vectors. 
     """
-    if not norm.order == 2:
-        raise NotImplementedError ("non-Euclidean norms not supported as of now. ")
-    elif monzos is None:
+    if monzos is None:
         if subgroup is None:
             raise ValueError ("please specify a monzo list or a subgroup. ")
         else:
