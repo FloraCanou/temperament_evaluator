@@ -40,7 +40,7 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
     else:
         monzos, subgroup = te.setup (monzos, subgroup, axis = te.AXIS.COL)
     do_inharmonic = (inharmonic or subgroup.is_prime ()
-        or norm.wtype == "tenney" and norm.wamount == 1 and subgroup.is_prime_power ())
+        or norm.wmode == 1 and norm.wstrength == 1 and subgroup.is_prime_power ())
     if not do_inharmonic and subgroup.index () == np.inf and cond == "badness":
         raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
 

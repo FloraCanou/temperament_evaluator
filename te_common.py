@@ -30,9 +30,6 @@ def primes_gen ():
 # create on start
 PRIME_LIST = list (itertools.islice (primes_gen (), 24))
 
-RATIONAL_WEIGHT_LIST = ["equilateral"]
-ALGEBRAIC_WEIGHT_LIST = RATIONAL_WEIGHT_LIST + ["wilson", "benedetti"]
-
 class AXIS:
     ROW, COL, VEC = 0, 1, 2
 
@@ -303,36 +300,62 @@ class Subgroup:
         return np.array_equal (self.basis_matrix, other.basis_matrix) if isinstance (other, Subgroup) else False
 
 class Norm: 
-    """Norm profile for the tuning space."""
+    """Tenney--Wilson parametric norm profile for the tuning space."""
 
-    def __init__ (self, wtype = "tenney", wamount = 1, skew = 0, order = 2):
-        self.wtype = wtype
-        self.wamount = wamount
+    def __init__ (self, wtype = None, wmode = 1, wstrength = 1, skew = 0, order = 2, 
+            *, wamount = None):
+        if wtype: 
+            wmode, wstrength = self.__presets (wtype)
+        
+        if wamount:
+            warnings.warn ("`wamount` is deprecated. Use `wstrength` instead. ")
+            wstrength = wamount
+
+        self.wmode = wmode
+        self.wstrength = wstrength
         self.skew = skew
         self.order = order
 
-    def __get_interval_weight (self, primes):
-        """Returns the weight matrix for a list of formal primes. """
-        match self.wtype:
+    @staticmethod
+    def __presets (wtype):
+        match wtype: 
             case "tenney":
-                weight_vec = np.log2 (primes)
+                wmode, wstrength = 1, 1
             case "wilson" | "benedetti":
-                weight_vec = np.asarray (primes)
+                wmode, wstrength = 0, 1
             case "equilateral":
-                weight_vec = np.ones (len (primes))
-            # case "hahn24": #pending better implementation
-            #     weight_vec = np.reciprocal (np.floor (np.log2 (24)/np.log2 (primes)))
+                wmode, wstrength = 0, 0
             case _:
                 warnings.warn ("weighter type not supported, using default (\"tenney\")")
-                self.wtype = "tenney"
-                return self.__get_interval_weight (primes)
-        return np.diag (weight_vec**self.wamount)
+                wmode, wstrength = 1, 1
+        return wmode, wstrength
 
-    def __get_tuning_weight (self, primes):
-        return linalg.inv (self.__get_interval_weight (primes))
+    def __weight_vec (self, primes):
+        """Returns the interval weight vector for a list of formal primes. """
 
-    def __get_interval_skew (self, primes):
-        """Returns the skew matrix for a list of formal primes. """
+        if not isinstance (self.wmode, (int, np.integer)):
+            raise TypeError ("non-integer modes not supported. ")
+
+        def modal_weighter (primes, m): 
+            if m == 0: 
+                return primes
+            elif m > 0: 
+                return modal_weighter (2*np.log2 (primes), m - 1)
+            else: 
+                return modal_weighter (np.exp2 (primes/2), m + 1)
+
+        return (modal_weighter (np.asarray (primes), self.wmode)/2)**self.wstrength
+
+    def interval_weight (self, primes):
+        """Returns the interval weight matrix for a list of formal primes. """
+        return np.diag (self.__weight_vec (primes))
+
+    def tuning_weight (self, primes):
+        """Returns the tuning weight matrix for a list of formal primes. """
+        return np.diag (1/self.__weight_vec (primes))
+
+    def interval_skew (self, primes):
+        """Returns the interval skew matrix for a list of formal primes. """
         if self.skew == 0:
             return np.eye (len (primes))
         elif self.order == 2:
@@ -340,7 +363,8 @@ class Norm:
         else:
             raise NotImplementedError ("Skew only works with Euclidean norm as of now.")
 
-    def __get_tuning_skew (self, primes):
+    def tuning_skew (self, primes):
+        """Returns the tuning skew matrix for a list of formal primes. """
         if self.skew == 0:
             return np.eye (len (primes))
         elif self.order == 2:
@@ -356,11 +380,11 @@ class Norm:
 
     def tuning_x (self, main, subgroup):
         primes = subgroup.ratios (evaluate = True)
-        return main @ self.__get_tuning_weight (primes) @ self.__get_tuning_skew (primes)
+        return main @ self.tuning_weight (primes) @ self.tuning_skew (primes)
 
     def interval_x (self, main, subgroup):
         primes = subgroup.ratios (evaluate = True)
-        return self.__get_interval_skew (primes) @ self.__get_interval_weight (primes) @ main
+        return self.interval_skew (primes) @ self.interval_weight (primes) @ main
 
 # canonicalization functions
 

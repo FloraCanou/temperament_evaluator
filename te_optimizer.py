@@ -32,7 +32,7 @@ def wrapper_main (breeds, subgroup = None, norm = te.Norm (), inharmonic = False
 
     breeds, subgroup = te.setup (breeds, subgroup, axis = te.AXIS.ROW)
     if (inharmonic or subgroup.is_prime ()
-            or norm.wtype == "tenney" and norm.wamount == 1 and subgroup.is_prime_power ()):
+            or norm.wmode == 1 and norm.wstrength == 1 and subgroup.is_prime_power ()):
         gen, tempered_tuning_map, error_map = optimizer_main (
             breeds, target = subgroup, norm = norm, 
             constraint = constraint, destretch = destretch, show = show)

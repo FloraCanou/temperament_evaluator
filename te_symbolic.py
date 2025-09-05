@@ -5,38 +5,45 @@ import warnings
 import numpy as np
 from scipy import linalg
 from sympy.matrices import Matrix, BlockMatrix
-from sympy import Rational, floor, log, Pow, pprint, simplify
+from sympy import Rational, exp, log, Pow, pprint, simplify
 import te_common as te
 
 class NormSym (te.Norm):
     """Specialized norm class for symbolic calculations."""
 
     def __init__ (self, norm):
-        super ().__init__ (norm.wtype, norm.wamount, norm.skew, norm.order)
+        super ().__init__ (wmode = norm.wmode, wstrength = norm.wstrength, 
+            skew = norm.skew, order = norm.order)
 
-    def __get_interval_weight_sym (self, primes):
-        """Returns the weight matrix for a list of formal primes. """
-        wamount = Rational (self.wamount).limit_denominator (1e3)
-        match self.wtype:
-            case "tenney":
-                warnings.warn ("transcendental weight can be slow. Main optimizer recommended. ")
-                weight_vec = Matrix (primes).applyfunc (lambda q: log (q, 2))
-            case "wilson" | "benedetti":
-                weight_vec = Matrix (primes)
-            case "equilateral":
-                weight_vec = Matrix.ones (len (primes), 1)
-            # case "hahn24": #pending better implementation
-            #     weight_vec = Matrix (primes).applyfunc (lambda q: 1/floor (log (24, q)))
-            case _:
-                warnings.warn ("weighter type not supported, using default (\"tenney\")")
-                self.wtype = "tenney"
-                return self.__get_interval_weight_sym (primes)
-        return Matrix.diag (*weight_vec.applyfunc (lambda wi: Pow (wi, wamount)))
+    def __weight_vec_sym (self, primes):
+        """Returns the interval weight vector for a list of formal primes. """
 
-    def __get_tuning_weight_sym (self, primes):
-        return self.__get_interval_weight_sym (primes).inv ()
+        if self.wmode != 0: 
+            warnings.warn ("transcendental weight can be slow. Main optimizer recommended. ")
+        if not isinstance (self.wmode, (int, np.integer)):
+            raise TypeError ("non-integer modes not supported. ")
 
-    def __get_interval_skew_sym (self, primes):
+        def modal_weighter (primes, m): 
+            if m == 0: 
+                return primes
+            elif m > 0: 
+                return modal_weighter (primes.applyfunc (lambda q: 2*log (q, 2)), m - 1)
+            else: 
+                return modal_weighter (primes.applyfunc (lambda q: log (2)*exp (q/2, 2)), m + 1)
+
+        wstrength = Rational (self.wstrength).limit_denominator (1e3)
+        return modal_weighter (Matrix (primes), self.wmode).applyfunc (lambda wi: Pow (wi/2, wstrength))
+
+    def interval_weight_sym (self, primes):
+        """Returns the interval weight matrix for a list of formal primes. """
+        return Matrix.diag (*self.__weight_vec_sym (primes))
+
+    def tuning_weight_sym (self, primes):
+        """Returns the tuning weight matrix for a list of formal primes. """
+        return Matrix.diag (*self.__weight_vec_sym (primes).applyfunc (lambda wi: 1/wi))
+
+    def interval_skew_sym (self, primes):
+        """Returns the interval skew matrix for a list of formal primes. """
         skew = Rational (self.skew).limit_denominator (1e3)
         if self.skew == 0:
             return Matrix.eye (len (primes))
@@ -44,7 +51,8 @@ class NormSym (te.Norm):
             return Matrix.eye (len (primes)).col_join (
                 self.skew*Matrix.ones (1, len (primes)))
 
-    def __get_tuning_skew_sym (self, primes):
+    def tuning_skew_sym (self, primes):
+        """Returns the tuning skew matrix for a list of formal primes. """
         if self.skew == 0:
             return Matrix.eye (len (primes))
         elif self.skew == np.inf:
@@ -59,15 +67,15 @@ class NormSym (te.Norm):
 
     def tuning_x_sym (self, main, subgroup):
         primes = Matrix ([Rational (r.num, r.den) for r in subgroup.ratios ()])
-        return main @ self.__get_tuning_weight_sym (primes) @ self.__get_tuning_skew_sym (primes)
+        return main @ self.tuning_weight_sym (primes) @ self.tuning_skew_sym (primes)
 
     def interval_x_sym (self, main, subgroup):
         primes = Matrix ([Rational (r.num, r.den) for r in subgroup.ratios ()])
-        return self.__get_interval_skew_sym (primes) @ self.__get_interval_weight_sym (primes) @ main
+        return self.interval_skew_sym (primes) @ self.interval_weight_sym (primes) @ main
     
     def weightskew (self, subgroup):
         primes = Matrix ([Rational (r.num, r.den) for r in subgroup.ratios ()])
-        return self.__get_tuning_weight_sym (primes) @ self.__get_tuning_skew_sym (primes)
+        return self.tuning_weight_sym (primes) @ self.tuning_skew_sym (primes)
 
 def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = False, 
         constraint = None, destretch = None, show = True):
@@ -94,7 +102,7 @@ def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = F
 
     breeds, subgroup = te.setup (breeds, subgroup, axis = te.AXIS.ROW)
     if (inharmonic or subgroup.is_prime ()
-            or norm.wtype == "tenney" and subgroup.is_prime_power ()):
+            or norm.wmode == 1 and norm.wstrength == 1 and subgroup.is_prime_power ()):
         gen, tuning_projection, tempered_tuning_map, error_projection, error_map = optimizer_symbolic (
             breeds, target = subgroup, norm = norm, 
             constraint = constraint, destretch = destretch, show = show)
@@ -125,7 +133,7 @@ def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = F
         print (f"Generators: {gen} (¢)",
             f"Tuning map: {tempered_tuning_map} (¢)",
             f"Error map: {error_map} (¢)", sep = "\n")
-        if norm.wtype in te.ALGEBRAIC_WEIGHT_LIST and destretch is None:
+        if norm.wmode == 0 or norm.wstrength == 0 and destretch is None:
             print ("Tuning projection map: ")
             pprint (tuning_projection)
             print ("Error projection map: ")

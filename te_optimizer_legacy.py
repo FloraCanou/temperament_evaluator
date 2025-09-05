@@ -1,6 +1,6 @@
 # © 2020-2025 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 0.28.1
+# Version 0.29.0
 
 import warnings
 import numpy as np
@@ -9,8 +9,7 @@ np.set_printoptions (suppress = True, linewidth = 256, precision = 3)
 
 PRIME_LIST = [
     2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 
-    41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 
-]
+    41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89]
 
 class SCALAR:
     CENT = 1200
@@ -18,27 +17,49 @@ class SCALAR:
 class Norm: 
     """Norm profile for the tuning space."""
 
-    def __init__ (self, wtype = "tenney", wamount = 1, skew = 0, order = 2):
-        self.wtype = wtype
-        self.wamount = wamount
+    def __init__ (self, wtype = None, wmode = 1, wstrength = 1, skew = 0, order = 2):
+        if wtype: 
+            wmode, wstrength = self.__presets (wtype)
+        self.wmode = wmode
+        self.wstrength = wstrength
         self.skew = skew
         self.order = order
 
-    def __get_tuning_weight (self, subgroup):
-        match self.wtype:
+    @staticmethod
+    def __presets (wtype):
+        match wtype: 
             case "tenney":
-                weight_vec = np.reciprocal (np.log2 (subgroup, dtype = float))
+                wmode, wstrength = 1, 1
             case "wilson" | "benedetti":
-                weight_vec = np.reciprocal (np.array (subgroup, dtype = float))
+                wmode, wstrength = 0, 1
             case "equilateral":
-                weight_vec = np.ones (len (subgroup))
+                wmode, wstrength = 0, 0
             case _:
                 warnings.warn ("weighter type not supported, using default (\"tenney\")")
-                self.wtype = "tenney"
-                return self.__get_weight (subgroup)
-        return np.diag (weight_vec**self.wamount)
+                wmode, wstrength = 1, 1
+        return wmode, wstrength
 
-    def __get_tuning_skew (self, subgroup):
+    def __weight_vec (self, primes):
+        """Returns the interval weight vector for a list of formal primes. """
+
+        if not isinstance (self.wmode, (int, np.integer)):
+            raise TypeError ("non-integer modes not supported. ")
+
+        def modal_weighter (primes, m): 
+            if m == 0: 
+                return primes
+            elif m > 0: 
+                return modal_weighter (2*np.log2 (primes), m - 1)
+            else: 
+                return modal_weighter (np.exp2 (primes/2), m + 1)
+
+        return (modal_weighter (np.asarray (primes), self.wmode)/2)**self.wstrength
+
+    def tuning_weight (self, primes):
+        """Returns the tuning weight matrix for a list of formal primes. """
+        return np.diag (1/self.__weight_vec (primes))
+
+    def tuning_skew (self, subgroup):
         if self.skew == 0:
             return np.eye (len (subgroup))
         elif self.order == 2:
@@ -51,7 +72,7 @@ class Norm:
             r*np.ones ((len (subgroup), 1)), axis = 1)
 
     def tuning_x (self, main, subgroup):
-        return main @ self.__get_tuning_weight (subgroup) @ self.__get_tuning_skew (subgroup)
+        return main @ self.tuning_weight (subgroup) @ self.tuning_skew (subgroup)
 
 def __get_subgroup (main, subgroup):
     main = np.asarray (main)

@@ -36,27 +36,39 @@ class Temperament:
             f"Mapping: \n{self.mapping}", sep = "\n")
 
         if norm: 
-            if norm.wtype == "tenney" and norm.skew == 1:
-                weightskew_text = "weil"
+            if norm.wstrength == 0:
+                weight_text = "equilateral"
             else:
-                weight_text = norm.wtype
-                if norm.wamount != 1:
-                    weight_text += f"[{norm.wamount}]"
-                if norm.skew != 0:
-                    skew_text = "skewed"
-                    if norm.skew != 1:
-                        skew_text += f"[{norm.skew}]"
-                    weightskew_text = "-".join ((skew_text, weight_text))
-                else:
-                    weightskew_text = weight_text
+                if norm.wmode == 1: 
+                    if norm.skew == 1: 
+                        weight_text = "weil"
+                    else:
+                        weight_text = "tenney"
+                    if norm.wstrength != 1: 
+                        weight_text += f"[{norm.wstrength}]"
+                elif norm.wmode == 0:
+                    weight_text = "wilson"
+                    if norm.wstrength != 1: 
+                        weight_text += f"[{norm.wstrength}]"
+                else: 
+                    weight_text = f"tenney-wilson[{norm.wmode}, {norm.wstrength}]"
+            
+            if norm.skew != 0 and not (norm.wmode == 1 and norm.skew == 1):
+                skew_text = "skewed"
+                if norm.skew != 1:
+                    skew_text += f"[{norm.skew}]"
+                transformer_text = "-".join ((skew_text, weight_text))
+            else:
+                transformer_text = weight_text
 
             order_dict = {1: "chebyshevian", 2: "euclidean", np.inf: "manhattan"}
             try:
                 order_text = order_dict[norm.order]
             except KeyError:
                 order_text = f"L{norm.order}"
+            norm_text = "-".join ((transformer_text, order_text))
 
-            print ("Norm: " + "-".join ((weightskew_text, order_text)))
+            print ("Norm: " + norm_text)
         if mode_text:
             print ("Mode: " + mode_text)
         if enforce_text:
@@ -140,25 +152,28 @@ class Temperament:
         Calls either wrapper_main or wrapper_symbolic. 
         """
 
-        # checks optimizer applicability and availability
+        # check optimizer applicability and availability
         if optimizer == "sym" and not self.__check_sym (norm.order):
             return self.tune (optimizer = "main", norm = norm, inharmonic = inharmonic, 
                 constraint = constraint, destretch = destretch, ftype = ftype)
 
-        # gets the text for enforcement & mode
+        # get the text for enforcement & subgroup interpretation mode
         cons_text = constraint.__str__ () + "-constrained" if constraint else ""
         des_text = destretch.__str__ () + "-destretched" if destretch else ""
-        enforce_text = " ".join ([cons_text, des_text]) if cons_text or des_text else "none"
+        if cons_text or des_text: 
+            enforce_text = " ".join (filter (None, [cons_text, des_text]))
+        else: 
+            enforce_text = "none"
         if is_trivial := (self.subgroup.is_prime ()
-                or norm.wtype == "tenney" and norm.wamount == 1 and self.subgroup.is_prime_power ()):
+                or norm.wmode == 1 and norm.wstrength == 1 and self.subgroup.is_prime_power ()):
             mode_text = "trivial -- inharmonic and subgroup tunings are identical"
         else:
             mode_text = "inharmonic tuning" if inharmonic else "subgroup tuning"
 
-        # shows the header
+        # show the header
         self.__show_header (norm = norm, mode_text = mode_text, enforce_text = enforce_text)
 
-        # gets the specified form
+        # get the specified form
         if ftype:
             mapping = self.form (ftype)
             print ("The generators will be found for the following mapping form:", 
@@ -166,18 +181,16 @@ class Temperament:
         else:
             mapping = self.mapping
 
-        # starts optimization
+        # start optimization
         if optimizer == "main":
             import te_optimizer as te_opt
             gen, tempered_tuning_map, error_map = te_opt.wrapper_main (
                 mapping, subgroup = self.subgroup, norm = norm, 
-                inharmonic = inharmonic or is_trivial, constraint = constraint, destretch = destretch
-            )
+                inharmonic = inharmonic or is_trivial, constraint = constraint, destretch = destretch)
         elif optimizer == "sym":
             gen, tempered_tuning_map, error_map = te_sym.wrapper_symbolic (
                 mapping, subgroup = self.subgroup, norm = te_sym.NormSym (norm), 
-                inharmonic = inharmonic or is_trivial, constraint = constraint, destretch = destretch
-            )
+                inharmonic = inharmonic or is_trivial, constraint = constraint, destretch = destretch)
 
         return gen, tempered_tuning_map, error_map
 
@@ -219,7 +232,7 @@ class Temperament:
         nondegenerate subgroup temperaments supported. 
         """
         do_inharmonic = (inharmonic or self.subgroup.is_prime ()
-            or norm.wtype == "tenney" and norm.wamount == 1 and self.subgroup.is_prime_power ())
+            or norm.wmode == 1 and norm.wstrength == 1 and self.subgroup.is_prime_power ())
         if not do_inharmonic and self.subgroup.index () == np.inf:
             raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
         return self.__complexity (ntype, norm, do_inharmonic)
@@ -266,7 +279,7 @@ class Temperament:
         all subgroup temperaments supported. 
         """
         do_inharmonic = (inharmonic or self.subgroup.is_prime ()
-            or norm.wtype == "tenney" and norm.wamount == 1 and self.subgroup.is_prime_power ())
+            or norm.wmode == 1 and norm.wstrength == 1 and self.subgroup.is_prime_power ())
         return self.__error (ntype, norm, do_inharmonic, scalar)
 
     def __error (self, ntype, norm, inharmonic, scalar):
@@ -320,7 +333,7 @@ class Temperament:
             logflat = False, scalar = te.SCALAR.OCTAVE): #in octaves by default
 
         do_inharmonic = (inharmonic or self.subgroup.is_prime ()
-            or norm.wtype == "tenney" and norm.wamount == 1 and self.subgroup.is_prime_power ())
+            or norm.wmode == 1 and norm.wstrength == 1 and self.subgroup.is_prime_power ())
         if not do_inharmonic and self.subgroup.index () == np.inf:
             raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
 
@@ -355,7 +368,7 @@ class Temperament:
             error_scale = te.SCALAR.CENT, badness_scale = te.SCALAR.OCTAVE):
         """Shows the temperament measures."""
         do_inharmonic = (inharmonic or self.subgroup.is_prime ()
-            or norm.wtype == "tenney" and norm.wamount == 1 and self.subgroup.is_prime_power ())
+            or norm.wmode == 1 and norm.wstrength == 1 and self.subgroup.is_prime_power ())
         if not do_inharmonic and self.subgroup.index () == np.inf:
             raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
         return self.__temperament_measures (ntype, norm, do_inharmonic, error_scale, badness_scale)
