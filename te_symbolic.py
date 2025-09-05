@@ -18,10 +18,10 @@ class NormSym (te.Norm):
     def __weight_vec_sym (self, primes):
         """Returns the interval weight vector for a list of formal primes. """
 
-        if self.wmode != 0: 
-            warnings.warn ("transcendental weight can be slow. Main optimizer recommended. ")
         if not isinstance (self.wmode, (int, np.integer)):
             raise TypeError ("non-integer modes not supported. ")
+        if self.wmode != 0: 
+            warnings.warn ("transcendental weight can be slow. Main optimizer recommended. ")
 
         def modal_weighter (primes, m): 
             if m == 0: 
@@ -29,7 +29,7 @@ class NormSym (te.Norm):
             elif m > 0: 
                 return modal_weighter (primes.applyfunc (lambda q: 2*log (q, 2)), m - 1)
             else: 
-                return modal_weighter (primes.applyfunc (lambda q: log (2)*exp (q/2, 2)), m + 1)
+                return modal_weighter (primes.applyfunc (lambda q: log (2)*exp (q/2)), m + 1)
 
         wstrength = Rational (self.wstrength).limit_denominator (1e3)
         return modal_weighter (Matrix (primes), self.wmode).applyfunc (lambda wi: Pow (wi/2, wstrength))
