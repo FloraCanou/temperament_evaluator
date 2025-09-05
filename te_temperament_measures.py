@@ -150,7 +150,7 @@ class Temperament:
         des_text = destretch.__str__ () + "-destretched" if destretch else ""
         enforce_text = " ".join ([cons_text, des_text]) if cons_text or des_text else "none"
         if is_trivial := (self.subgroup.is_prime ()
-                or norm.wtype == "tenney" and self.subgroup.is_prime_power ()):
+                or norm.wtype == "tenney" and norm.wamount == 1 and self.subgroup.is_prime_power ()):
             mode_text = "trivial -- inharmonic and subgroup tunings are identical"
         else:
             mode_text = "inharmonic tuning" if inharmonic else "subgroup tuning"
@@ -219,7 +219,7 @@ class Temperament:
         nondegenerate subgroup temperaments supported. 
         """
         do_inharmonic = (inharmonic or self.subgroup.is_prime ()
-            or norm.wtype == "tenney" and self.subgroup.is_prime_power ())
+            or norm.wtype == "tenney" and norm.wamount == 1 and self.subgroup.is_prime_power ())
         if not do_inharmonic and self.subgroup.index () == np.inf:
             raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
         return self.__complexity (ntype, norm, do_inharmonic)
@@ -266,7 +266,7 @@ class Temperament:
         all subgroup temperaments supported. 
         """
         do_inharmonic = (inharmonic or self.subgroup.is_prime ()
-            or norm.wtype == "tenney" and self.subgroup.is_prime_power ())
+            or norm.wtype == "tenney" and norm.wamount == 1 and self.subgroup.is_prime_power ())
         return self.__error (ntype, norm, do_inharmonic, scalar)
 
     def __error (self, ntype, norm, inharmonic, scalar):
@@ -320,7 +320,7 @@ class Temperament:
             logflat = False, scalar = te.SCALAR.OCTAVE): #in octaves by default
 
         do_inharmonic = (inharmonic or self.subgroup.is_prime ()
-            or norm.wtype == "tenney" and self.subgroup.is_prime_power ())
+            or norm.wtype == "tenney" and norm.wamount == 1 and self.subgroup.is_prime_power ())
         if not do_inharmonic and self.subgroup.index () == np.inf:
             raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
 
@@ -355,7 +355,7 @@ class Temperament:
             error_scale = te.SCALAR.CENT, badness_scale = te.SCALAR.OCTAVE):
         """Shows the temperament measures."""
         do_inharmonic = (inharmonic or self.subgroup.is_prime ()
-            or norm.wtype == "tenney" and self.subgroup.is_prime_power ())
+            or norm.wtype == "tenney" and norm.wamount == 1 and self.subgroup.is_prime_power ())
         if not do_inharmonic and self.subgroup.index () == np.inf:
             raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
         return self.__temperament_measures (ntype, norm, do_inharmonic, error_scale, badness_scale)

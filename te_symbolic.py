@@ -58,15 +58,15 @@ class NormSym (te.Norm):
                 r*Matrix.ones (len (primes), 1))
 
     def tuning_x_sym (self, main, subgroup):
-        primes = Matrix (subgroup.ratios (evaluate = True))
+        primes = Matrix ([Rational (r.num, r.den) for r in subgroup.ratios ()])
         return main @ self.__get_tuning_weight_sym (primes) @ self.__get_tuning_skew_sym (primes)
 
     def interval_x_sym (self, main, subgroup):
-        primes = Matrix (subgroup.ratios (evaluate = True))
+        primes = Matrix ([Rational (r.num, r.den) for r in subgroup.ratios ()])
         return self.__get_interval_skew_sym (primes) @ self.__get_interval_weight_sym (primes) @ main
     
     def weightskew (self, subgroup):
-        primes = Matrix (subgroup.ratios (evaluate = True))
+        primes = Matrix ([Rational (r.num, r.den) for r in subgroup.ratios ()])
         return self.__get_tuning_weight_sym (primes) @ self.__get_tuning_skew_sym (primes)
 
 def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = False, 
