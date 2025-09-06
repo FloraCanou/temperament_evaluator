@@ -5,7 +5,7 @@ import warnings
 import numpy as np
 from scipy import linalg
 from sympy.matrices import Matrix, BlockMatrix
-from sympy import Rational, exp, log, Pow, Mod, pprint, simplify
+from sympy import Rational, log, Pow, Mod, pprint, simplify
 import te_common as te
 
 class NormSym (te.Norm):
