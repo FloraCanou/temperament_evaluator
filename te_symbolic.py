@@ -5,7 +5,7 @@ import warnings
 import numpy as np
 from scipy import linalg
 from sympy.matrices import Matrix, BlockMatrix
-from sympy import Rational, exp, log, Pow, pprint, simplify
+from sympy import Rational, exp, log, Pow, Mod, pprint, simplify
 import te_common as te
 
 class NormSym (te.Norm):
@@ -20,8 +20,17 @@ class NormSym (te.Norm):
 
         if not isinstance (self.wmode, (int, np.integer)):
             raise TypeError ("non-integer modes not supported. ")
-        if self.wmode != 0: 
-            warnings.warn ("transcendental weight can be slow. Main optimizer recommended. ")
+        wmode = self.wmode if self.wstrength else 0
+        wstrength = Rational (self.wstrength).limit_denominator (1e3)
+
+        # test shows that besides mode 0, only mode +/-1
+        # with integer or half-integer strengths demonstrate acceptable performance
+        if wmode not in (-1, 0, 1): 
+            warnings.warn ("remote weight modes can be slow. " \
+                "Main optimizer recommended. ")
+        if Mod (wstrength, Rational (1, 2)): 
+            warnings.warn ("non-integer, non-half-integer weight strengths can be slow. " \
+                "Main optimizer recommended. ")
 
         def modal_weighter (primes, m): 
             if m == 0: 
@@ -29,10 +38,9 @@ class NormSym (te.Norm):
             elif m > 0: 
                 return modal_weighter (primes.applyfunc (lambda q: 2*log (q, 2)), m - 1)
             else: 
-                return modal_weighter (primes.applyfunc (lambda q: log (2)*exp (q/2)), m + 1)
+                return modal_weighter (primes.applyfunc (lambda q: 2**(q/2)), m + 1)
 
-        wstrength = Rational (self.wstrength).limit_denominator (1e3)
-        return modal_weighter (Matrix (primes), self.wmode).applyfunc (lambda wi: Pow (wi/2, wstrength))
+        return modal_weighter (Matrix (primes), wmode).applyfunc (lambda wi: Pow (wi/2, wstrength))
 
     def interval_weight_sym (self, primes):
         """Returns the interval weight matrix for a list of formal primes. """
@@ -147,7 +155,7 @@ def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = F
             unit_eigenmonzos = np.column_stack ([te.matrix2array (entry) for entry in frac_unit_eigenmonzos])
             te.show_monzo_list (unit_eigenmonzos, subgroup)
         else:
-            print ("Transcendental projection maps not shown. ")
+            print ("Projection maps not shown. ")
         print (f"Tuning error: {error:.6f} (¢)",
             f"Tuning bias: {bias:.6f} (¢)", sep = "\n")
 

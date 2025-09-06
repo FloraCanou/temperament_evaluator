@@ -308,7 +308,7 @@ class Norm:
             wmode, wstrength = self.__presets (wtype)
         
         if wamount:
-            warnings.warn ("`wamount` is deprecated. Use `wstrength` instead. ")
+            warnings.warn ("`wamount` is deprecated. Use `wstrength` instead. ", FutureWarning)
             wstrength = wamount
 
         self.wmode = wmode
@@ -335,6 +335,8 @@ class Norm:
 
         if not isinstance (self.wmode, (int, np.integer)):
             raise TypeError ("non-integer modes not supported. ")
+        wmode = self.wmode if self.wstrength else 0
+        wstrength = self.wstrength
 
         def modal_weighter (primes, m): 
             if m == 0: 
@@ -344,7 +346,7 @@ class Norm:
             else: 
                 return modal_weighter (np.exp2 (primes/2), m + 1)
 
-        return (modal_weighter (np.asarray (primes), self.wmode)/2)**self.wstrength
+        return (modal_weighter (np.asarray (primes), wmode)/2)**wstrength
 
     def interval_weight (self, primes):
         """Returns the interval weight matrix for a list of formal primes. """
