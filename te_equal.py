@@ -44,6 +44,15 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
     if not do_inharmonic and subgroup.index () == np.inf and cond == "badness":
         raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
 
+    def __gpv_roll (breed, tuning_map):
+        for i in range (1, len (tuning_map) + 1):
+            breed_copy = breed.copy ()
+            breed_copy[-i] += 1
+            if __is_gpv (breed_copy, tuning_map):
+                return breed_copy
+        else:
+            raise NotImplementedError ("this nontrivial tuning map cannot be processed. ")
+
     print ("\nOptimal GPV sequence: ")
     just_tuning_map = subgroup.just_tuning_map ()
     gpv = np.zeros (len (just_tuning_map), dtype = int) #initialize with the all-zeroes breed
@@ -111,9 +120,9 @@ def __is_pv (breed, tuning_map):
     """
     return all (breed == np.rint (breed[0]*tuning_map/tuning_map[0]))
 
-def gpv_roll (breed, subgroup = None, n = 1):
+def gpv_roll_recursive (breed, subgroup = None, n = 1):
     """
-    Enter a GPV, finds the n-th next GPV. 
+    Enter a GPV, finds the n-th next GPV. n can be any integer. 
     The subgroup basis must be normalized to all-positive pitches. 
     Doesn't handle some nontrivial subgroups. 
     """
@@ -123,9 +132,9 @@ def gpv_roll (breed, subgroup = None, n = 1):
         raise ValueError ("input is not a GPV. ")
     if not isinstance (n, (int, np.integer)):
         raise TypeError ("n must be an integer. ")
-    return __gpv_roll (breed, just_tuning_map, n)
+    return __gpv_roll_recursive (breed, just_tuning_map, n)
 
-def __gpv_roll (breed, tuning_map, n = 1):
+def __gpv_roll_recursive (breed, tuning_map, n = 1):
     if n == 0:
         return breed
     else:
@@ -134,7 +143,7 @@ def __gpv_roll (breed, tuning_map, n = 1):
             breed_copy = breed.copy ()
             breed_copy[-i] += u
             if __is_gpv (breed_copy, tuning_map):
-                return __gpv_roll (breed_copy, tuning_map, n - u)
+                return __gpv_roll_recursive (breed_copy, tuning_map, n - u)
         else:
             raise NotImplementedError ("this nontrivial tuning map cannot be processed. ")
 
