@@ -5,7 +5,7 @@ import warnings
 import numpy as np
 from scipy import optimize, linalg
 from sympy.matrices import Matrix, normalforms
-import te_common as te
+from . import te_common as te
 
 def wrapper_main (breeds, subgroup = None, norm = te.Norm (), inharmonic = False, 
         constraint = None, destretch = None, show = True):

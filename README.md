@@ -9,7 +9,7 @@ This Python 3 script can be used to compute various regular temperament data.
 - [SymPy](https://www.sympy.org/en/index.html)
 	- various tasks including symbolic solution, mapping normalization, comma basis, etc. 
 - [tqdm](https://tqdm.github.io/)
-	- to render the progress bar for `te.equal.et_sequence`. 
+	- to render the progress bar for `te_equal.et_sequence`. 
 
 ```
 pip install scipy sympy tqdm
@@ -23,10 +23,10 @@ See our [wiki](https://github.com/FloraCanou/temperament_evaluator/wiki) for tec
 
 ```
 import numpy as np
-import te_common as te
-import te_temperament_measures as te_tm
-import te_equal as te_et
-import te_lattice as te_lat
+from lib.te_common import *
+from lib.te_temperament_measures import *
+from lib.te_equal import *
+from lib.te_lattice import *
 ```
 
 Set precision level ([note](https://github.com/FloraCanou/temperament_evaluator/wiki/Precision-limits))
@@ -40,10 +40,10 @@ np.set_printoptions (precision = 3)
 To construct a temperament (we're showing septimal magic here)
 
 ```
-temp = te_tm.Temperament ([
-    [1, 0, 2, -1], 
-    [0, 5, 1, 12]
-    ]) 
+temp = Temperament (
+    [[1, 0, 2, -1], 
+    [0, 5, 1, 12]]
+) 
 ```
 
 To tune the temperament
@@ -51,19 +51,19 @@ To tune the temperament
 - CTE tuning
 
 ```
-temp.tune (constraint = te.Subgroup ("2")) 
+temp.tune (constraint = Subgroup ([2])) 
 ```
 
 - CWE tuning
 
 ```
-temp.tune (norm = te.Norm (skew = 1), constraint = te.Subgroup ("2")) 
+temp.tune (norm = Norm (skew = 1), constraint = Subgroup ([2])) 
 ```
 
 - POTE tuning
 
 ```
-temp.tune (destretch = te.Ratio (2, 1)) 
+temp.tune (destretch = Ratio (2, 1)) 
 ```
 
 To find the temperament measures
@@ -86,7 +86,7 @@ temp.comma_basis ()
 To find the optimal GPV sequence of the temperament
 
 ```
-te_et.et_sequence (
+et_sequence (
     temp.comma_basis (show = False), cond = "error", search_range = 300)
 ```
 
@@ -97,13 +97,13 @@ To construct a temperament from equal temperaments
 - squares
 
 ```
-temp = te_et.et_construct (["14c", "17c"], te.Subgroup ([2, 3, 5, 7]))
+temp = et_construct (["14c", "17c"], Subgroup ([2, 3, 5, 7]))
 ```
 
 - BPS
 
 ```
-temp = te_et.et_construct (["b4", "b13"], te.Subgroup ([3, 5, 7]))
+temp = et_construct (["b4", "b13"], Subgroup ([3, 5, 7]))
 ```
 
 To construct a temperament from a comma basis
@@ -111,8 +111,8 @@ To construct a temperament from a comma basis
 - septimal sensi
 
 ```
-temp = te_et.comma_construct (
-    te.Subgroup (["126/125", "245/243"]).basis_matrix)
+temp = comma_construct (
+    Subgroup (["126/125", "245/243"]).basis_matrix)
 ```
 
 ### Lattice-related functions
@@ -120,11 +120,11 @@ temp = te_et.comma_construct (
 This is mainly used to find the octave-equivalent interval temperamental complexity spectrum. To do this, we need to construct the temperament with `te_lat.TemperamentLattice`. Here we're demonstrating using tridecimal history. 
 
 ```
-temp = te_lat.TemperamentLattice ([
-    [1, 2, 0, 0, 1, 2], 
+temp = TemperamentLattice (
+    [[1, 2, 0, 0, 1, 2], 
     [0, 6, 0, -7, -2, 9], 
-    [0, 0, 1, 1, 1, 1]
-    ])
+    [0, 0, 1, 1, 1, 1]]
+)
 temp.temperamental_complexity_spectrum (
-    te_lat.diamond_monzos_gen (15, eq = 2, comp = False), oe = True)
+    diamond_monzos_gen (15, eq = 2, comp = False), oe = True)
 ```

@@ -4,8 +4,8 @@
 import math, warnings
 import numpy as np
 from scipy import linalg
-import te_common as te
-import te_temperament_measures as te_tm
+from . import te_common as te
+from . import te_temperament_measures as te_tm
 
 class TemperamentLattice (te_tm.Temperament):
     def temperamental_norm (self, monzo, norm = te.Norm (), oe = False, show = True):

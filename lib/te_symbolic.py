@@ -6,7 +6,7 @@ import numpy as np
 from scipy import linalg
 from sympy.matrices import Matrix, BlockMatrix
 from sympy import Rational, log, Pow, Mod, pprint, simplify
-import te_common as te
+from . import te_common as te
 
 class NormSym (te.Norm):
     """Specialized norm class for symbolic calculations."""

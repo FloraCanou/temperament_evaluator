@@ -4,8 +4,8 @@
 import re, warnings
 import numpy as np
 from tqdm import tqdm
-import te_common as te
-import te_temperament_measures as te_tm
+from . import te_common as te
+from . import te_temperament_measures as te_tm
 
 WARTS_DICT = {
     2: "a", 3: "b", 5: "c", 7: "d", 11: "e", 13: "f", 
