@@ -33,7 +33,7 @@ def wrapper_main (breeds, subgroup = None, norm = te.Norm (), inharmonic = False
     breeds, subgroup = te.setup (breeds, subgroup, axis = te.AXIS.ROW)
     if (inharmonic or subgroup.is_prime ()
             or norm.wmode == 1 and norm.wstrength == 1 and subgroup.is_prime_power ()):
-        gen, tempered_tuning_map, error_map = optimizer_main (
+        gen, tempered_tuning_map, error_map = __optimizer_main (
             breeds, target = subgroup, norm = norm, 
             constraint = constraint, destretch = destretch, show = show)
         error_map_x = norm.tuning_x (error_map, subgroup)
@@ -41,11 +41,8 @@ def wrapper_main (breeds, subgroup = None, norm = te.Norm (), inharmonic = False
         error = __power_mean_norm (error_map_x)
         bias = __mean (error_map_x)
     else:
-        subgroup_mp = subgroup.minimal_prime_subgroup ()
-        subgroup2mp = subgroup.basis_matrix_to (subgroup_mp)
-        breeds_mp = te.antinullspace (subgroup2mp @ te.nullspace (breeds))
-
-        gen_mp, tempered_tuning_map_mp, error_map_mp = optimizer_main (
+        breeds_mp, subgroup_mp = te.breeds2mp (breeds, subgroup)
+        gen_mp, tempered_tuning_map_mp, error_map_mp = __optimizer_main (
             breeds_mp, target = subgroup_mp, norm = norm, 
             constraint = constraint, destretch = destretch, show = show)
         error_map_mp_x = norm.tuning_x (error_map_mp, subgroup_mp)
@@ -66,7 +63,7 @@ def wrapper_main (breeds, subgroup = None, norm = te.Norm (), inharmonic = False
 
     return gen, tempered_tuning_map, error_map
 
-def optimizer_main (breeds, target = None, norm = te.Norm (), 
+def __optimizer_main (breeds, target = None, norm = te.Norm (), 
         constraint = None, destretch = None, show = True):
     """Returns the generator tuning map, tuning map, and error map inharmonically. """
 
@@ -83,10 +80,10 @@ def optimizer_main (breeds, target = None, norm = te.Norm (),
         if constraint is None:
             cons = ()
         else:
-            cons_monzo_list = constraint.basis_matrix_to (target)
-            cons = optimize.LinearConstraint ((breeds @ cons_monzo_list).T, 
-                lb = (just_tuning_map @ cons_monzo_list).T, 
-                ub = (just_tuning_map @ cons_monzo_list).T)
+            cons_monzos = constraint.basis_matrix_to (target)
+            cons = optimize.LinearConstraint ((breeds @ cons_monzos).T, 
+                lb = (just_tuning_map @ cons_monzos).T, 
+                ub = (just_tuning_map @ cons_monzos).T)
         res = optimize.minimize (
             lambda gen: linalg.norm (gen @ breeds_x - just_tuning_map_x, ord = norm.order), 
             gen0, method = "COBYQA", constraints = cons)
@@ -109,4 +106,4 @@ def optimizer_main (breeds, target = None, norm = te.Norm (),
 
     return gen, tempered_tuning_map, error_map
 
-optimiser_main = optimizer_main
+__optimiser_main = __optimizer_main

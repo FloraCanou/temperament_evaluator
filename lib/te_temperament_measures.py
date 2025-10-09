@@ -149,7 +149,7 @@ class Temperament:
             constraint = None, destretch = None, ftype = None): 
         """
         Gives the tuning. 
-        Calls either wrapper_main or wrapper_symbolic. 
+        Calls either wrapper_main or wrapper_sym. 
         """
 
         # check optimizer applicability and availability
@@ -188,7 +188,7 @@ class Temperament:
                 mapping, subgroup = self.subgroup, norm = norm, 
                 inharmonic = inharmonic or is_trivial, constraint = constraint, destretch = destretch)
         elif optimizer == "sym":
-            gen, tempered_tuning_map, error_map = te_sym.wrapper_symbolic (
+            gen, tempered_tuning_map, error_map = te_sym.wrapper_sym (
                 mapping, subgroup = self.subgroup, norm = te_sym.NormSym (norm), 
                 inharmonic = inharmonic or is_trivial, constraint = constraint, destretch = destretch)
 
@@ -239,12 +239,10 @@ class Temperament:
 
     def __complexity (self, ntype, norm, inharmonic):
         if inharmonic:
-            subgroup = self.subgroup
-            mapping = self.mapping
+            mapping, subgroup = self.mapping, self.subgroup
             index = 1
         else:
-            subgroup = self.subgroup.minimal_prime_subgroup ()
-            mapping = te.antinullspace (self.subgroup.basis_matrix_to (subgroup) @ te.nullspace (self.mapping))
+            mapping, subgroup = te.breeds2mp (self.mapping, self.subgroup)
             index = self.subgroup.index ()
         r, d = mapping.shape #rank and dimensionality
 
@@ -284,11 +282,9 @@ class Temperament:
 
     def __error (self, ntype, norm, inharmonic, scalar):
         if inharmonic:
-            subgroup = self.subgroup
-            mapping = self.mapping
+            mapping, subgroup = self.mapping, self.subgroup
         else:
-            subgroup = self.subgroup.minimal_prime_subgroup ()
-            mapping = te.antinullspace (self.subgroup.basis_matrix_to (subgroup) @ te.nullspace (self.mapping))
+            mapping, subgroup = te.breeds2mp (self.mapping, self.subgroup)
         r, d = mapping.shape #rank and dimensionality
         just_tuning_map = subgroup.just_tuning_map (scalar)
 
@@ -301,7 +297,7 @@ class Temperament:
             error = np.sqrt (error_map_x @ error_map_x.T)
         else:
             from . import te_optimizer as te_opt
-            _, _, error_map = te_opt.optimizer_main (
+            _, _, error_map = te_opt.__optimizer_main (
                 mapping, target = subgroup, norm = norm, show = False)
             error_map *= scalar / te.SCALAR.CENT #optimizer is always in cents
             error_map_x = norm.tuning_x (error_map, subgroup)
@@ -316,7 +312,7 @@ class Temperament:
                 except ZeroDivisionError:
                     error = np.nan
             case "sintel": #Sintel--Breed
-                # an extra factor of 1/(np.sqrt (d)) is added here
+                # an extra factor of 1/(d**(1/norm.order)) is added here
                 # which isn't in Sintel's implementation
                 # this factor will be canceled out in logflat badness
                 # when we divide it by the norm of jtm
@@ -338,9 +334,9 @@ class Temperament:
             raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
 
         if logflat:
-            return self.__badness_logflat (ntype, norm, inharmonic, scalar)
+            return self.__badness_logflat (ntype, norm, do_inharmonic, scalar)
         else:
-            return self.__badness (ntype, norm, inharmonic, scalar)
+            return self.__badness (ntype, norm, do_inharmonic, scalar)
 
     def __badness (self, ntype, norm, inharmonic, scalar):
         return (self.__error (ntype, norm, inharmonic, scalar)

@@ -544,12 +544,23 @@ def nullspace (covectors):
 def antinullspace (vectors):
     """
     Column-style nullspace. 
-    *Antinullspace* is a term that's supposed to be eliminated.
-    It's antitranspose--nullspace--antitranspose 
+    Antitranspose--nullspace--antitranspose 
     where *antitranspose* refers to flip and transpose. 
     """
     frac_antinullspace_matrix = Matrix (np.flip (vectors.T)).nullspace ()
     return np.flip (np.row_stack ([matrix2array (entry) for entry in frac_antinullspace_matrix]))
+
+def breeds2mp (breeds, subgroup):
+    """
+    Enter an array of breeds and a subgroup, 
+    returns the corresponding array of breeds in the minimal prime subgroup, 
+    and the minimal prime subgroup itself. 
+    """
+    subgroup_mp = subgroup.minimal_prime_subgroup ()
+    subgroup2mp = subgroup.basis_matrix_to (subgroup_mp)
+    breeds_mp = canonicalize ( #NOTE: next line can introduce contorsion in rare cases
+        antinullspace (subgroup2mp @ nullspace (breeds)))
+    return breeds_mp, subgroup_mp
 
 # annotation functions
 

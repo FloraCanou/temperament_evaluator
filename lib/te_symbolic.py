@@ -85,7 +85,7 @@ class NormSym (te.Norm):
         primes = Matrix ([Rational (r.num, r.den) for r in subgroup.ratios ()])
         return self.tuning_weight_sym (primes) @ self.tuning_skew_sym (primes)
 
-def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = False, 
+def wrapper_sym (breeds, subgroup = None, norm = te.Norm (), inharmonic = False, 
         constraint = None, destretch = None, show = True):
     """
     Returns the generator tuning map, tuning map, and error map. 
@@ -111,7 +111,7 @@ def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = F
     breeds, subgroup = te.setup (breeds, subgroup, axis = te.AXIS.ROW)
     if (inharmonic or subgroup.is_prime ()
             or norm.wmode == 1 and norm.wstrength == 1 and subgroup.is_prime_power ()):
-        gen, tuning_projection, tempered_tuning_map, error_projection, error_map = optimizer_symbolic (
+        gen, tuning_projection, tempered_tuning_map, error_projection, error_map = __optimizer_sym (
             breeds, target = subgroup, norm = norm, 
             constraint = constraint, destretch = destretch, show = show)
         error_map_x = norm.tuning_x (error_map, subgroup)
@@ -119,11 +119,8 @@ def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = F
         error = __power_mean_norm (error_map_x)
         bias = __mean (error_map_x)
     else:
-        subgroup_mp = subgroup.minimal_prime_subgroup ()
-        subgroup2mp = subgroup.basis_matrix_to (subgroup_mp)
-        breeds_mp = te.antinullspace (subgroup2mp @ te.nullspace (breeds))
-
-        gen_mp, tuning_projection_mp, tempered_tuning_map_mp, error_projection_mp, error_map_mp = optimizer_symbolic (
+        breeds_mp, subgroup_mp = te.breeds2mp (breeds, subgroup)
+        gen_mp, tuning_projection_mp, tempered_tuning_map_mp, error_projection_mp, error_map_mp = __optimizer_sym (
             breeds_mp, target = subgroup_mp, norm = norm, 
             constraint = constraint, destretch = destretch, show = show)
         error_map_mp_x = norm.tuning_x (error_map_mp, subgroup_mp)
@@ -161,7 +158,7 @@ def wrapper_symbolic (breeds, subgroup = None, norm = te.Norm (), inharmonic = F
 
     return gen, tempered_tuning_map, error_map
 
-def optimizer_symbolic (breeds, target = None, norm = te.Norm (), 
+def __optimizer_sym (breeds, target = None, norm = te.Norm (), 
         constraint = None, destretch = None, show = True):
     """Returns the generator tuning map, tuning map, and error map inharmonically. """
 
