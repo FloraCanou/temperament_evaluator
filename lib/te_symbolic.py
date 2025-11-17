@@ -46,8 +46,8 @@ class NormSym (te.Norm):
         """Returns the interval weight matrix for a list of formal primes. """
         return Matrix.diag (*self.__weight_vec_sym (primes))
 
-    def tuning_weight_sym (self, primes):
-        """Returns the tuning weight matrix for a list of formal primes. """
+    def val_weight_sym (self, primes):
+        """Returns the val weight matrix for a list of formal primes. """
         return Matrix.diag (*self.__weight_vec_sym (primes).applyfunc (lambda wi: 1/wi))
 
     def interval_skew_sym (self, primes):
@@ -59,8 +59,8 @@ class NormSym (te.Norm):
             return Matrix.eye (len (primes)).col_join (
                 self.skew*Matrix.ones (1, len (primes)))
 
-    def tuning_skew_sym (self, primes):
-        """Returns the tuning skew matrix for a list of formal primes. """
+    def val_skew_sym (self, primes):
+        """Returns the val skew matrix for a list of formal primes. """
         if self.skew == 0:
             return Matrix.eye (len (primes))
         elif self.skew == np.inf:
@@ -73,17 +73,17 @@ class NormSym (te.Norm):
             - kr*Matrix.ones (len (primes), len (primes))).row_join (
                 r*Matrix.ones (len (primes), 1))
 
-    def tuning_x_sym (self, main, subgroup):
+    def val_transform_sym (self, vals, subgroup):
         primes = Matrix ([Rational (r.num, r.den) for r in subgroup.ratios ()])
-        return main @ self.tuning_weight_sym (primes) @ self.tuning_skew_sym (primes)
+        return vals @ self.val_weight_sym (primes) @ self.val_skew_sym (primes)
 
-    def interval_x_sym (self, main, subgroup):
+    def interval_transform_sym (self, intervals, subgroup):
         primes = Matrix ([Rational (r.num, r.den) for r in subgroup.ratios ()])
-        return self.interval_skew_sym (primes) @ self.interval_weight_sym (primes) @ main
-    
-    def weightskew (self, subgroup):
+        return self.interval_skew_sym (primes) @ self.interval_weight_sym (primes) @ intervals
+
+    def val_transformer (self, subgroup):
         primes = Matrix ([Rational (r.num, r.den) for r in subgroup.ratios ()])
-        return self.tuning_weight_sym (primes) @ self.tuning_skew_sym (primes)
+        return self.val_weight_sym (primes) @ self.val_skew_sym (primes)
 
 def wrapper_sym (breeds, subgroup = None, norm = te.Norm (), inharmonic = False, 
         constraint = None, destretch = None, show = True):
@@ -114,8 +114,7 @@ def wrapper_sym (breeds, subgroup = None, norm = te.Norm (), inharmonic = False,
         gen, tuning_projection, tempered_tuning_map, error_projection, error_map = __optimizer_sym (
             breeds, target = subgroup, norm = norm, 
             constraint = constraint, destretch = destretch, show = show)
-        error_map_x = norm.tuning_x (error_map, subgroup)
-        # print (error_map_x) #for debugging
+        error_map_x = norm.val_transform (error_map, subgroup)
         error = __power_mean_norm (error_map_x)
         bias = __mean (error_map_x)
     else:
@@ -123,8 +122,7 @@ def wrapper_sym (breeds, subgroup = None, norm = te.Norm (), inharmonic = False,
         gen_mp, tuning_projection_mp, tempered_tuning_map_mp, error_projection_mp, error_map_mp = __optimizer_sym (
             breeds_mp, target = subgroup_mp, norm = norm, 
             constraint = constraint, destretch = destretch, show = show)
-        error_map_mp_x = norm.tuning_x (error_map_mp, subgroup_mp)
-        # print (error_map_mp_x) #for debugging
+        error_map_mp_x = norm.val_transform (error_map_mp, subgroup_mp)
         error = __power_mean_norm (error_map_mp_x)
         bias = __mean (error_map_mp_x)
 
@@ -168,34 +166,34 @@ def __optimizer_sym (breeds, target = None, norm = te.Norm (),
         raise ValueError ("Euclidean norm is required for symbolic solution. ")
 
     just_tuning_map = te.SCALAR.CENT*Matrix ([target.ratios (evaluate = True)]).applyfunc (lambda si: log (si, 2))
-    weightskew = norm.weightskew (target)
+    val_transformer = norm.val_transformer (target)
     breeds_copy = Matrix (breeds)
-    breeds_x = norm.tuning_x_sym (breeds_copy, target)
+    breeds_x = norm.val_transform_sym (breeds_copy, target)
 
     if constraint is None:
-        tuning_projection = weightskew @ breeds_x.pinv () @ breeds_x @ weightskew.pinv ()
+        tuning_projection = val_transformer @ breeds_x.pinv () @ breeds_x @ val_transformer.pinv ()
     else:
-        cons_monzo_list = Matrix (constraint.basis_matrix_to (target))
-        cons_monzo_list_x = norm.interval_x_sym (cons_monzo_list, target)
+        cons_basis_matrix = Matrix (constraint.basis_matrix_to (target))
+        cons_basis_matrix_x = norm.interval_transform_sym (cons_basis_matrix, target)
 
         # orthonormal complement basis of the weight-skewed constraints
         comp_monzo_list_x = Matrix (BlockMatrix (Matrix.orthogonalize (
-            *cons_monzo_list_x.T.nullspace (), normalize = True)))
+            *cons_basis_matrix_x.T.nullspace (), normalize = True)))
         
         # weight-skewed working subgroup basis in terms of monzo list, isomorphic to the original
         # joined by weight-skewed constraint and its orthonormal complement
-        subgroup_x = cons_monzo_list_x.row_join (comp_monzo_list_x)
+        subgroup_x = cons_basis_matrix_x.row_join (comp_monzo_list_x)
 
         # weight-skewed map and constraints in the working basis
         breeds_xs = Matrix (breeds_x @ subgroup_x).rref ()[0]
-        cons_monzo_list_xs = subgroup_x.inv () @ cons_monzo_list_x
+        cons_basis_matrix_xs = subgroup_x.inv () @ cons_basis_matrix_x
 
         # get the weight-skewed tuning projection map in the working basis and copy the first r columns
         tuning_projection_xs = breeds_xs.pinv () @ breeds_xs
-        tuning_projection_xs_eigen = tuning_projection_xs @ cons_monzo_list_xs
+        tuning_projection_xs_eigen = tuning_projection_xs @ cons_basis_matrix_xs
 
         # find the minor tuning projection map
-        r = cons_monzo_list.rank ()
+        r = cons_basis_matrix.rank ()
         breeds_xs_minor = breeds_xs[r:, r:]
         tuning_projection_xs_minor = breeds_xs_minor.pinv () @ breeds_xs_minor
 
@@ -208,7 +206,7 @@ def __optimizer_sym (breeds, target = None, norm = te.Norm (),
 
         # remove weight-skew and basis transformation
         tuning_projection = simplify (
-            weightskew @ subgroup_x @ tuning_projection_xs @ subgroup_x.inv () @ weightskew.pinv ())
+            val_transformer @ subgroup_x @ tuning_projection_xs @ subgroup_x.inv () @ val_transformer.pinv ())
     if show: 
         print ("Solved. ")
 

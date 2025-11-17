@@ -11,20 +11,14 @@ class TemperamentLattice (te_tm.Temperament):
     def temperamental_norm (self, monzo, norm = te.Norm (), oe = False, show = True):
         """Takes a monzo and returns its temperamental norm."""
         mapping_copy = self.mapping[1:] if oe else self.mapping # formal-octave equivalence
-        mapping_x = norm.tuning_x (mapping_copy, self.subgroup)
+        mapping_x = norm.val_transform (mapping_copy, self.subgroup)
         projection_x = linalg.pinv (mapping_x) @ mapping_x
-        monzo_x = norm.interval_x (monzo, self.subgroup)
+        monzo_x = norm.interval_transform (monzo, self.subgroup)
         interval_temperamental_norm = np.sqrt (monzo_x.T @ projection_x @ monzo_x)
         if show:
             ratio = te.monzo2ratio (monzo, self.subgroup)
             print (f"{ratio}\t {interval_temperamental_norm}")
         return interval_temperamental_norm
-
-    def find_temperamental_norm (self, monzo, norm = te.Norm (), oe = False, show = True):
-        """Same as above. Deprecated since 1.11.0. """
-        warnings.warn ("`find_temperamental_norm` has been deprecated. "
-            "Use `temperamental_norm` instead. ", FutureWarning)
-        return self.temperamental_norm (monzo, norm = norm, oe = oe, show = show)
 
     def temperamental_complexity_spectrum (self, monzos, norm = te.Norm (), oe = True):
         """Takes a monzo list and displays the temperamental norms."""
@@ -41,14 +35,6 @@ class TemperamentLattice (te_tm.Temperament):
         for entry in spectrum:
             ratio = te.monzo2ratio (entry[0], self.subgroup)
             print (f"{ratio}\t{entry[1]:.3f}")
-
-    def find_complexity_spectrum (self, monzos, norm = te.Norm (), oe = True):
-        """Same as above. Deprecated since 1.11.0. """
-        warnings.warn ("`find_spectrum` and `find_complexity_spectrum` have been deprecated. "
-            "Use `temperamental_complexity_spectrum` instead. ", FutureWarning)
-        return self.temperamental_complexity_spectrum (monzos, norm = norm, oe = oe)
-    
-    find_spectrum = find_complexity_spectrum
 
 def diamond_monzos_gen (limit, eq = None, excl = [], comp = True, sort = None):
     """

@@ -1,6 +1,6 @@
 # © 2020-2025 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 0.29.0
+# Version 0.30.0
 
 import warnings
 import numpy as np
@@ -55,11 +55,12 @@ class Norm:
 
         return (modal_weighter (np.asarray (primes), self.wmode)/2)**self.wstrength
 
-    def tuning_weight (self, primes):
-        """Returns the tuning weight matrix for a list of formal primes. """
+    def val_weight (self, primes):
+        """Returns the val weight matrix for a list of formal primes. """
         return np.diag (1/self.__weight_vec (primes))
 
-    def tuning_skew (self, subgroup):
+    def val_skew (self, subgroup):
+        """Returns the val skew matrix for a list of formal primes. """
         if self.skew == 0:
             return np.eye (len (subgroup))
         elif self.order == 2:
@@ -71,8 +72,8 @@ class Norm:
             np.eye (len (subgroup)) - kr*np.ones ((len (subgroup), len (subgroup))),
             r*np.ones ((len (subgroup), 1)), axis = 1)
 
-    def tuning_x (self, main, subgroup):
-        return main @ self.tuning_weight (subgroup) @ self.tuning_skew (subgroup)
+    def val_transform (self, main, subgroup):
+        return main @ self.val_weight (subgroup) @ self.val_skew (subgroup)
 
 def __get_subgroup (main, subgroup):
     main = np.asarray (main)
@@ -92,8 +93,8 @@ def optimizer_main (breeds, subgroup = None, norm = Norm (),
     breeds, subgroup = __get_subgroup (breeds, subgroup)
 
     just_tuning_map = SCALAR.CENT*np.log2 (subgroup)
-    breeds_x = norm.tuning_x (breeds, subgroup)
-    just_tuning_map_x = norm.tuning_x (just_tuning_map, subgroup)
+    breeds_x = norm.val_transform (breeds, subgroup)
+    just_tuning_map_x = norm.val_transform (just_tuning_map, subgroup)
     if norm.order == 2 and cons_monzo_list is None: #simply using lstsq for better performance
         res = linalg.lstsq (breeds_x.T, just_tuning_map_x)
         gen = res[0]
@@ -102,9 +103,9 @@ def optimizer_main (breeds, subgroup = None, norm = Norm (),
     else:
         gen0 = just_tuning_map[:breeds.shape[0]] #initial guess
         if cons_monzo_list is None:
-            cons = ()
+            cons_object = ()
         else:
-            cons = optimize.LinearConstraint ((breeds @ cons_monzo_list).T, 
+            cons_object = optimize.LinearConstraint ((breeds @ cons_monzo_list).T, 
                 lb = (just_tuning_map @ cons_monzo_list).T, 
                 ub = (just_tuning_map @ cons_monzo_list).T)
         res = optimize.minimize (
@@ -120,10 +121,10 @@ def optimizer_main (breeds, subgroup = None, norm = Norm (),
     if des_monzo is not None:
         if np.asarray (des_monzo).ndim > 1 and np.asarray (des_monzo).shape[1] != 1:
             raise IndexError ("only one destretch target is allowed. ")
-        elif (tempered_size := gen @ breeds @ des_monzo) == 0:
+        elif (des_tempered_size := gen @ breeds @ des_monzo) == 0:
             raise ZeroDivisionError ("destretch target is in the nullspace. ")
         else:
-            gen *= (just_tuning_map @ des_monzo)/tempered_size
+            gen *= (just_tuning_map @ des_monzo)/des_tempered_size
 
     tempered_tuning_map = gen @ breeds
     error_map = tempered_tuning_map - just_tuning_map

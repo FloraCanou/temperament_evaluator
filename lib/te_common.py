@@ -1,6 +1,6 @@
 # © 2020-2025 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 1.14.0
+# Version 1.15.0
 
 import re, itertools, functools, warnings
 import numpy as np
@@ -352,8 +352,8 @@ class Norm:
         """Returns the interval weight matrix for a list of formal primes. """
         return np.diag (self.__weight_vec (primes))
 
-    def tuning_weight (self, primes):
-        """Returns the tuning weight matrix for a list of formal primes. """
+    def val_weight (self, primes):
+        """Returns the val weight matrix for a list of formal primes. """
         return np.diag (1/self.__weight_vec (primes))
 
     def interval_skew (self, primes):
@@ -365,8 +365,8 @@ class Norm:
         else:
             raise NotImplementedError ("Skew only works with Euclidean norm as of now.")
 
-    def tuning_skew (self, primes):
-        """Returns the tuning skew matrix for a list of formal primes. """
+    def val_skew (self, primes):
+        """Returns the val skew matrix for a list of formal primes. """
         if self.skew == 0:
             return np.eye (len (primes))
         elif self.order == 2:
@@ -380,13 +380,13 @@ class Norm:
         else:
             raise NotImplementedError ("Skew only works with Euclidean norm as of now.")
 
-    def tuning_x (self, main, subgroup):
+    def val_transform (self, vals, subgroup):
         primes = subgroup.ratios (evaluate = True)
-        return main @ self.tuning_weight (primes) @ self.tuning_skew (primes)
+        return vals @ self.val_weight (primes) @ self.val_skew (primes)
 
-    def interval_x (self, main, subgroup):
+    def interval_transform (self, intervals, subgroup):
         primes = subgroup.ratios (evaluate = True)
-        return self.interval_skew (primes) @ self.interval_weight (primes) @ main
+        return self.interval_skew (primes) @ self.interval_weight (primes) @ intervals
 
 # canonicalization functions
 

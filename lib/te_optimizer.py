@@ -36,8 +36,7 @@ def wrapper_main (breeds, subgroup = None, norm = te.Norm (), inharmonic = False
         gen, tempered_tuning_map, error_map = __optimizer_main (
             breeds, target = subgroup, norm = norm, 
             constraint = constraint, destretch = destretch, show = show)
-        error_map_x = norm.tuning_x (error_map, subgroup)
-        # print (error_map_x) #for debugging
+        error_map_x = norm.val_transform (error_map, subgroup)
         error = __power_mean_norm (error_map_x)
         bias = __mean (error_map_x)
     else:
@@ -45,8 +44,7 @@ def wrapper_main (breeds, subgroup = None, norm = te.Norm (), inharmonic = False
         gen_mp, tempered_tuning_map_mp, error_map_mp = __optimizer_main (
             breeds_mp, target = subgroup_mp, norm = norm, 
             constraint = constraint, destretch = destretch, show = show)
-        error_map_mp_x = norm.tuning_x (error_map_mp, subgroup_mp)
-        # print (error_map_mp_x) #for debugging
+        error_map_mp_x = norm.val_transform (error_map_mp, subgroup_mp)
         error = __power_mean_norm (error_map_mp_x)
         bias = __mean (error_map_mp_x)
 
@@ -63,13 +61,13 @@ def wrapper_main (breeds, subgroup = None, norm = te.Norm (), inharmonic = False
 
     return gen, tempered_tuning_map, error_map
 
-def __optimizer_main (breeds, target = None, norm = te.Norm (), 
+def __optimizer_main (breeds, target, norm = te.Norm (), 
         constraint = None, destretch = None, show = True):
     """Returns the generator tuning map, tuning map, and error map inharmonically. """
 
     just_tuning_map = target.just_tuning_map (scalar = te.SCALAR.CENT)
-    breeds_x = norm.tuning_x (breeds, target)
-    just_tuning_map_x = norm.tuning_x (just_tuning_map, target)
+    breeds_x = norm.val_transform (breeds, target)
+    just_tuning_map_x = norm.val_transform (just_tuning_map, target)
     if norm.order == 2 and constraint is None: #simply using lstsq for better performance
         res = linalg.lstsq (breeds_x.T, just_tuning_map_x)
         gen = res[0]
@@ -78,15 +76,15 @@ def __optimizer_main (breeds, target = None, norm = te.Norm (),
     else:
         gen0 = just_tuning_map[:breeds.shape[0]] #initial guess
         if constraint is None:
-            cons = ()
+            cons_object = ()
         else:
-            cons_monzos = constraint.basis_matrix_to (target)
-            cons = optimize.LinearConstraint ((breeds @ cons_monzos).T, 
-                lb = (just_tuning_map @ cons_monzos).T, 
-                ub = (just_tuning_map @ cons_monzos).T)
+            cons_basis_matrix = constraint.basis_matrix_to (target)
+            cons_object = optimize.LinearConstraint ((breeds @ cons_basis_matrix).T, 
+                lb = (just_tuning_map @ cons_basis_matrix).T, 
+                ub = (just_tuning_map @ cons_basis_matrix).T)
         res = optimize.minimize (
             lambda gen: linalg.norm (gen @ breeds_x - just_tuning_map_x, ord = norm.order), 
-            gen0, method = "COBYQA", constraints = cons)
+            gen0, method = "COBYQA", constraints = cons_object)
         if show: 
             print (res.message)
         if res.success:
@@ -96,13 +94,13 @@ def __optimizer_main (breeds, target = None, norm = te.Norm (),
 
     if destretch is not None:
         des_monzo = te.ratio2monzo (te.as_ratio (destretch), subgroup = target)
-        if (tempered_size := gen @ breeds @ des_monzo) == 0:
+        if (des_tempered_size := gen @ breeds @ des_monzo) == 0:
             raise ZeroDivisionError ("destretch target is in the nullspace. ")
         else:
-            gen *= (just_tuning_map @ des_monzo)/tempered_size
+            gen *= (just_tuning_map @ des_monzo)/des_tempered_size
 
     tempered_tuning_map = gen @ breeds
-    error_map = tempered_tuning_map - target.just_tuning_map (scalar = te.SCALAR.CENT)
+    error_map = tempered_tuning_map - just_tuning_map
 
     return gen, tempered_tuning_map, error_map
 

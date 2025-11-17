@@ -224,7 +224,7 @@ class Temperament:
         r, d = mapping.shape #rank and dimensionality
         if norm.skew: d += 1
         combinations = itertools.combinations (range (d), r)
-        return np.array ([linalg.det (norm.tuning_x (mapping, subgroup)[:, entry]) for entry in combinations])
+        return np.array ([linalg.det (norm.val_transform (mapping, subgroup)[:, entry]) for entry in combinations])
 
     def complexity (self, ntype = "breed", norm = te.Norm (), inharmonic = False):
         """
@@ -250,8 +250,8 @@ class Temperament:
             # complexity = linalg.norm (
             #     self.__wedgie (mapping, subgroup, norm)) / index #same but less performant
             complexity = np.sqrt (linalg.det (
-                norm.tuning_x (mapping, subgroup)
-                @ norm.tuning_x (mapping, subgroup).T)) / index
+                norm.val_transform (mapping, subgroup)
+                @ norm.val_transform (mapping, subgroup).T)) / index
         else:
             complexity = linalg.norm (
                 self.__wedgie (mapping, subgroup, norm), ord = norm.order) / index
@@ -262,7 +262,7 @@ class Temperament:
             case "smith": #Gene Ward Smith's RMS
                 complexity *= 1/(len (tuple (itertools.combinations (range (d), r))))**(1/norm.order)
             case "sintel": #Sintel--Breed
-                complexity *= 1/linalg.det (norm.tuning_x (np.eye (d), subgroup)[:,:d])**(r/d)
+                complexity *= 1/linalg.det (norm.val_transform (np.eye (d), subgroup)[:,:d])**(r/d)
             case "none":
                 pass
             case _:
@@ -289,10 +289,10 @@ class Temperament:
         just_tuning_map = subgroup.just_tuning_map (scalar)
 
         if norm.order == 2: # standard L2 error
-            error_map_x = (norm.tuning_x (just_tuning_map, subgroup)
-                @ linalg.pinv (norm.tuning_x (mapping, subgroup))
-                @ norm.tuning_x (mapping, subgroup)
-                - norm.tuning_x (just_tuning_map, subgroup))
+            error_map_x = (norm.val_transform (just_tuning_map, subgroup)
+                @ linalg.pinv (norm.val_transform (mapping, subgroup))
+                @ norm.val_transform (mapping, subgroup)
+                - norm.val_transform (just_tuning_map, subgroup))
             # error = linalg.norm (error_map_x) #same
             error = np.sqrt (error_map_x @ error_map_x.T)
         else:
@@ -300,7 +300,7 @@ class Temperament:
             _, _, error_map = te_opt.__optimizer_main (
                 mapping, target = subgroup, norm = norm, show = False)
             error_map *= scalar / te.SCALAR.CENT #optimizer is always in cents
-            error_map_x = norm.tuning_x (error_map, subgroup)
+            error_map_x = norm.val_transform (error_map, subgroup)
             error = linalg.norm (error_map_x, ord = norm.order)
         
         match ntype: 
@@ -317,7 +317,7 @@ class Temperament:
                 # this factor will be canceled out in logflat badness
                 # when we divide it by the norm of jtm
                 error *= 1/(d**(1/norm.order)
-                    * linalg.det (norm.tuning_x (np.eye (d), subgroup)[:,:d])**(1/d))
+                    * linalg.det (norm.val_transform (np.eye (d), subgroup)[:,:d])**(1/d))
             case "none":
                 pass
             case _:
@@ -351,7 +351,7 @@ class Temperament:
             res = np.nan
         match ntype:
             case "sintel":
-                norm_jtm = 1/linalg.det (norm.tuning_x (np.eye (d), self.subgroup)[:,:d])**(1/d)
+                norm_jtm = 1/linalg.det (norm.val_transform (np.eye (d), self.subgroup)[:,:d])**(1/d)
                 res /= norm_jtm
             case "breed" | "smith" | "none":
                 pass
