@@ -80,69 +80,96 @@ class Temperament:
     def form (self, ftype = "none"):
         """
         Returns the mapping renormalized to various forms. 
-        \"none\": does nothing. 
-        \"flip\": flips negative generators. 
+        \"none\": 
+            does nothing. 
+        \"flip\": 
+            flips negative generators. 
         \"shift\": 
-            flips negative generators if they are (-1)-sheared; 
-            equave-reduces negative generators otherwise. 
+            shifts negative generators, but
+            flips negative generators if they are (c - p)-sheared, 
+            where c is the cot and p is the ploid. 
         \"reduce\": 
-            flips negative generators if they are (-1)-sheared; 
             equave-reduces all generators. 
+        \"flip-reduce\": 
+            flips negative generators. 
+            then equave-reduces all generators. 
+        \"shift-reduce\": 
+            shifts negative generators, but
+            flips negative generators if they are (c - p)-sheared, 
+            where c is the cot and p is the ploid. 
+            then equave-reduces all generators. 
         """
 
-        def __fx ():
+        def __fx (breeds, tuning_map):
             """
             Returns the fast approximate generator map in octaves.
             The mapping must be in HNF. 
             """
-            cols = [next (j for j, bj in enumerate (self.mapping[i]) if bj != 0) for i in range (self.mapping.shape[0])]
-            return self.subgroup.just_tuning_map ()[cols] @ linalg.inv (self.mapping[:, cols])
+            cols = [next (j for j, bj in enumerate (breeds[i]) if bj != 0) for i in range (breeds.shape[0])]
+            return tuning_map[cols] @ linalg.inv (breeds[:, cols])
+
+        def __flip (breeds, tuning_map): 
+            gen = __fx (breeds, just_tuning_map)
+            for i, gi in enumerate (gen):
+                if gi < 0:
+                    breeds[i] *= -1
+            return breeds
+
+        def __shift (breeds, tuning_map): 
+            # to determine when to flip
+            # we define a generalized ploidacot that works for any rank & subgroup
+            # ploid: number of periods per formal equave
+            #   which equals the first entry of the mapping
+            # cot: number of generators to reach the current formal prime
+            #   which equals the first nonzero entry of the current row
+            # shear: number of periods added to the equave-reduced formal prime
+            #   to reach the stack of generators, modulo cot
+            # to perform period shift on the mapping
+            # we add to the first row the current row 
+            # times the number of whole periods the generator has
+            gen = __fx (breeds, tuning_map)
+            ploid = breeds[0][0]
+            for i, _ in enumerate (gen[1:], start = 1): 
+                cot = next (bj for bj in breeds[i] if bj != 0)
+                shear = ((cot*gen[i]//gen[0]).astype (int) 
+                    - (tuning_map[i] % tuning_map[0]//gen[0]).astype (int)) % cot
+                print (ploid, shear, cot)
+                if gen[i] < 0:
+                    if shear == cot - ploid: 
+                        breeds[i] *= -1
+                    else:
+                        breeds[0] += breeds[i]*(gen[i]//gen[0]).astype (int)
+            return breeds
+
+        def __reduce (breeds, tuning_map): 
+            # to perform equave reduction on the mapping
+            # we add to the first row the current row
+            # times the number of periods of the number of whole equaves the generator has
+            gen = __fx (breeds, tuning_map)
+            for i, _ in enumerate (gen[1:], start = 1):
+                breeds[0] += breeds[i]*breeds[0][0]*(gen[i]//tuning_map[0]).astype (int)
+            return breeds
 
         mapping = self.mapping.copy ()
+        just_tuning_map = self.subgroup.just_tuning_map ()
         match ftype:
             case "none":
                 pass
             case "flip":
-                gen = __fx ()
-                for i, gi in enumerate (gen):
-                    if gi < 0:
-                        mapping[i] *= -1
+                mapping = __flip (mapping, just_tuning_map)
             case "shift":
-                # to determine when to flip
-                # we define a generalized ploidacot that works for any rank & subgroup
-                # ploid: number of periods per formal equave
-                #   which equals the first entry of the mapping
-                # cot: number of gens to reach the interval indicated by the current row
-                #   which equals the first nonzero entry of the current row
-                # shear: number of whole periods the interval has, modulo cot
-                # to perform equave reduction on the mapping
-                # we add to the first row the current row times the number
-                # of whole periods of the number of whole equaves the gen has
-                gen = __fx ()
-                ploid = mapping[0][0]
-                for i, gi in enumerate (gen[1:], start = 1):
-                    if gi < 0:
-                        cot = next (entry for entry in mapping[i] if entry != 0)
-                        shear = np.floor (cot*gi/gen[0]).astype (int) % cot
-                        if shear == cot - 1: 
-                            mapping[i] *= -1
-                        else:
-                            mapping[0] += mapping[i]*ploid*np.floor (gi/(ploid*gen[0])).astype (int)
+                mapping = __shift (mapping, just_tuning_map)
             case "reduce":
-                # similar to above, but equave reduction is done on every row
-                gen = __fx ()
-                ploid = mapping[0][0]
-                for i, gi in enumerate (gen[1:], start = 1):
-                    if gi < 0:
-                        cot = next (entry for entry in mapping[i] if entry != 0)
-                        shear = np.floor (cot*gi/gen[0]).astype (int) % cot
-                        if shear == cot - 1: 
-                            mapping[i] *= -1
-                            gi *= -1 #updates the gen for use below
-                    mapping[0] += mapping[i]*ploid*np.floor (gi/(ploid*gen[0])).astype (int)
+                mapping = __reduce (mapping, just_tuning_map)
+            case "flip-reduce":
+                mapping = __flip (mapping, just_tuning_map)
+                mapping = __reduce (mapping, just_tuning_map)
+            case "shift-reduce":
+                mapping = __shift (mapping, just_tuning_map)
+                mapping = __reduce (mapping, just_tuning_map)
             case _:
                 warnings.warn ("form not supported, using default (\"none\"). ")
-                return self.form ("none")
+                return self.form ("none", reduce)
         return mapping
 
     def tune (self, optimizer = "main", norm = te.Norm (), inharmonic = False, 
