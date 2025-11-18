@@ -133,7 +133,6 @@ class Temperament:
                 cot = next (bj for bj in breeds[i] if bj != 0)
                 shear = ((cot*gen[i]//gen[0]).astype (int) 
                     - (tuning_map[i] % tuning_map[0]//gen[0]).astype (int)) % cot
-                print (ploid, shear, cot)
                 if gen[i] < 0:
                     if shear == cot - ploid: 
                         breeds[i] *= -1
