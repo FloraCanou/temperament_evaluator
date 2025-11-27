@@ -225,8 +225,8 @@ class Temperament:
     analyze = tune
     analyse = tune
 
-    def wedgie (self, norm = te.Norm (wtype = "equilateral"), show = True):
-        """Finds the wedgie of the temperament. """
+    def wedgie (self, norm = te.Norm (wmode = 0, wstrength = 0), show = True):
+        """Finds the wedgie for the temperament. """
         wedgie = self.__wedgie (self.mapping, self.subgroup, norm)
 
         # normalize for a positive first entry
@@ -247,10 +247,19 @@ class Temperament:
 
     @staticmethod
     def __wedgie (mapping, subgroup, norm): 
-        r, d = mapping.shape #rank and dimensionality
-        if norm.skew: d += 1
+        mapping_x = norm.val_transform (mapping, subgroup)
+        r, d = mapping_x.shape #rank and dimensionality
         combinations = itertools.combinations (range (d), r)
-        return np.array ([linalg.det (norm.val_transform (mapping, subgroup)[:, entry]) for entry in combinations])
+        return np.array ([linalg.det (mapping_x[:, entry]) for entry in combinations])
+
+    def comma_basis (self, show = True):
+        """Finds a comma basis for the temperament. """
+        comma_basis = te.nullspace (self.mapping)
+        if show:
+            self.__show_header ()
+            print ("Comma basis: ")
+            te.show_monzo_list (comma_basis, self.subgroup)
+        return comma_basis
 
     def complexity (self, ntype = "breed", norm = te.Norm (), inharmonic = False):
         """
@@ -275,9 +284,8 @@ class Temperament:
         if norm.order == 2: # standard L2 complexity
             # complexity = linalg.norm (
             #     self.__wedgie (mapping, subgroup, norm)) / index #same but less performant
-            complexity = np.sqrt (linalg.det (
-                norm.val_transform (mapping, subgroup)
-                @ norm.val_transform (mapping, subgroup).T)) / index
+            mapping_x = norm.val_transform (mapping, subgroup)
+            complexity = np.sqrt (linalg.det (mapping_x @ mapping_x.T)) / index
         else:
             complexity = linalg.norm (
                 self.__wedgie (mapping, subgroup, norm), ord = norm.order) / index
@@ -315,10 +323,10 @@ class Temperament:
         just_tuning_map = subgroup.just_tuning_map (scalar)
 
         if norm.order == 2: # standard L2 error
-            error_map_x = (norm.val_transform (just_tuning_map, subgroup)
-                @ linalg.pinv (norm.val_transform (mapping, subgroup))
-                @ norm.val_transform (mapping, subgroup)
-                - norm.val_transform (just_tuning_map, subgroup))
+            just_tuning_map_x = norm.val_transform (just_tuning_map, subgroup)
+            mapping_x = norm.val_transform (mapping, subgroup)
+            error_map_x = (just_tuning_map_x @ linalg.pinv (mapping_x) @ mapping_x
+                - just_tuning_map_x)
             # error = linalg.norm (error_map_x) #same
             error = np.sqrt (error_map_x @ error_map_x.T)
         else:
@@ -405,11 +413,3 @@ class Temperament:
             f"Error: {error:.6f} (oct/{error_scale})",
             f"Badness (simple): {badness:.6f} (oct/{badness_scale})",
             f"Badness (logflat): {badness_logflat:.6f} (oct/{badness_scale})", sep = "\n")
-
-    def comma_basis (self, show = True):
-        comma_basis = te.nullspace (self.mapping)
-        if show:
-            self.__show_header ()
-            print ("Comma basis: ")
-            te.show_monzo_list (comma_basis, self.subgroup)
-        return comma_basis
