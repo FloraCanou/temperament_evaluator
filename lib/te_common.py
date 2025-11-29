@@ -11,8 +11,8 @@ np.set_printoptions (suppress = True, linewidth = 256, precision = 3)
 
 def primes_gen ():
     """
-    Prime number generator. Infinite sieve of Erathosthenes
-    from https://eli.thegreenplace.net/2023/my-favorite-prime-number-generator/. 
+    Prime number generator. Infinite sieve of Erathosthenes from
+    https://eli.thegreenplace.net/2023/my-favorite-prime-number-generator/. 
     """
     composites = {}
     q = 2
@@ -26,9 +26,17 @@ def primes_gen ():
             del composites[q]
         q += 1
 
-# stock prime list, up to the 24th
+# stock prime list, up to the 24th (89)
 # create on start
-PRIME_LIST = list (itertools.islice (primes_gen (), 24))
+PRIME_LIST_LEN = 24
+PRIME_LIST = list (itertools.islice (primes_gen (), PRIME_LIST_LEN))
+
+def prime_list (length): 
+    """Returns the list of prime numbers of a specified length. """
+    if length <= PRIME_LIST_LEN: 
+        return PRIME_LIST[:length]
+    else: 
+        return list (itertools.islice (primes_gen (), length))
 
 class AXIS:
     ROW, COL, VEC = 0, 1, 2
@@ -250,7 +258,9 @@ class Subgroup:
             return [monzo2ratio (entry) for entry in self.basis_matrix.T]
 
     def just_tuning_map (self, scalar = SCALAR.OCTAVE): #in octaves by default
-        return scalar*np.log2 (self.ratios (evaluate = True))
+        """Returns the just tuning map. """
+        primes = prime_list (self.basis_matrix.shape[0])
+        return scalar*(np.log2 (primes) @ self.basis_matrix)
 
     def is_prime_power (self):
         """
@@ -436,21 +446,22 @@ def setup (main, subgroup, axis):
     """
     main = np.asarray (main)
     if subgroup is None:
-        if (length_main := __get_length (main, axis)) <= len (PRIME_LIST): 
-            subgroup = Subgroup (PRIME_LIST[:length_main])
-        else: 
-            subgroup = Subgroup (list (itertools.islice (primes_gen (), length_main)))
-    elif (length_main := __get_length (main, axis)) != len (subgroup):
-        warnings.warn ("dimensionalities do not match. Casting to the smaller dimensionality. ")
-        dim = min (length_main, len (subgroup))
-        match axis:
-            case AXIS.ROW:
-                main = main[:, :dim]
-            case AXIS.COL:
-                main = main[:dim, :]
-            case AXIS.VEC:
-                main = main[:dim]
-        subgroup.basis_matrix = subgroup.basis_matrix[:, :dim]
+        primes = prime_list (__get_length (main, axis))
+        subgroup = Subgroup (primes)
+    else: 
+        length_main = __get_length (main, axis)
+        length_subgroup = len (subgroup)
+        if length_main != length_subgroup:
+            warnings.warn ("dimensionalities do not match. Casting to the smaller dimensionality. ")
+            dim = min (length_main, length_subgroup)
+            match axis:
+                case AXIS.ROW:
+                    main = main[:, :dim]
+                case AXIS.COL:
+                    main = main[:dim, :]
+                case AXIS.VEC:
+                    main = main[:dim]
+            subgroup.basis_matrix = subgroup.basis_matrix[:, :dim]
     return main, subgroup
 
 # conversion functions
@@ -466,19 +477,15 @@ def monzo2ratio (subgroup_monzo, subgroup = None):
         monzo = subgroup.basis_matrix @ vec_pad (subgroup_monzo, length = len (subgroup))
     return __monzo2ratio (monzo)
 
-def __monzo2ratio (monzo, *, primes = PRIME_LIST):
-    if (length := len (monzo)) <= len (primes): 
-        primes = primes[:length]
-        num, den = 1, 1
-        for i, mi in enumerate (monzo):
-            if mi > 0:
-                num *= primes[i]**mi
-            elif mi < 0:
-                den *= primes[i]**(-mi)
-        ratio = Ratio (num, den)
-    else: #retry using the prime number generator
-        ratio = __monzo2ratio (monzo, primes = list (itertools.islice (primes_gen (), length)))
-    return ratio
+def __monzo2ratio (monzo):
+    primes = prime_list (len (monzo))
+    num, den = 1, 1
+    for i, mi in enumerate (monzo):
+        if mi > 0:
+            num *= primes[i]**mi
+        elif mi < 0:
+            den *= primes[i]**(-mi)
+    return Ratio (num, den)
 
 def ratio2monzo (ratio, subgroup = None):
     """
@@ -515,6 +522,9 @@ def ratio2monzo (ratio, subgroup = None):
     return subgroup_monzo
 
 def __ratio2monzo (ratio, *, primes = PRIME_LIST):
+    # optimized for stock primes
+    # this is faster than using the generator from the start
+    # only switch to the generator on failure
     num, den = ratio.num, ratio.den
     monzo = []
     for entry in primes:
@@ -528,7 +538,7 @@ def __ratio2monzo (ratio, *, primes = PRIME_LIST):
         monzo.append (order)
         if num == 1 and den == 1:
             break
-    else: #retry using the prime number generator
+    else: #retry using the generator
         monzo = __ratio2monzo (ratio, primes = primes_gen ())
     return np.array (monzo)
 
