@@ -4,8 +4,6 @@
 import itertools, re, warnings
 import numpy as np
 from scipy import linalg
-from sympy.matrices import Matrix, BlockMatrix
-from sympy import gcd
 from . import te_common as te
 
 class Temperament:

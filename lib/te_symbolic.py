@@ -88,9 +88,8 @@ class NormSym (te.Norm):
 def wrapper_sym (breeds, subgroup = None, norm = te.Norm (), inharmonic = False, 
         constraint = None, destretch = None, show = True):
     """
-    Returns the generator tuning map, tuning map, and error map. 
-    Inharmonic/subgroup modes can be configured here, 
-    and the result can be displayed. 
+    Returns and displays the generator tuning map, tuning map, 
+    and error map. Also displays the corresponding projection maps.
     """
     # NOTE: "map" is a reserved word
     # optimization is preferably done in the unit of octaves, but for precision reasons

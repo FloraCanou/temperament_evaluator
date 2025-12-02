@@ -4,15 +4,13 @@
 import warnings
 import numpy as np
 from scipy import optimize, linalg
-from sympy.matrices import Matrix, normalforms
 from . import te_common as te
 
 def wrapper_main (breeds, subgroup = None, norm = te.Norm (), inharmonic = False, 
         constraint = None, destretch = None, show = True):
     """
-    Returns the generator tuning map, tuning map, and error map. 
-    Inharmonic/subgroup modes can be configured here, 
-    and the result can be displayed. 
+    Returns and displays the optimal generator tuning map, 
+    tuning map, and error map. 
     """
     # NOTE: "map" is a reserved word
     # optimization is preferably done in the unit of octaves, but for precision reasons
