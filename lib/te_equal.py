@@ -15,12 +15,18 @@ WARTS_DICT = {
 }
 
 def et_construct (et_list, subgroup):
-    """Temperament construction function from equal temperaments."""
+    """Constructs a temperament from equal temperaments in wart notation."""
     breeds = np.array ([warts2breed (n, subgroup) for n in te.as_list (et_list)])
     return te_tm.Temperament (breeds, subgroup)
 
 def comma_construct (monzos, subgroup = None):
-    """Temperament construction function from commas."""
+    """
+    Constructs a temperament from its comma list. 
+    Deprecated since v1.16.0. 
+    """
+    warnings.warn ("`comma_construct` is deprecated. " \
+        "Use `Temperament.from_comma_list` instead. ", FutureWarning)
+
     monzos, subgroup = te.setup (monzos, subgroup, axis = te.AXIS.COL)
     breeds = te.antinullspace (monzos)
     return te_tm.Temperament (breeds, subgroup)

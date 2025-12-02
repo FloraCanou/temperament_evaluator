@@ -15,6 +15,13 @@ class Temperament:
         self.subgroup = subgroup
         self.mapping = te.canonicalize (np.rint (breeds).astype (int), saturate, normalize)
 
+    @classmethod
+    def from_comma_list (cls, monzos, subgroup = None):
+        """Constructs a temperament from its comma list. """
+        monzos, subgroup = te.setup (monzos, subgroup, axis = te.AXIS.COL)
+        breeds = te.antinullspace (monzos)
+        return cls (breeds, subgroup)
+
     @staticmethod
     def __check_sym (order):
         """Checks the applicability and availability of the symbolic solver."""

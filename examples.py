@@ -28,13 +28,13 @@ temp.tune (destretch = Ratio (2, 1))
 ## to find the te temperament measures
 temp.temperament_measures (ntype = "sintel") 
 
-## to find the wedgie of the temperament
+## to find the wedgie for the temperament
 temp.wedgie ()
 
-## to find a comma basis of the temperament
+## to find a comma basis for the temperament
 temp.comma_basis ()
 
-## to find the optimal GPV sequence of the temperament
+## to find the optimal GPV sequence for the temperament
 et_sequence (
     temp.comma_basis (show = False), cond = "error", search_range = 300)
 
@@ -51,7 +51,7 @@ temp.temperament_measures (ntype = "sintel")
 
 ## to construct a temperament from a comma basis
 ### septimal sensi
-temp = comma_construct (
+temp = Temperament.from_comma_list (
     Subgroup (["126/125", "245/243"]).basis_matrix)
 temp.temperament_measures (ntype = "sintel")
 
