@@ -85,14 +85,19 @@ class NormSym (te.Norm):
         primes = Matrix ([Rational (r.num, r.den) for r in subgroup.ratios ()])
         return self.val_weight_sym (primes) @ self.val_skew_sym (primes)
 
-def wrapper_sym (breeds, subgroup = None, norm = te.Norm (), inharmonic = False, 
-        constraint = None, destretch = None, show = True):
+def wrapper_sym (breeds, target = None, norm = te.Norm (), inharmonic = False, 
+        constraint = None, destretch = None, show = True, *, subgroup = None): 
     """
-    Returns and displays the generator tuning map, tuning map, 
-    and error map. Also displays the corresponding projection maps.
+    Returns and displays the generator tuning map, tempered tuning map, 
+    and error map in cents. Also displays the corresponding projection maps.
     """
     # NOTE: "map" is a reserved word
-    # optimization is preferably done in the unit of octaves, but for precision reasons
+    # in cents for consistency with wrapper_main
+
+    if subgroup is not None: 
+        warnings.warn ("'subgroup' is deprecated. Use 'target' instead. ", FutureWarning)
+        if target is None: 
+            target = subgroup
 
     def __mean (main):
         """
@@ -107,29 +112,28 @@ def wrapper_sym (breeds, subgroup = None, norm = te.Norm (), inharmonic = False,
         else:
             return __mean (np.fabs (main)**norm.order)**(1/norm.order)
 
-    breeds, subgroup = te.setup (breeds, subgroup, axis = te.AXIS.ROW)
-    if (inharmonic or subgroup.is_prime ()
-            or norm.wmode == 1 and norm.wstrength == 1 and subgroup.is_prime_power ()):
+    breeds, target = te.setup (breeds, target, axis = te.AXIS.ROW)
+    if (inharmonic or target.is_prime ()
+            or norm.wmode == 1 and norm.wstrength == 1 and target.is_prime_power ()):
         gen, tuning_projection, tempered_tuning_map, error_projection, error_map = __optimizer_sym (
-            breeds, target = subgroup, norm = norm, 
-            constraint = constraint, destretch = destretch, show = show)
-        error_map_x = norm.val_transform (error_map, subgroup)
+            breeds, target, norm, constraint, destretch, show)
+        error_map_x = norm.val_transform (error_map, target)
         error = __power_mean_norm (error_map_x)
         bias = __mean (error_map_x)
     else:
-        breeds_mp, subgroup_mp = te.breeds2mp (breeds, subgroup)
+        breeds_mp, target_mp = te.breeds2mp (breeds, target)
         gen_mp, tuning_projection_mp, tempered_tuning_map_mp, error_projection_mp, error_map_mp = __optimizer_sym (
-            breeds_mp, target = subgroup_mp, norm = norm, 
-            constraint = constraint, destretch = destretch, show = show)
-        error_map_mp_x = norm.val_transform (error_map_mp, subgroup_mp)
+            breeds_mp, target_mp, norm, constraint, destretch, show)
+        error_map_mp_x = norm.val_transform (error_map_mp, target_mp)
         error = __power_mean_norm (error_map_mp_x)
         bias = __mean (error_map_mp_x)
 
-        tempered_tuning_map = tempered_tuning_map_mp @ subgroup2mp
+        just_tuning_map = target.just_tuning_map (scalar = te.SCALAR.CENT)
+        tempered_tuning_map = tempered_tuning_map_mp @ target2mp
         gen = tempered_tuning_map @ linalg.pinv (breeds)
-        error_map = tempered_tuning_map - subgroup.just_tuning_map (scalar = te.SCALAR.CENT)
-        tuning_projection = Matrix (subgroup2mp).pinv () @ tuning_projection_mp @ Matrix (subgroup2mp)
-        error_projection = Matrix (subgroup2mp).pinv () @ error_projection_mp @ Matrix (subgroup2mp)
+        error_map = tempered_tuning_map - just_tuning_map
+        tuning_projection = Matrix (target2mp).pinv () @ tuning_projection_mp @ Matrix (target2mp)
+        error_projection = Matrix (target2mp).pinv () @ error_projection_mp @ Matrix (target2mp)
 
     if show:
         print (f"Generators: {gen} (¢)",
@@ -147,7 +151,7 @@ def wrapper_sym (breeds, subgroup = None, norm = te.Norm (), inharmonic = False,
             # but we're only interested in eigenvectors of unit eigenvalue
             frac_unit_eigenmonzos = tuning_projection.eigenvects ()[-1][-1]
             unit_eigenmonzos = np.column_stack ([te.matrix2array (entry) for entry in frac_unit_eigenmonzos])
-            te.show_monzo_list (unit_eigenmonzos, subgroup)
+            te.show_monzo_list (unit_eigenmonzos, target)
         else:
             print ("Projection maps not shown. ")
         print (f"Tuning error: {error:.6f} (¢)",
@@ -155,11 +159,12 @@ def wrapper_sym (breeds, subgroup = None, norm = te.Norm (), inharmonic = False,
 
     return gen, tempered_tuning_map, error_map
 
-def __optimizer_sym (breeds, target = None, norm = te.Norm (), 
-        constraint = None, destretch = None, show = True):
-    """Returns the generator tuning map, tuning map, and error map inharmonically. """
+def __optimizer_sym (breeds, target, norm, constraint, destretch, show): 
+    """
+    Returns the optimal generator tuning map, tempered tuning map, 
+    and error map inharmonically in cents. 
+    """
 
-    breeds, target = te.setup (breeds, target, axis = te.AXIS.ROW)
     norm = NormSym (norm)
     if norm.order != 2:
         raise ValueError ("Euclidean norm is required for symbolic solution. ")
@@ -181,11 +186,11 @@ def __optimizer_sym (breeds, target = None, norm = te.Norm (),
         
         # weight-skewed working subgroup basis in terms of monzo list, isomorphic to the original
         # joined by weight-skewed constraint and its orthonormal complement
-        subgroup_x = cons_basis_matrix_x.row_join (comp_monzo_list_x)
+        target_x = cons_basis_matrix_x.row_join (comp_monzo_list_x)
 
         # weight-skewed map and constraints in the working basis
-        breeds_xs = Matrix (breeds_x @ subgroup_x).rref ()[0]
-        cons_basis_matrix_xs = subgroup_x.inv () @ cons_basis_matrix_x
+        breeds_xs = Matrix (breeds_x @ target_x).rref ()[0]
+        cons_basis_matrix_xs = target_x.inv () @ cons_basis_matrix_x
 
         # get the weight-skewed tuning projection map in the working basis and copy the first r columns
         tuning_projection_xs = breeds_xs.pinv () @ breeds_xs
@@ -205,7 +210,7 @@ def __optimizer_sym (breeds, target = None, norm = te.Norm (),
 
         # remove weight-skew and basis transformation
         tuning_projection = simplify (
-            val_transformer @ subgroup_x @ tuning_projection_xs @ subgroup_x.inv () @ val_transformer.pinv ())
+            val_transformer @ target_x @ tuning_projection_xs @ target_x.inv () @ val_transformer.pinv ())
     if show: 
         print ("Solved. ")
 

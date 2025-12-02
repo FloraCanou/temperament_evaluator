@@ -7,6 +7,7 @@ from scipy import linalg
 from . import te_common as te
 
 class Temperament:
+    """Regular temperament profile. """
     # NOTE: "map" is a reserved word
 
     def __init__ (self, breeds, subgroup = None, *, saturate = True, normalize = True):
@@ -188,7 +189,7 @@ class Temperament:
             enforce_text = " ".join (filter (None, [cons_text, des_text]))
         else: 
             enforce_text = "none"
-        if is_trivial := (self.subgroup.is_prime ()
+        if (self.subgroup.is_prime ()
                 or norm.wmode == 1 and norm.wstrength == 1 and self.subgroup.is_prime_power ()):
             mode_text = "trivial -- inharmonic and subgroup tunings are identical"
         else:
@@ -209,12 +210,12 @@ class Temperament:
         if optimizer == "main":
             from . import te_optimizer as te_opt
             gen, tempered_tuning_map, error_map = te_opt.wrapper_main (
-                mapping, subgroup = self.subgroup, norm = norm, 
-                inharmonic = inharmonic or is_trivial, constraint = constraint, destretch = destretch)
+                mapping, target = self.subgroup, norm = norm, inharmonic = inharmonic, 
+                constraint = constraint, destretch = destretch)
         elif optimizer == "sym":
             gen, tempered_tuning_map, error_map = te_sym.wrapper_sym (
-                mapping, subgroup = self.subgroup, norm = te_sym.NormSym (norm), 
-                inharmonic = inharmonic or is_trivial, constraint = constraint, destretch = destretch)
+                mapping, target = self.subgroup, norm = norm, inharmonic = inharmonic, 
+                constraint = constraint, destretch = destretch)
 
         return gen, tempered_tuning_map, error_map
 
@@ -303,7 +304,8 @@ class Temperament:
         
         return complexity
 
-    def error (self, ntype = "breed", norm = te.Norm (), inharmonic = False, scalar = te.SCALAR.CENT): #in cents by default
+    def error (self, ntype = "breed", norm = te.Norm (), inharmonic = False, 
+            scalar = te.SCALAR.CENT): # in cents by default
         """
         Returns the temperament's inherent inaccuracy regardless of the actual tuning, 
         all subgroup temperaments supported. 
@@ -329,9 +331,9 @@ class Temperament:
             error = np.sqrt (error_map_x @ error_map_x.T)
         else:
             from . import te_optimizer as te_opt
-            _, _, error_map = te_opt.__optimizer_main (
-                mapping, target = subgroup, norm = norm, show = False)
-            error_map *= scalar / te.SCALAR.CENT #optimizer is always in cents
+            _, _, error_map = te_opt.__optimizer_main (mapping, subgroup, 
+                norm = norm, constraint = None, destretch = None, show = False)
+            error_map *= scalar / te.SCALAR.CENT #optimizer always returns values in cents
             error_map_x = norm.val_transform (error_map, subgroup)
             error = linalg.norm (error_map_x, ord = norm.order)
         

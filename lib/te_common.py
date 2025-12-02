@@ -312,15 +312,10 @@ class Subgroup:
 class Norm: 
     """Tenney--Wilson parametric norm profile for the tuning space."""
 
-    def __init__ (self, wtype = None, wmode = 1, wstrength = 1, skew = 0, order = 2, 
-            *, wamount = None):
+    def __init__ (self, wtype = None, wmode = 1, wstrength = 1, skew = 0, order = 2):
         if wtype: 
             wmode, wstrength = self.__presets (wtype)
         
-        if wamount:
-            warnings.warn ("`wamount` is deprecated. Use `wstrength` instead. ", FutureWarning)
-            wstrength = wamount
-
         self.wmode = wmode
         self.wstrength = wstrength
         self.skew = skew

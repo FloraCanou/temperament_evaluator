@@ -6,14 +6,22 @@ import numpy as np
 from scipy import optimize, linalg
 from . import te_common as te
 
-def wrapper_main (breeds, subgroup = None, norm = te.Norm (), inharmonic = False, 
-        constraint = None, destretch = None, show = True):
+def wrapper_main (breeds, target = None, norm = te.Norm (), inharmonic = False, 
+        constraint = None, destretch = None, show = True, *, subgroup = None):
     """
     Returns and displays the optimal generator tuning map, 
-    tuning map, and error map. 
+    tempered tuning map, and error map in cents. 
     """
     # NOTE: "map" is a reserved word
-    # optimization is preferably done in the unit of octaves, but for precision reasons
+    # optimization would ideally be performed in the unit of octaves
+    # unfortunately, that often results in insufficient accuracy
+    # the cent is a practical choice of unit, and test shows that further scaling 
+    # doesn't improve accuracy for most main-sequence temperaments
+
+    if subgroup is not None: 
+        warnings.warn ("'subgroup' is deprecated. Use 'target' instead. ", FutureWarning)
+        if target is None: 
+            target = subgroup
 
     def __mean (main):
         """
@@ -28,27 +36,26 @@ def wrapper_main (breeds, subgroup = None, norm = te.Norm (), inharmonic = False
         else:
             return __mean (np.fabs (main)**norm.order)**(1/norm.order)
 
-    breeds, subgroup = te.setup (breeds, subgroup, axis = te.AXIS.ROW)
-    if (inharmonic or subgroup.is_prime ()
-            or norm.wmode == 1 and norm.wstrength == 1 and subgroup.is_prime_power ()):
+    breeds, target = te.setup (breeds, target, axis = te.AXIS.ROW)
+    if (inharmonic or target.is_prime ()
+            or norm.wmode == 1 and norm.wstrength == 1 and target.is_prime_power ()):
         gen, tempered_tuning_map, error_map = __optimizer_main (
-            breeds, target = subgroup, norm = norm, 
-            constraint = constraint, destretch = destretch, show = show)
-        error_map_x = norm.val_transform (error_map, subgroup)
+            breeds, target, norm, constraint, destretch, show)
+        error_map_x = norm.val_transform (error_map, target)
         error = __power_mean_norm (error_map_x)
         bias = __mean (error_map_x)
     else:
-        breeds_mp, subgroup_mp = te.breeds2mp (breeds, subgroup)
+        breeds_mp, target_mp = te.breeds2mp (breeds, target)
         gen_mp, tempered_tuning_map_mp, error_map_mp = __optimizer_main (
-            breeds_mp, target = subgroup_mp, norm = norm, 
-            constraint = constraint, destretch = destretch, show = show)
-        error_map_mp_x = norm.val_transform (error_map_mp, subgroup_mp)
+            breeds_mp, target_mp, norm, constraint, destretch, show)
+        error_map_mp_x = norm.val_transform (error_map_mp, target_mp)
         error = __power_mean_norm (error_map_mp_x)
         bias = __mean (error_map_mp_x)
 
-        tempered_tuning_map = tempered_tuning_map_mp @ subgroup2mp
+        just_tuning_map = target.just_tuning_map (scalar = te.SCALAR.CENT)
+        tempered_tuning_map = tempered_tuning_map_mp @ target2mp
         gen = tempered_tuning_map @ linalg.pinv (breeds)
-        error_map = tempered_tuning_map - subgroup.just_tuning_map (scalar = te.SCALAR.CENT)
+        error_map = tempered_tuning_map - just_tuning_map
 
     if show:
         print (f"Generators: {gen} (¢)",
@@ -59,9 +66,11 @@ def wrapper_main (breeds, subgroup = None, norm = te.Norm (), inharmonic = False
 
     return gen, tempered_tuning_map, error_map
 
-def __optimizer_main (breeds, target, norm = te.Norm (), 
-        constraint = None, destretch = None, show = True):
-    """Returns the generator tuning map, tuning map, and error map inharmonically. """
+def __optimizer_main (breeds, target, norm, constraint, destretch, show):
+    """
+    Returns the optimal generator tuning map, tempered tuning map, 
+    and error map inharmonically in cents. 
+    """
 
     just_tuning_map = target.just_tuning_map (scalar = te.SCALAR.CENT)
     breeds_x = norm.val_transform (breeds, target)
