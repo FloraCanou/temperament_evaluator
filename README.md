@@ -111,7 +111,7 @@ To construct a temperament from a comma basis
 - septimal sensi
 
 ```
-temp = comma_construct (
+temp = Temperament.from_comma_list (
     Subgroup (["126/125", "245/243"]).basis_matrix)
 ```
 
