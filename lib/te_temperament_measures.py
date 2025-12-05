@@ -411,12 +411,23 @@ class Temperament:
         return self.__temperament_measures (ntype, norm, do_inharmonic, error_scale, badness_scale)
         
     def __temperament_measures (self, ntype, norm, inharmonic, error_scale, badness_scale):
+        
+        def unit_symbol (scale):
+            match scale: 
+                case te.SCALAR.OCTAVE: 
+                    return "oct"
+                case te.SCALAR.CENT: 
+                    return "¢"
+                case _:
+                    return f"oct/{scale}"
+
         self.__show_header (norm = norm, ntype = ntype)
         complexity = self.__complexity (ntype, norm, inharmonic)
         error = self.__error (ntype, norm, inharmonic, error_scale)
         badness = self.__badness (ntype, norm, inharmonic, badness_scale)
         badness_logflat = self.__badness_logflat (ntype, norm, inharmonic, badness_scale)
         print (f"Complexity: {complexity:.6f}",
-            f"Error: {error:.6f} (oct/{error_scale})",
-            f"Badness (simple): {badness:.6f} (oct/{badness_scale})",
-            f"Badness (logflat): {badness_logflat:.6f} (oct/{badness_scale})", sep = "\n")
+            f"Error: {error:.6f} ({unit_symbol (error_scale)})",
+            f"Badness (simple): {badness:.6f} ({unit_symbol (badness_scale)})",
+            f"Badness (logflat): {badness_logflat:.6f} ({unit_symbol (badness_scale)})", 
+            sep = "\n")

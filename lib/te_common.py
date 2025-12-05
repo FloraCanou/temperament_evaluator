@@ -43,7 +43,6 @@ class AXIS:
 
 class SCALAR:
     OCTAVE = 1
-    MILLIOCTAVE = 1000
     CENT = 1200
 
 def as_list (main):

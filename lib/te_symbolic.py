@@ -139,7 +139,7 @@ def wrapper_sym (breeds, target = None, norm = te.Norm (), inharmonic = False,
         print (f"Generators: {gen} (¢)",
             f"Tuning map: {tempered_tuning_map} (¢)",
             f"Error map: {error_map} (¢)", sep = "\n")
-        if norm.wmode == 0 or norm.wstrength == 0 and destretch is None:
+        if (norm.wmode == 0 or norm.wstrength == 0) and destretch is None:
             print ("Tuning projection map: ")
             pprint (tuning_projection)
             print ("Error projection map: ")
