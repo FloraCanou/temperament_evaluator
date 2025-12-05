@@ -1,6 +1,6 @@
 # © 2020-2025 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 0.30.0
+# Version 0.30.1
 
 import warnings
 import numpy as np
@@ -80,7 +80,7 @@ def __get_subgroup (main, subgroup):
     if subgroup is None:
         subgroup = PRIME_LIST[:main.shape[1]]
     elif main.shape[1] != len (subgroup):
-        warnings.warn ("dimension does not match. Casting to the smaller dimension. ")
+        warnings.warn ("dimensionalities do not match. Casting to the smaller dimensionality. ")
         dim = min (main.shape[1], len (subgroup))
         main = main[:, :dim]
         subgroup = subgroup[:dim]
@@ -89,7 +89,10 @@ def __get_subgroup (main, subgroup):
 def optimizer_main (breeds, subgroup = None, norm = Norm (), 
         cons_monzo_list = None, des_monzo = None, show = True):
     # NOTE: "map" is a reserved word
-    # optimization is preferably done in the unit of octaves, but for precision reasons
+    # optimization would ideally be performed in the unit of octaves
+    # unfortunately, that often results in insufficient accuracy
+    # the cent is a practical choice of unit, and test shows that further scaling 
+    # doesn't improve accuracy for most main-sequence temperaments
     breeds, subgroup = __get_subgroup (breeds, subgroup)
 
     just_tuning_map = SCALAR.CENT*np.log2 (subgroup)
