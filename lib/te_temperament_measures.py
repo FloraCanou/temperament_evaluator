@@ -260,11 +260,13 @@ class Temperament:
 
     def comma_basis (self, show = True):
         """Finds a comma basis for the temperament. """
-        comma_basis = te.nullspace (self.mapping)
+        comma_basis = te.canonicalize (te.nullspace (self.mapping), axis = te.AXIS.COL)
+        
         if show:
             self.__show_header ()
             print ("Comma basis: ")
             te.show_monzo_list (comma_basis, self.subgroup)
+        
         return comma_basis
 
     def complexity (self, ntype = "breed", norm = te.Norm (), inharmonic = False):
