@@ -72,18 +72,18 @@ To find the temperament measures
 temp.temperament_measures (ntype = "sintel") 
 ```
 
-To find the wedgie of the temperament
+To find the wedgie for the temperament
 
 ```
 temp.wedgie ()
 ```
 
-To find a comma basis of the temperament
+To find a comma basis for the temperament
 ```
 temp.comma_basis ()
 ```
 
-To find the optimal GPV sequence of the temperament
+To find the optimal GPV sequence for the temperament
 
 ```
 et_sequence (
