@@ -37,32 +37,25 @@ np.set_printoptions (precision = 3)
 
 ### Basic usages
 
-To construct a temperament (we're showing septimal magic here)
+To construct a temperament
 
 ```
-temp = Temperament (
-    [[1, 0, 2, -1], 
-    [0, 5, 1, 12]]
-) 
+# magic
+temp = Temperament ([[1, 0, 2, -1], [0, 5, 1, 12]]) 
 ```
 
 To tune the temperament
 
-- CTE tuning
-
 ```
+# cte tuning
 temp.tune (constraint = Subgroup ([2])) 
 ```
-
-- CWE tuning
-
 ```
+# cwe tuning
 temp.tune (norm = Norm (skew = 1), constraint = Subgroup ([2])) 
 ```
-
-- POTE tuning
-
 ```
+# pote tuning
 temp.tune (destretch = Ratio (2, 1)) 
 ```
 
@@ -94,32 +87,29 @@ et_sequence (
 
 To construct a temperament from equal temperaments
 
-- squares
-
 ```
+# squares
 temp = et_construct (["14c", "17c"], Subgroup ([2, 3, 5, 7]))
 ```
-
-- BPS
-
 ```
+# bps
 temp = et_construct (["b4", "b13"], Subgroup ([3, 5, 7]))
 ```
 
 To construct a temperament from a comma basis
 
-- septimal sensi
-
 ```
+# sensi
 temp = Temperament.from_comma_list (
     Subgroup (["126/125", "245/243"]).basis_matrix)
 ```
 
 ### Lattice-related functions
 
-This is mainly used to find the octave-equivalent interval temperamental complexity spectrum. To do this, we need to construct the temperament with `te_lat.TemperamentLattice`. Here we're demonstrating using tridecimal history. 
+This is mainly used to find the octave-equivalent interval temperamental complexity spectrum. To do this, we need to construct the temperament with `te_lattice.TemperamentLattice`. Here we're demonstrating using tridecimal history. 
 
 ```
+# tridecimal history
 temp = TemperamentLattice (
     [[1, 2, 0, 0, 1, 2], 
     [0, 6, 0, -7, -2, 9], 
