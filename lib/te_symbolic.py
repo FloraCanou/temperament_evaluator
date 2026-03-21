@@ -129,6 +129,7 @@ def wrapper_sym (breeds, target = None, norm = te.Norm (), inharmonic = False,
         bias = __mean (error_map_mp_x)
 
         just_tuning_map = target.just_tuning_map (scalar = te.SCALAR.CENT)
+        target2mp = target.basis_matrix_to (target.minimal_prime_subgroup ())
         tempered_tuning_map = tempered_tuning_map_mp @ target2mp
         gen = tempered_tuning_map @ linalg.pinv (breeds)
         error_map = tempered_tuning_map - just_tuning_map
