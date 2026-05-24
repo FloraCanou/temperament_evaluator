@@ -367,7 +367,7 @@ class Temperament:
                     error *= ((r + 1)/(d - r))**(1/norm.order)
                 except ZeroDivisionError:
                     error = np.nan
-            case "sintel": #Sintel--Breed
+            case "sintel": #Sintel-Breed
                 # an extra factor of 1/(d**(1/norm.order)) is added here
                 # which isn't in Sintel's implementation
                 # this factor will be canceled out in logflat badness

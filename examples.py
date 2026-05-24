@@ -50,9 +50,14 @@ temp = et_construct (["b4", "b13"], Subgroup ([3, 5, 7]))
 temp.temperament_measures (ntype = "sintel")
 
 ## to construct a temperament from a comma basis
-### septimal sensi
-temp = Temperament.from_comma_list (
-    Subgroup (["126/125", "245/243"]).basis_matrix)
+### squares
+temp = Temperament.from_comma_space (
+    Subgroup (["81/80", "2401/2400"]))
+temp.temperament_measures (ntype = "sintel")
+
+### bps
+temp = Temperament.from_comma_space (
+    Subgroup (["245/243"]), Subgroup ([3, 5, 7]))
 temp.temperament_measures (ntype = "sintel")
 
 # lattice-related functions
