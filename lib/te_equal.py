@@ -25,7 +25,7 @@ def comma_construct (monzos, subgroup = None):
     Deprecated since v1.16.0. 
     """
     warnings.warn ("`comma_construct` is deprecated. " \
-        "Use `Temperament.from_comma_list` instead. ", FutureWarning)
+        "Use `Temperament.from_comma_space` instead. ", FutureWarning)
 
     monzos, subgroup = te.setup (monzos, subgroup, axis = te.AXIS.COL)
     breeds = te.antinullspace (monzos)
