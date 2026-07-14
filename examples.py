@@ -17,10 +17,10 @@ temp = Temperament (
 
 ## to tune the temperament
 ### cte tuning
-temp.tune (constraint = Subgroup ([2])) 
+temp.tune (constraint = Subgroup.from_ratios ([2])) 
 
 ### cwe a.k.a. ke tuning
-temp.tune (norm = Norm (skew = 1), constraint = Subgroup ([2])) 
+temp.tune (norm = Norm (skew = 1), constraint = Subgroup.from_ratios ([2])) 
 
 ### pote tuning
 temp.tune (destretch = Ratio (2, 1)) 
@@ -42,22 +42,22 @@ et_sequence (
 
 ## to construct a temperament from equal temperaments
 ### squares
-temp = et_construct (["14c", "17c"], Subgroup ([2, 3, 5, 7]))
+temp = et_construct (["14c", "17c"], Subgroup.from_ratios ([2, 3, 5, 7]))
 temp.temperament_measures (ntype = "sintel")
 
 ### bps
-temp = et_construct (["b4", "b13"], Subgroup ([3, 5, 7]))
+temp = et_construct (["b4", "b13"], Subgroup.from_ratios ([3, 5, 7]))
 temp.temperament_measures (ntype = "sintel")
 
 ## to construct a temperament from a comma basis
 ### squares
 temp = Temperament.from_comma_space (
-    Subgroup (["81/80", "2401/2400"]))
+    Subgroup.from_ratios (["81/80", "2401/2400"]))
 temp.temperament_measures (ntype = "sintel")
 
 ### bps
 temp = Temperament.from_comma_space (
-    Subgroup (["245/243"]), Subgroup ([3, 5, 7]))
+    Subgroup.from_ratios (["245/243"]), Subgroup.from_ratios ([3, 5, 7]))
 temp.temperament_measures (ntype = "sintel")
 
 # lattice-related functions

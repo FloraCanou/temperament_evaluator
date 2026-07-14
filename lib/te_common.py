@@ -1,6 +1,6 @@
 # © 2020-2026 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 1.17.0
+# Version 1.18.0
 
 import re, itertools, functools, warnings
 import numpy as np
@@ -205,21 +205,29 @@ def as_ratio (n):
 class Subgroup:
     """Subgroup profile of ji."""
 
-    def __init__ (self, ratios = None, monzos = None, saturate = False, normalize = True):
-        if (ratios is None) == (monzos is None): 
+    def __init__ (self, ratios = None, monzos = None, *, saturate = False, normalize = True):
+        if ratios is not None and monzos is None: 
+            warnings.warn ("The parameter `ratios` is deprecated. " \
+            "Use the method `Subgroup.from_ratios` instead. ", FutureWarning)
+            monzos = column_stack_pad ([ratio2monzo (as_ratio (entry)) for entry in ratios])
+        elif (ratios is None) == (monzos is None): 
             raise ValueError ("Either ratios or monzos must be provided.")
         
         # construct the basis matrix
         self.basis_matrix = canonicalize (
-                monzos if monzos is not None else column_stack_pad (
-                [ratio2monzo (as_ratio (entry)) for entry in ratios]
-                ), saturate, normalize, axis = AXIS.COL)
+                monzos, saturate, normalize, axis = AXIS.COL)
 
         # normalize to positive pitches
         for i, si in enumerate (self.basis_matrix.T):
             ratio = monzo2ratio (si)
             if ratio.num < ratio.den: 
                 self.basis_matrix[:, i] *= -1
+
+    @classmethod
+    def from_ratios (cls, ratios):
+        """Constructs a subgroup from a list of ratios. """
+        monzos = column_stack_pad ([ratio2monzo (as_ratio (entry)) for entry in ratios])
+        return cls (monzos = monzos)
 
     def basis_matrix_to (self, other):
         """
@@ -439,14 +447,14 @@ def setup (main, subgroup, axis):
     along a certain axis. 
     """
     main = np.asarray (main)
-    if subgroup is None:
-        primes = prime_list (__get_length (main, axis))
-        subgroup = Subgroup (primes)
+    length_main = __get_length (main, axis)
+    if subgroup is None: 
+        subgroup = Subgroup (monzos = np.eye (length_main, dtype = int))
     else: 
-        length_main = __get_length (main, axis)
         length_subgroup = len (subgroup)
         if length_main != length_subgroup:
-            warnings.warn ("dimensionalities do not match. Casting to the smaller dimensionality. ")
+            warnings.warn ("dimensionalities do not match. " \
+                "Casting to the smaller dimensionality. ")
             dim = min (length_main, length_subgroup)
             match axis:
                 case AXIS.ROW:
