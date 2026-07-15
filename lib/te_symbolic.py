@@ -86,18 +86,13 @@ class NormSym (te.Norm):
         return self.val_weight_sym (primes) @ self.val_skew_sym (primes)
 
 def wrapper_sym (breeds, target = None, norm = te.Norm (), inharmonic = False, 
-        constraint = None, destretch = None, show = True, *, subgroup = None): 
+        constraint = None, destretch = None, show = True): 
     """
     Returns and displays the generator tuning map, tempered tuning map, 
     and error map in cents. Also displays the corresponding projection maps.
     """
     # NOTE: "map" is a reserved word
     # in cents for consistency with wrapper_main
-
-    if subgroup is not None: 
-        warnings.warn ("'subgroup' is deprecated. Use 'target' instead. ", FutureWarning)
-        if target is None: 
-            target = subgroup
 
     def __mean (main):
         """

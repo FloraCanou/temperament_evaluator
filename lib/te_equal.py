@@ -19,18 +19,6 @@ def et_construct (et_list, subgroup):
     breeds = np.array ([warts2breed (n, subgroup) for n in te.as_list (et_list)])
     return te_tm.Temperament (breeds, subgroup)
 
-def comma_construct (monzos, subgroup = None):
-    """
-    Constructs a temperament from its comma list. 
-    Deprecated since v1.16.0. 
-    """
-    warnings.warn ("`comma_construct` is deprecated. " \
-        "Use `Temperament.from_comma_space` instead. ", FutureWarning)
-
-    monzos, subgroup = te.setup (monzos, subgroup, axis = te.AXIS.COL)
-    breeds = te.antinullspace (monzos)
-    return te_tm.Temperament (breeds, subgroup)
-
 def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm (), inharmonic = False, 
         cond = "error", pv = False, prog = True, threshold = 20, search_range = 1200):
     """

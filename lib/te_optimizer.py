@@ -7,7 +7,7 @@ from scipy import optimize, linalg
 from . import te_common as te
 
 def wrapper_main (breeds, target = None, norm = te.Norm (), inharmonic = False, 
-        constraint = None, destretch = None, show = True, *, subgroup = None):
+        constraint = None, destretch = None, show = True):
     """
     Returns and displays the optimal generator tuning map, 
     tempered tuning map, and error map in cents. 
@@ -17,11 +17,6 @@ def wrapper_main (breeds, target = None, norm = te.Norm (), inharmonic = False,
     # unfortunately, that often results in insufficient accuracy
     # the cent is a practical choice of unit, and test shows that further scaling 
     # doesn't improve accuracy for most main-sequence temperaments
-
-    if subgroup is not None: 
-        warnings.warn ("'subgroup' is deprecated. Use 'target' instead. ", FutureWarning)
-        if target is None: 
-            target = subgroup
 
     def __mean (main):
         """
