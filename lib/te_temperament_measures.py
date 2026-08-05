@@ -312,11 +312,11 @@ class Temperament:
                 self.__wedgie (mapping, subgroup, norm), ord = norm.order) / index
         
         match ntype:
-            case "breed": #Graham Breed's RMS (default)
+            case "breed": # Graham Breed's RMS (default)
                 complexity *= 1/(d**r)**(1/norm.order)
-            case "smith": #Gene Ward Smith's RMS
+            case "smith": # Gene Ward Smith's RMS
                 complexity *= 1/(len (tuple (itertools.combinations (range (d), r))))**(1/norm.order)
-            case "sintel": #Sintel--Breed
+            case "sintel": # Sintel
                 complexity *= 1/linalg.det (norm.val_transform (np.eye (d), subgroup)[:,:d])**(r/d)
             case "none":
                 pass
@@ -360,16 +360,16 @@ class Temperament:
             error = linalg.norm (error_map_x, ord = norm.order)
         
         match ntype: 
-            case "breed": #Graham Breed's RMS (default)
+            case "breed": # Graham Breed's RMS (default)
                 error *= 1/d**(1/norm.order)
-            case "smith": #Gene Ward Smith's RMS
+            case "smith": # Gene Ward Smith's RMS
                 try:
                     error *= ((r + 1)/(d - r))**(1/norm.order)
                 except ZeroDivisionError:
                     error = np.nan
-            case "sintel": #Sintel-Breed
+            case "sintel": # hybrid Sintel
                 # an extra factor of 1/(d**(1/norm.order)) is added here
-                # which isn't in Sintel's implementation
+                # which isn't in Sintel's original formula
                 # this factor will be canceled out in logflat badness
                 # when we divide it by the norm of jtm
                 error *= 1/(d**(1/norm.order)
@@ -399,6 +399,17 @@ class Temperament:
             * self.__complexity (ntype, norm, inharmonic))
 
     def __badness_logflat (self, ntype, norm, inharmonic, scalar):
+
+        def __norm_jtm (norm, scalar): 
+            """Finds the norm of the just tuning map for Sintel's scheme."""
+            if norm.wmode == 1 and norm.wstrength == 1: 
+                return 1/linalg.det (norm.val_transform (np.eye (d), self.subgroup)[:,:d])**(1/d)
+            else: 
+                just_tuning_map = self.subgroup.just_tuning_map (scalar)
+                just_tuning_map_x = norm.val_transform (just_tuning_map, self.subgroup)
+                return linalg.norm (just_tuning_map_x, ord = norm.order) / (d**(1/norm.order) 
+                    * linalg.det (norm.val_transform (np.eye (d), self.subgroup)[:,:d])**(1/d))
+
         r, d = self.mapping.shape #rank and dimensionality
         try:
             res = (self.__error (ntype, norm, inharmonic, scalar)
@@ -407,8 +418,7 @@ class Temperament:
             res = np.nan
         match ntype:
             case "sintel":
-                norm_jtm = 1/linalg.det (norm.val_transform (np.eye (d), self.subgroup)[:,:d])**(1/d)
-                res /= norm_jtm
+                res /= __norm_jtm (norm, scalar)
             case "breed" | "smith" | "none":
                 pass
             case _:

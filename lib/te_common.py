@@ -1,6 +1,6 @@
 # © 2020-2026 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 1.18.1
+# Version 1.19.0
 
 import re, itertools, functools, warnings
 import numpy as np
@@ -237,7 +237,7 @@ class Subgroup:
             return [monzo2ratio (entry) for entry in self.basis_matrix.T]
 
     def ratios (self, evaluate = False): 
-        """Alias of to_ratios. Deprecated since v1.18.1. """
+        """Alias of to_ratios. Deprecated since v1.19.0. """
         warnings.warn ("`ratios` is deprecated. Use `to_ratios` instead. ", FutureWarning)
         return to_ratios (evaluate = evaluate)
 
