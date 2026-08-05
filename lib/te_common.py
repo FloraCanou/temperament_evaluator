@@ -229,6 +229,18 @@ class Subgroup:
         monzos = column_stack_pad ([ratio2monzo (as_ratio (entry)) for entry in ratios])
         return cls (monzos = monzos)
 
+    def to_ratios (self, evaluate = False):
+        """Returns a list of ratios in Ratio objects or floats."""
+        if evaluate:
+            return [monzo2ratio (entry).value () for entry in self.basis_matrix.T]
+        else:
+            return [monzo2ratio (entry) for entry in self.basis_matrix.T]
+
+    def ratios (self, evaluate = False): 
+        """Alias of to_ratios. Deprecated since v1.18.1. """
+        warnings.warn ("`ratios` is deprecated. Use `to_ratios` instead. ", FutureWarning)
+        return to_ratios (evaluate = evaluate)
+
     def basis_matrix_to (self, other):
         """
         Returns the basis matrix with respect to another subgroup.
@@ -257,13 +269,6 @@ class Subgroup:
 
         return result
     
-    def ratios (self, evaluate = False):
-        """Returns a list of ratio objects or floats."""
-        if evaluate:
-            return [monzo2ratio (entry).value () for entry in self.basis_matrix.T]
-        else:
-            return [monzo2ratio (entry) for entry in self.basis_matrix.T]
-
     def just_tuning_map (self, scalar = SCALAR.OCTAVE): #in octaves by default
         """Returns the just tuning map. """
         primes = prime_list (self.basis_matrix.shape[0])
@@ -294,20 +299,22 @@ class Subgroup:
         monzos[selector, np.arange (len (selector))] = 1
         return Subgroup (monzos = monzos)
 
-    def index (self):
+    def index (self, other = None):
         """
-        Returns what fraction the subgroup is to its minimal prime subgroup. 
-        1: it's a prime subgroup. 
-        inf: it's a degenerate subgroup. 
-        Temperament complexity can be defined on any nondegenerate subgroups. 
+        Returns what fraction the subgroup is to another subgroup. 
+        Defaults to the minimal prime subgroup if not specified. 
+        1: it's a formally prime subgroup; inf: it's a degenerate subgroup. 
+        Used to validate temperament complexity and badness. 
         """
+        if other is None: 
+            other = self.minimal_prime_subgroup ()
         try:
-            return linalg.det (self.basis_matrix_to (self.minimal_prime_subgroup ()))
+            return linalg.det (self.basis_matrix_to (other))
         except ValueError:
             return np.inf
 
     def __str__ (self):
-        return ".".join (entry.__str__ () for entry in self.ratios ())
+        return ".".join (entry.__str__ () for entry in self.to_ratios ())
 
     def __len__ (self):
         """Returns its own rank."""
@@ -393,11 +400,11 @@ class Norm:
             raise NotImplementedError ("Skew only works with Euclidean norm as of now.")
 
     def val_transform (self, vals, subgroup):
-        primes = subgroup.ratios (evaluate = True)
+        primes = subgroup.to_ratios (evaluate = True)
         return vals @ self.val_weight (primes) @ self.val_skew (primes)
 
     def interval_transform (self, intervals, subgroup):
-        primes = subgroup.ratios (evaluate = True)
+        primes = subgroup.to_ratios (evaluate = True)
         return self.interval_skew (primes) @ self.interval_weight (primes) @ intervals
 
 # canonicalization functions

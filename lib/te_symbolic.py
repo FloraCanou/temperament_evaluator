@@ -74,15 +74,15 @@ class NormSym (te.Norm):
                 r*Matrix.ones (len (primes), 1))
 
     def val_transform_sym (self, vals, subgroup):
-        primes = Matrix ([Rational (r.num, r.den) for r in subgroup.ratios ()])
+        primes = Matrix ([Rational (r.num, r.den) for r in subgroup.to_ratios ()])
         return vals @ self.val_weight_sym (primes) @ self.val_skew_sym (primes)
 
     def interval_transform_sym (self, intervals, subgroup):
-        primes = Matrix ([Rational (r.num, r.den) for r in subgroup.ratios ()])
+        primes = Matrix ([Rational (r.num, r.den) for r in subgroup.to_ratios ()])
         return self.interval_skew_sym (primes) @ self.interval_weight_sym (primes) @ intervals
 
     def val_transformer (self, subgroup):
-        primes = Matrix ([Rational (r.num, r.den) for r in subgroup.ratios ()])
+        primes = Matrix ([Rational (r.num, r.den) for r in subgroup.to_ratios ()])
         return self.val_weight_sym (primes) @ self.val_skew_sym (primes)
 
 def wrapper_sym (breeds, target = None, norm = te.Norm (), inharmonic = False, 
@@ -165,7 +165,8 @@ def __optimizer_sym (breeds, target, norm, constraint, destretch, show):
     if norm.order != 2:
         raise ValueError ("Euclidean norm is required for symbolic solution. ")
 
-    just_tuning_map = te.SCALAR.CENT*Matrix ([target.ratios (evaluate = True)]).applyfunc (lambda si: log (si, 2))
+    just_tuning_map = (te.SCALAR.CENT
+        * Matrix ([target.to_ratios (evaluate = True)]).applyfunc (lambda si: log (si, 2)))
     val_transformer = norm.val_transformer (target)
     breeds_copy = Matrix (breeds)
     breeds_x = norm.val_transform_sym (breeds_copy, target)

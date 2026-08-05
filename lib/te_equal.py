@@ -154,7 +154,7 @@ def breed2warts (breed, subgroup = None):
     if breed[0] == 0:
         raise ValueError ("wart is undefined. ")
 
-    eq = subgroup.ratios ()[0].value ()
+    eq = subgroup.to_ratios ()[0].value ()
     if eq == 2: #octave equave
         prefix = ""
     elif eq in WARTS_DICT: #non-octave wartable equave
@@ -165,7 +165,7 @@ def breed2warts (breed, subgroup = None):
     just_tuning_map = subgroup.just_tuning_map ()
     if __is_pv (breed, just_tuning_map): #patent val
         postfix = ""
-    elif all (entry in WARTS_DICT for entry in subgroup.ratios (evaluate = True)): #nonpatent val in a wartable subgroup
+    elif all (entry in WARTS_DICT for entry in subgroup.to_ratios (evaluate = True)): #nonpatent val in a wartable subgroup
         # find the just tuning map in n-ed-p steps
         # and the corresponding patent val
         nj = __nt (breed[0], eq, just_tuning_map)
@@ -179,7 +179,7 @@ def breed2warts (breed, subgroup = None):
             2*np.fabs (breed - pv).astype (int) + np.where ((breed - pv)*(pv - nj) >= 0., 0, -1))
 
         postfix = ""
-        for i, si in enumerate (subgroup.ratios (evaluate = True)):
+        for i, si in enumerate (subgroup.to_ratios (evaluate = True)):
             postfix += warts_number_list[i]*str (WARTS_DICT[si])
     else: #nonpatent val in an unwartable subgroup
         postfix = "*"
@@ -216,7 +216,7 @@ def __warts2breed (warts, subgroup):
 
     # find the number of each wart letter
     warts_number_list = np.zeros (len (subgroup))
-    for i, si in enumerate (subgroup.ratios (evaluate = True)):
+    for i, si in enumerate (subgroup.to_ratios (evaluate = True)):
         if si in WARTS_DICT: # wart is supported
             warts_number_list[i] = len (re.findall (WARTS_DICT[si], match.group (3)))
 
