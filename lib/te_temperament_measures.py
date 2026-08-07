@@ -302,12 +302,12 @@ class Temperament:
 
         if norm.order == 2: # standard L2 complexity
             # complexity = linalg.norm (
-            #     self.__wedgie (mapping, subgroup, norm)) / index #same but less performant
+            #     self.__wedgie (mapping, subgroup, norm).squeeze ()) / index # same but less performant
             mapping_x = norm.val_transform (mapping, subgroup)
             complexity = np.sqrt (linalg.det (mapping_x @ mapping_x.T)) / index
         else:
             complexity = linalg.norm (
-                self.__wedgie (mapping, subgroup, norm), ord = norm.order) / index
+                self.__wedgie (mapping, subgroup, norm).squeeze (), ord = norm.order) / index
         
         match ntype:
             case "breed": # Graham Breed's RMS (default)
