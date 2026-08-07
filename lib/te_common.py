@@ -1,6 +1,6 @@
 # © 2020-2026 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 1.19.0
+# Version 1.20.0
 
 import re, itertools, functools, warnings
 import numpy as np
@@ -190,7 +190,10 @@ class Ratio:
         return self.value () == (other.value () if isinstance (other, Ratio) else other)
 
 def as_ratio (n):
-    """Returns a ratio object, fractional notation supported."""
+    """
+    Returns a Ratio object, fractional notation supported.
+    Existing Ratio objects are not copied. 
+    """
     if isinstance (n, Ratio):
         return n
     elif isinstance (n, str):

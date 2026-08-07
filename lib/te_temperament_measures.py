@@ -250,7 +250,7 @@ class Temperament:
 
         # normalize for a positive first entry
         # unneeded if the mapping is in canonical form
-        if wedgie[0] < 0:
+        if wedgie.flat[0] < 0:
             wedgie *= -1
 
         # convert to integer type if possible
@@ -259,7 +259,6 @@ class Temperament:
             wedgie = wedgie_rd.astype (int)
         
         if show:
-            self.__show_header ()
             print (f"Wedgie: {wedgie}", sep = "\n")
         
         return wedgie
@@ -269,14 +268,13 @@ class Temperament:
         mapping_x = norm.val_transform (mapping, subgroup)
         r, d = mapping_x.shape #rank and dimensionality
         combinations = itertools.combinations (range (d), r)
-        return np.array ([linalg.det (mapping_x[:, entry]) for entry in combinations])
+        return np.array ([linalg.det (mapping_x[:, entry]) for entry in combinations], ndmin = r)
 
     def comma_basis (self, show = True):
         """Finds a comma basis for the temperament. """
         comma_basis = te.canonicalize (te.nullspace (self.mapping), axis = te.AXIS.COL)
         
         if show:
-            self.__show_header ()
             print ("Comma basis: ")
             te.show_monzo_list (comma_basis, self.subgroup)
         
