@@ -35,10 +35,10 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
             monzos = np.zeros ((len (subgroup), 1))
     else:
         monzos, subgroup = te.setup (monzos, subgroup, axis = te.AXIS.COL)
-    match cond: 
+    match cond.lower (): 
         case "error": 
             on_badness, on_alt_mode = False, False
-        case "badness": 
+        case "simple badness" | "badness": 
             on_badness, on_alt_mode = True, False
         case "logflat badness": 
             on_badness, on_alt_mode = True, True

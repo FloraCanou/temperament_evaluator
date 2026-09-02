@@ -327,7 +327,7 @@ class Subgroup:
         return np.array_equal (self.basis_matrix, other.basis_matrix) if isinstance (other, Subgroup) else False
 
 class Norm: 
-    """Tenney--Wilson parametric norm profile for the tuning space."""
+    """Tenney-Wilson parametric norm profile for the tuning space."""
 
     def __init__ (self, wtype = None, wmode = 1, wstrength = 1, skew = 0, order = 2):
         if wtype: 
@@ -340,7 +340,7 @@ class Norm:
 
     @staticmethod
     def __presets (wtype):
-        match wtype: 
+        match wtype.lower (): 
             case "tenney":
                 wmode, wstrength = 1, 1
             case "wilson" | "benedetti":

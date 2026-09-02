@@ -93,7 +93,7 @@ class Temperament:
         if enforce_text:
             print ("Enforcement: " + enforce_text)
         if ntype:
-            print ("Normalizer: " + ntype)
+            print ("Normalizer: " + ntype.lower ())
         return
 
     def form (self, ftype = "none"):
@@ -170,7 +170,7 @@ class Temperament:
 
         mapping = self.mapping.copy ()
         just_tuning_map = self.subgroup.just_tuning_map ()
-        match ftype:
+        match ftype.lower ():
             case "none":
                 pass
             case "flip":
@@ -198,7 +198,7 @@ class Temperament:
         """
 
         # check optimizer applicability and availability
-        if optimizer == "sym" and not self.__check_sym (norm.order):
+        if optimizer.lower () == "sym" and not self.__check_sym (norm.order):
             return self.tune (optimizer = "main", norm = norm, inharmonic = inharmonic, 
                 constraint = constraint, destretch = destretch, ftype = ftype)
 
@@ -227,12 +227,12 @@ class Temperament:
             mapping = self.mapping
 
         # start optimization
-        if optimizer == "main":
+        if optimizer.lower () == "main":
             from . import te_optimizer as te_opt
             gen, tempered_tuning_map, error_map = te_opt.wrapper_main (
                 mapping, target = self.subgroup, norm = norm, inharmonic = inharmonic, 
                 constraint = constraint, destretch = destretch)
-        elif optimizer == "sym":
+        elif optimizer.lower () == "sym":
             gen, tempered_tuning_map, error_map = te_sym.wrapper_sym (
                 mapping, target = self.subgroup, norm = norm, inharmonic = inharmonic, 
                 constraint = constraint, destretch = destretch)
@@ -309,7 +309,7 @@ class Temperament:
             complexity = linalg.norm (
                 self.__wedgie (mapping, subgroup, norm).squeeze (), ord = norm.order) / index
         
-        match ntype:
+        match ntype.lower ():
             case "breed": # Graham Breed's RMS (default)
                 complexity *= 1/(d**r)**(1/norm.order)
             case "smith": # Gene Ward Smith's RMS
@@ -357,7 +357,7 @@ class Temperament:
             error_map_x = norm.val_transform (error_map, subgroup)
             error = linalg.norm (error_map_x, ord = norm.order)
         
-        match ntype: 
+        match ntype.lower (): 
             case "breed": # Graham Breed's RMS (default)
                 error *= 1/d**(1/norm.order)
             case "smith": # Gene Ward Smith's RMS
@@ -407,7 +407,7 @@ class Temperament:
                 complexity_exp = d/(d - r)
             except ZeroDivisionError: 
                 return np.nan
-            match ntype:
+            match ntype.lower ():
                 case "sintel":
                     jtm_coefficient = 1/__norm_jtm (norm, scalar)
                 case "breed" | "smith" | "none":
