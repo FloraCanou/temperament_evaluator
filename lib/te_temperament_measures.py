@@ -22,19 +22,6 @@ class Temperament:
             if target is not None else commas.basis_matrix)
         return cls (breeds, target)
 
-    @classmethod
-    def from_comma_list (cls, monzos, subgroup = None):
-        """
-        Constructs a temperament from its comma list. 
-        Deprecated since v1.17.0. 
-        """
-        warnings.warn ("`Temperament.from_comma_list` is deprecated." \
-            "Use `Temperament.from_comma_space` instead. ", FutureWarning)
-        
-        monzos, subgroup = te.setup (monzos, subgroup, axis = te.AXIS.COL)
-        breeds = te.antinullspace (monzos)
-        return cls (breeds, subgroup)
-
     @staticmethod
     def __check_sym (order):
         """Checks the applicability and availability of the symbolic solver."""
