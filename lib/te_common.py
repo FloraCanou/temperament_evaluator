@@ -392,7 +392,7 @@ class Norm:
         if self.skew == 0:
             return np.eye (len (primes))
         elif self.order == 2:
-            # return linalg.pinv (self.__get_interval_skew (primes))
+            # return linalg.pinv (self.interval_skew (primes))
             # same but for skew = np.inf and for better performance
             r = 1/(len (primes)*self.skew + 1/self.skew)
             kr = 1/(len (primes) + 1/self.skew**2)

@@ -26,6 +26,8 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
     Can be used to find optimal PVs and/or GPVs. 
     Comma list should be entered as column vectors. 
     """
+
+    # verify input
     if monzos is None:
         if subgroup is None:
             raise ValueError ("please specify a monzo list or a subgroup. ")
@@ -33,12 +35,26 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
             monzos = np.zeros ((len (subgroup), 1))
     else:
         monzos, subgroup = te.setup (monzos, subgroup, axis = te.AXIS.COL)
+    match cond: 
+        case "error": 
+            on_badness, on_alt_mode = False, False
+        case "badness": 
+            on_badness, on_alt_mode = True, False
+        case "logflat badness": 
+            on_badness, on_alt_mode = True, True
+        case "none": 
+            on_badness, on_alt_mode = False, True
+        case _: 
+            warnings.warn ("condition type not supported, using default (\"error\"). ")
+            return et_sequence (monzos, subgroup, ntype, norm, inharmonic, 
+                "error", pv, prog, threshold, search_range)
     do_inharmonic = (inharmonic or subgroup.is_prime ()
         or norm.wmode == 1 and norm.wstrength == 1 and subgroup.is_prime_power ())
-    if not do_inharmonic and subgroup.index () == np.inf and cond == "badness":
+    if on_badness and not do_inharmonic and subgroup.index () == np.inf:
         raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
 
     def __gpv_roll (breed, tuning_map):
+        """Simplified GPV roller."""
         for i in range (1, len (tuning_map) + 1):
             breed_copy = breed.copy ()
             breed_copy[-i] += 1
@@ -47,7 +63,7 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
         else:
             raise NotImplementedError ("this nontrivial tuning map cannot be processed. ")
 
-    print ("\nOptimal GPV sequence: ")
+    print ("\nSearching GPVs. ")
     just_tuning_map = subgroup.just_tuning_map ()
     gpv = np.zeros (len (just_tuning_map), dtype = int) #initialize with the all-zeroes breed
     while (gpv := __gpv_roll (gpv, just_tuning_map))[0] == 0: #skip zero-equave breeds
@@ -58,18 +74,14 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
             if ((not pv or __is_pv (gpv, just_tuning_map)) # patent val or pv isn't set
                     and np.gcd.reduce (gpv) == 1 #not enfactored
                     and not np.any (gpv[np.newaxis] @ monzos)): #tempering out the commas
-                match cond:
-                    case "error":
-                        et = te_tm.Temperament (gpv[np.newaxis], subgroup, saturate = False, normalize = False)
-                        current = et._Temperament__error (ntype, norm, do_inharmonic, te.SCALAR.CENT)
-                    case "badness":
-                        et = te_tm.Temperament (gpv[np.newaxis], subgroup, saturate = False, normalize = False)
-                        current = et._Temperament__badness (ntype, norm, do_inharmonic, te.SCALAR.OCTAVE)
-                    case "logflat badness":
-                        et = te_tm.Temperament (gpv[np.newaxis], subgroup, saturate = False, normalize = False)
-                        current = et._Temperament__badness_logflat (ntype, norm, do_inharmonic, te.SCALAR.OCTAVE)
-                    case _:
-                        current = threshold
+                if on_badness: 
+                    et = te_tm.Temperament (gpv[np.newaxis], subgroup, saturate = False, normalize = False)
+                    current = et._Temperament__badness (
+                        ntype, norm, do_inharmonic, on_alt_mode, te.SCALAR.OCTAVE)
+                else: 
+                    et = te_tm.Temperament (gpv[np.newaxis], subgroup, saturate = False, normalize = False)
+                    current = et._Temperament__error (
+                        ntype, norm, do_inharmonic, te.SCALAR.CENT) if not on_alt_mode else threshold
                 if current <= threshold:
                     progress_bar.write (f"{te.bra (gpv)} ({breed2warts (gpv, subgroup)})")
                     if prog:

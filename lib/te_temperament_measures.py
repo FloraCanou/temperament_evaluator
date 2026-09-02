@@ -387,16 +387,9 @@ class Temperament:
         if not do_inharmonic and self.subgroup.index () == np.inf:
             raise ValueError ("this measure is only defined on nondegenerate subgroups. ")
 
-        if logflat:
-            return self.__badness_logflat (ntype, norm, do_inharmonic, scalar)
-        else:
-            return self.__badness (ntype, norm, do_inharmonic, scalar)
+        return self.__badness (ntype, norm, do_inharmonic, logflat, scalar)
 
-    def __badness (self, ntype, norm, inharmonic, scalar):
-        return (self.__error (ntype, norm, inharmonic, scalar)
-            * self.__complexity (ntype, norm, inharmonic))
-
-    def __badness_logflat (self, ntype, norm, inharmonic, scalar):
+    def __badness (self, ntype, norm, inharmonic, logflat, scalar):
 
         def __norm_jtm (norm, scalar): 
             """Finds the norm of the just tuning map for Sintel's scheme."""
@@ -408,21 +401,26 @@ class Temperament:
                 return linalg.norm (just_tuning_map_x, ord = norm.order) / (d**(1/norm.order) 
                     * linalg.det (norm.val_transform (np.eye (d), self.subgroup)[:,:d])**(1/d))
 
-        r, d = self.mapping.shape #rank and dimensionality
-        try:
-            res = (self.__error (ntype, norm, inharmonic, scalar)
-                * self.__complexity (ntype, norm, inharmonic)**(d/(d - r)))
-        except ZeroDivisionError:
-            res = np.nan
-        match ntype:
-            case "sintel":
-                res /= __norm_jtm (norm, scalar)
-            case "breed" | "smith" | "none":
-                pass
-            case _:
-                warnings.warn ("normalizer not supported, using default (\"breed\"). ")
-                return self.__badness_logflat ("breed", norm, inharmonic, scalar)
-        return res
+        if logflat: 
+            r, d = self.mapping.shape #rank and dimensionality
+            try: 
+                complexity_exp = d/(d - r)
+            except ZeroDivisionError: 
+                return np.nan
+            match ntype:
+                case "sintel":
+                    jtm_coefficient = 1/__norm_jtm (norm, scalar)
+                case "breed" | "smith" | "none":
+                    jtm_coefficient = 1
+                case _:
+                    warnings.warn ("normalizer not supported, using default (\"breed\"). ")
+                    return self.__badness ("breed", norm, inharmonic, logflat, scalar)
+        else: 
+            complexity_exp = 1
+            jtm_coefficient = 1
+        
+        return jtm_coefficient * (self.__error (ntype, norm, inharmonic, scalar)
+            * self.__complexity (ntype, norm, inharmonic)**complexity_exp)
 
     def temperament_measures (self, ntype = "breed", norm = te.Norm (), inharmonic = False, 
             error_scale = te.SCALAR.CENT, badness_scale = te.SCALAR.OCTAVE):
@@ -447,10 +445,10 @@ class Temperament:
         self.__show_header (norm = norm, ntype = ntype)
         complexity = self.__complexity (ntype, norm, inharmonic)
         error = self.__error (ntype, norm, inharmonic, error_scale)
-        badness = self.__badness (ntype, norm, inharmonic, badness_scale)
-        badness_logflat = self.__badness_logflat (ntype, norm, inharmonic, badness_scale)
+        simple_badness = self.__badness (ntype, norm, inharmonic, False, badness_scale)
+        logflat_badness = self.__badness (ntype, norm, inharmonic, True, badness_scale)
         print (f"Complexity: {complexity:.6f}",
             f"Error: {error:.6f} ({unit_symbol (error_scale)})",
-            f"Badness (simple): {badness:.6f} ({unit_symbol (badness_scale)})",
-            f"Badness (logflat): {badness_logflat:.6f} ({unit_symbol (badness_scale)})", 
+            f"Badness (simple): {simple_badness:.6f} ({unit_symbol (badness_scale)})",
+            f"Badness (logflat): {logflat_badness:.6f} ({unit_symbol (badness_scale)})", 
             sep = "\n")
