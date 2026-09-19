@@ -1,6 +1,6 @@
 # © 2020-2026 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 1.20.0
+# Version 1.20.1
 
 import re, itertools, functools, warnings
 import numpy as np
@@ -69,27 +69,27 @@ class Ratio:
     """Ratio in fraction."""
 
     def __init__ (self, num, den):
-        if not self.__is_regular (num, den): 
-            raise ValueError ("irregular number not supported yet. ")
-        self.pos, self.num, self.den = self.__reduce (num, den)
+        # check type and float-to-integer value preservation property
+        if (not isinstance (num, (int, np.integer)) and num != round (num)
+                or not isinstance (den, (int, np.integer)) and den != round (den)): 
+            raise ValueError ("inconvertible non-integer input. ")
 
-    @staticmethod
-    def __is_regular (num, den):
-        """Checks whether the ratio is nonzero and finite."""
-        return all (np.isfinite ((num, den))) and all ((num, den))
+        # check for regularity
+        if num == 0 or den == 0: 
+            raise ValueError ("irregular number not supported yet. ")
+        
+        # convert to numpy integer type
+        nd = np.array ((num, den), dtype = int)
+        
+        self.pos, self.num, self.den = self.__reduce (nd[0], nd[1])
 
     @staticmethod
     def __reduce (num, den):
         """Determines the sign and eliminates the common factors."""
         pos = (num > 0) == (den > 0)
-        if isinstance (num, (int, np.integer)) and isinstance (den, (int, np.integer)):
-            gcd = np.gcd (num, den)
-            num = abs (num//gcd)
-            den = abs (den//gcd)
-        else:
-            warnings.warn ("non-integer input. ")
-            num = abs (np.divide (num, den))
-            den = 1
+        gcd = np.gcd (num, den)
+        num = np.abs (num//gcd)
+        den = np.abs (den//gcd)
         return pos, num, den
 
     @classmethod
@@ -116,7 +116,7 @@ class Ratio:
 
     def value (self):
         """Returns the value of the ratio as a float."""
-        v = np.divide (self.num, self.den)
+        v = self.num/self.den
         return v if self.pos else -v
 
     def oct_count (self): 
@@ -142,9 +142,7 @@ class Ratio:
         """Returns the octave-reduced ratio."""
         # NOTE: "oct" is a reserved word
         oct_count = self.oct_count ()
-        if oct_count == 0:
-            return self
-        elif oct_count > 0:
+        if oct_count >= 0:
             return Ratio (self.num, self.den*2**oct_count)
         else:
             return Ratio (self.num*2**(-oct_count), self.den)
@@ -159,9 +157,7 @@ class Ratio:
 
     def __eq_reduce (self, eq):
         eq_count = self.__eq_count (eq)
-        if eq_count == 0:
-            return self
-        elif eq_count > 0:
+        if eq_count >= 0:
             return Ratio (self.num*eq.den**eq_count, self.den*eq.num**eq_count)
         else:
             return Ratio (self.num*eq.num**(-eq_count), self.den*eq.den**(-eq_count))
