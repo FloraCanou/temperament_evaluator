@@ -1,7 +1,7 @@
 # © 2020-2026 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
 
-import itertools, re, warnings
+import itertools, math, re, warnings
 import numpy as np
 from scipy import linalg
 from . import te_common as te
@@ -233,7 +233,11 @@ class Temperament:
     analyse = tune
 
     def wedgie (self, norm = te.Norm (wmode = 0, wstrength = 0), show = True):
-        """Finds the wedgie for the temperament. """
+        """
+        Returns and displays the wedgie for the temperament. 
+        Similar to breeds2wedgie but supports transformation, 
+        useful for computational purposes. 
+        """
         wedgie = self.__wedgie (self.mapping, self.subgroup, norm)
 
         # normalize for a positive first entry
@@ -288,9 +292,7 @@ class Temperament:
             index = self.subgroup.index ()
         r, d = mapping.shape #rank and dimensionality
 
-        if norm.order == 2: # standard L2 complexity
-            # complexity = linalg.norm (
-            #     self.__wedgie (mapping, subgroup, norm).squeeze ()) / index # same but less performant
+        if norm.order == 2: # for euclidean norms, more performant
             mapping_x = norm.val_transform (mapping, subgroup)
             complexity = np.sqrt (linalg.det (mapping_x @ mapping_x.T)) / index
         else:
@@ -301,7 +303,7 @@ class Temperament:
             case "breed": # Graham Breed's RMS (default)
                 complexity *= 1/(d**r)**(1/norm.order)
             case "smith": # Gene Ward Smith's RMS
-                complexity *= 1/(len (tuple (itertools.combinations (range (d), r))))**(1/norm.order)
+                complexity *= 1/(math.comb (d, r))**(1/norm.order)
             case "sintel": # Sintel
                 complexity *= 1/linalg.det (norm.val_transform (np.eye (d), subgroup)[:,:d])**(r/d)
             case "none":
@@ -315,8 +317,8 @@ class Temperament:
     def error (self, ntype = "breed", norm = te.Norm (), inharmonic = False, 
             scalar = te.SCALAR.CENT): # in cents by default
         """
-        Returns the temperament's inherent inaccuracy regardless of the actual tuning, 
-        all subgroup temperaments supported. 
+        Returns the temperament's error, i.e. inherent inaccuracy 
+        regardless of the actual tuning, all subgroup temperaments supported. 
         """
         do_inharmonic = (inharmonic or self.subgroup.is_prime ()
             or norm.wmode == 1 and norm.wstrength == 1 and self.subgroup.is_prime_power ())
@@ -330,7 +332,7 @@ class Temperament:
         r, d = mapping.shape #rank and dimensionality
         just_tuning_map = subgroup.just_tuning_map (scalar)
 
-        if norm.order == 2: # standard L2 error
+        if norm.order == 2: # for euclidean norms, more performant
             just_tuning_map_x = norm.val_transform (just_tuning_map, subgroup)
             mapping_x = norm.val_transform (mapping, subgroup)
             error_map_x = (just_tuning_map_x @ linalg.pinv (mapping_x) @ mapping_x
@@ -440,3 +442,76 @@ class Temperament:
             f"Badness (simple): {simple_badness:.6f} ({unit_symbol (badness_scale)})",
             f"Badness (logflat): {logflat_badness:.6f} ({unit_symbol (badness_scale)})", 
             sep = "\n")
+
+def breeds2wedgie (breeds): 
+    """
+    Takes a mapping, returns the corresponding wedgie. 
+    Use Temperament.wedgie if you need transformation. 
+    """
+    breeds = np.asarray (breeds)
+    r, d = breeds.shape #rank and dimensionality
+    combinations = itertools.combinations (range (d), r)
+    wedgie = np.array ([linalg.det (breeds[:, entry]) for entry in combinations], ndmin = r)
+
+    # normalize for a positive first entry
+    # unneeded if the mapping is in canonical form
+    if wedgie.flat[0] < 0:
+        wedgie *= -1
+
+    # convert to integer type if possible
+    wedgie_rd = np.rint (wedgie)
+    if np.allclose (wedgie, wedgie_rd, rtol = 0, atol = 1e-6):
+        wedgie = wedgie_rd.astype (int)
+    
+    return wedgie
+
+def wedgie2breeds (wedgie): 
+    """
+    Takes a wedgie, returns the corresponding mapping if decomposable, 
+    or None otherwise. Gene Ward Smith's algorithm.
+    """
+    wedgie = np.asarray (wedgie)
+
+    def inversion_count (a): 
+        """
+        Returns the number of inversions in an array, 
+        which equals the number of swaps required to sort it. 
+        https://stackoverflow.com/a/20990301
+        """
+        length = len (a)
+        count = 0  
+        for i in range (length - 1):
+            for j in range (i + 1, length):
+                if a[i] > a[j]:
+                    count += 1
+        return count
+    
+    # find the rank r and dimensionality d
+    r = wedgie.ndim
+    length = len (wedgie.flat)
+    for d in itertools.count (start = r): 
+        length_current = math.comb (d, r)
+        if length_current == length: 
+            break
+        elif length_current > length: 
+            raise ValueError ("invalid length for the rank. ")
+    
+    # gene's b and c, converted to tuples
+    # so that they will reset themselves on the beginning of each loop
+    combinations = tuple (itertools.combinations (range (d), r))
+    subcombinations = tuple (itertools.combinations (range (d), r - 1))
+
+    # main algorithm
+    breeds = np.zeros ((len (subcombinations), d), dtype = int)
+    for i, si in enumerate (subcombinations): 
+        for j in range (d): 
+            if j in si: 
+                continue
+            
+            appended_index = (*si, j)
+            sign = 1 if inversion_count (appended_index) % 2 == 0 else -1
+            k = combinations.index (tuple (sorted (appended_index)))
+            breeds[i][j] = sign*wedgie.flat[k]
+    
+    breeds = te.canonicalize (breeds)
+    return breeds if breeds.shape == (r, d) else None
