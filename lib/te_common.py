@@ -204,10 +204,10 @@ def as_ratio (n):
 class Subgroup:
     """Subgroup profile of ji."""
 
-    def __init__ (self, monzos, *, saturate = False, normalize = True):
+    def __init__ (self, monzos, *, normalize = True, saturate = False):
         # construct the basis matrix
         self.basis_matrix = canonicalize (
-                monzos, saturate, normalize, axis = AXIS.COL)
+            monzos, saturate, axis = AXIS.COL) if normalize else monzos
 
         # normalize to positive pitches
         for i, si in enumerate (self.basis_matrix.T):
@@ -313,7 +313,8 @@ class Subgroup:
         return self.basis_matrix.shape[1]
 
     def __eq__ (self, other):
-        return np.array_equal (self.basis_matrix, other.basis_matrix) if isinstance (other, Subgroup) else False
+        return (isinstance (other, Subgroup) 
+            and np.array_equal (self.basis_matrix, other.basis_matrix))
 
 class Norm: 
     """Tenney-Wilson parametric norm profile for the tuning space."""
@@ -401,29 +402,42 @@ class Norm:
 
 # canonicalization functions
 
-def __hnf (main, mode = AXIS.ROW):
-    """Normalizes a matrix to HNF."""
-    if mode == AXIS.ROW:
-        return np.flip (np.array (normalforms.hermite_normal_form (Matrix (np.flip (main)).T).T, dtype = int))
-    elif mode == AXIS.COL:
-        return np.flip (np.array (normalforms.hermite_normal_form (Matrix (np.flip (main))), dtype = int))
+def __hnf (main):
+    """Normalizes a matrix row-style to the Hermite normal form. """
+    return np.flip (np.array (
+        normalforms.hermite_normal_form (Matrix (np.flip (main).T)).T, dtype = int))
 
 def __sat (main):
-    """Saturates a matrix, pernet--stein method."""
-    r = Matrix (main).rank ()
-    return np.rint (
-        linalg.inv (__hnf (main, mode = AXIS.COL)[:, :r]) @ main
-        ).astype (int)
+    """
+    Saturates a matrix row-style, Pernet-Stein method.
+    Requires full-rank, so best to use with __hnf. 
+    """
 
-def canonicalize (main, saturate = True, normalize = True, axis = AXIS.ROW):
+    def __hnf_col (main): 
+        # equivalent to __hnf (main.T).T
+        return np.flip (np.array (
+            normalforms.hermite_normal_form (Matrix (np.flip (main))), dtype = int))
+
+    r = Matrix (main).rank ()
+    return np.rint (linalg.inv (__hnf_col (main)[:, :r]) @ main).astype (int)
+
+def canonicalize (main, saturate = True, axis = AXIS.ROW, *, normalize = None):
     """Saturation & normalization."""
+
+    if normalize is not None: 
+        warnings.warn ("The parameter \"normalize\" is deprecated and has no effects. ", \
+        FutureWarning)
+
     if axis == AXIS.ROW:
-        main = __sat (main) if saturate else main
-        main = __hnf (main) if normalize else main
+        if saturate: 
+            return __hnf (__sat (__hnf (main)))
+        else: 
+            return __hnf (main)
     elif axis == AXIS.COL:
-        main = np.flip (__sat (np.flip (main).T)).T if saturate else main
-        main = np.flip (__hnf (np.flip (main).T)).T if normalize else main
-    return main
+        if saturate: 
+            return np.flip (__hnf (__sat (__hnf (np.flip (main).T)))).T
+        else: 
+            return np.flip (__hnf (np.flip (main).T)).T
 
 canonicalise = canonicalize
 
@@ -548,14 +562,14 @@ def matrix2array (main):
     return np.array (main/functools.reduce (gcd, tuple (main)), dtype = int).squeeze ()
 
 def nullspace (covectors):
-    """Row-style nullspace."""
+    """Returns the row-style nullspace matrix. """
     frac_nullspace_matrix = Matrix (covectors).nullspace ()
     return np.column_stack ([matrix2array (entry) for entry in frac_nullspace_matrix])
 
 def antinullspace (vectors):
     """
-    Column-style nullspace. 
-    Antitranspose--nullspace--antitranspose 
+    Returns the column-style nullspace matrix. 
+    Equivalent to antitranspose-nullspace-antitranspose, 
     where *antitranspose* refers to flip and transpose. 
     """
     frac_antinullspace_matrix = Matrix (np.flip (vectors.T)).nullspace ()

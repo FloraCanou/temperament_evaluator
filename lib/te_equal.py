@@ -75,11 +75,11 @@ def et_sequence (monzos = None, subgroup = None, ntype = "breed", norm = te.Norm
                     and np.gcd.reduce (gpv) == 1 #not enfactored
                     and not np.any (gpv[np.newaxis] @ monzos)): #tempering out the commas
                 if on_badness: 
-                    et = te_tm.Temperament (gpv[np.newaxis], subgroup, saturate = False, normalize = False)
+                    et = te_tm.Temperament (gpv[np.newaxis], subgroup, normalize = False)
                     current = et._Temperament__badness (
                         ntype, norm, do_inharmonic, on_alt_mode, te.SCALAR.OCTAVE)
                 else: 
-                    et = te_tm.Temperament (gpv[np.newaxis], subgroup, saturate = False, normalize = False)
+                    et = te_tm.Temperament (gpv[np.newaxis], subgroup, normalize = False)
                     current = et._Temperament__error (
                         ntype, norm, do_inharmonic, te.SCALAR.CENT) if not on_alt_mode else threshold
                 if current <= threshold:

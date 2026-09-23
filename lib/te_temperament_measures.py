@@ -10,10 +10,11 @@ class Temperament:
     """Regular temperament profile. """
     # NOTE: "map" is a reserved word
 
-    def __init__ (self, breeds, subgroup = None, *, saturate = True, normalize = True):
+    def __init__ (self, breeds, subgroup = None, *, normalize = True, saturate = True):
         breeds, subgroup = te.setup (breeds, subgroup, axis = te.AXIS.ROW)
         self.subgroup = subgroup
-        self.mapping = te.canonicalize (np.rint (breeds).astype (int), saturate, normalize)
+        self.mapping = te.canonicalize (
+            breeds, saturate, axis = te.AXIS.ROW) if normalize else breeds
 
     @classmethod
     def from_comma_space (cls, commas, target = None):
