@@ -1,6 +1,6 @@
 # © 2020-2026 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 1.20.1
+# Version 1.21.0
 
 import re, itertools, functools, warnings
 import numpy as np
@@ -204,14 +204,7 @@ def as_ratio (n):
 class Subgroup:
     """Subgroup profile of ji."""
 
-    def __init__ (self, ratios = None, monzos = None, *, saturate = False, normalize = True):
-        if ratios is not None and monzos is None: 
-            warnings.warn ("The parameter `ratios` is deprecated. " \
-            "Use the method `Subgroup.from_ratios` instead. ", FutureWarning)
-            monzos = column_stack_pad ([ratio2monzo (as_ratio (entry)) for entry in ratios])
-        elif (ratios is None) == (monzos is None): 
-            raise ValueError ("Either ratios or monzos must be provided.")
-        
+    def __init__ (self, monzos, *, saturate = False, normalize = True):
         # construct the basis matrix
         self.basis_matrix = canonicalize (
                 monzos, saturate, normalize, axis = AXIS.COL)
@@ -226,7 +219,7 @@ class Subgroup:
     def from_ratios (cls, ratios):
         """Constructs a subgroup from a list of ratios. """
         monzos = column_stack_pad ([ratio2monzo (as_ratio (entry)) for entry in ratios])
-        return cls (monzos = monzos)
+        return cls (monzos)
 
     def to_ratios (self, evaluate = False):
         """Returns a list of ratios in Ratio objects or floats."""
@@ -296,7 +289,7 @@ class Subgroup:
         selector = self.basis_matrix.nonzero ()[0]
         monzos = np.zeros ((self.basis_matrix.shape[0], len (selector)), dtype = int)
         monzos[selector, np.arange (len (selector))] = 1
-        return Subgroup (monzos = monzos)
+        return Subgroup (monzos)
 
     def index (self, other = None):
         """
