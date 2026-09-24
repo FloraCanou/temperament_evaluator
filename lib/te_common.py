@@ -206,6 +206,7 @@ class Subgroup:
 
     def __init__ (self, monzos, *, normalize = True, saturate = False):
         # construct the basis matrix
+        monzos = np.asarray (monzos)
         self.basis_matrix = canonicalize (
             monzos, saturate, axis = AXIS.COL) if normalize else monzos
 

@@ -449,6 +449,9 @@ def breeds2wedgie (breeds):
     Use Temperament.wedgie if you need transformation. 
     """
     breeds = np.asarray (breeds)
+    if not np.issubdtype (breeds.dtype, np.integer): 
+        raise TypeError ("Non-integer input.")
+    
     r, d = breeds.shape #rank and dimensionality
     combinations = itertools.combinations (range (d), r)
     wedgie = np.array ([linalg.det (breeds[:, entry]) for entry in combinations], ndmin = r)
@@ -471,7 +474,9 @@ def wedgie2breeds (wedgie):
     or None otherwise. Gene Ward Smith's algorithm.
     """
     wedgie = np.asarray (wedgie)
-
+    if not np.issubdtype (wedgie.dtype, np.integer): 
+        raise TypeError ("Non-integer input.")
+    
     def inversion_count (a): 
         """
         Returns the number of inversions in an array, 
@@ -486,6 +491,10 @@ def wedgie2breeds (wedgie):
                     count += 1
         return count
     
+    # check contorsion
+    if np.gcd.reduce (wedgie.flat) != 1: 
+        return None
+
     # find the rank r and dimensionality d
     r = wedgie.ndim
     length = len (wedgie.flat)
