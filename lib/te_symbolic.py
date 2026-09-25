@@ -42,15 +42,15 @@ class NormSym (te.Norm):
 
         return modal_weighter (Matrix (primes), wmode).applyfunc (lambda wi: Pow (wi/2, wstrength))
 
-    def interval_weight_sym (self, primes):
+    def __interval_weight_sym (self, primes):
         """Returns the interval weight matrix for a list of formal primes. """
         return Matrix.diag (*self.__weight_vec_sym (primes))
 
-    def val_weight_sym (self, primes):
+    def __val_weight_sym (self, primes):
         """Returns the val weight matrix for a list of formal primes. """
         return Matrix.diag (*self.__weight_vec_sym (primes).applyfunc (lambda wi: 1/wi))
 
-    def interval_skew_sym (self, primes):
+    def __interval_skew_sym (self, primes):
         """Returns the interval skew matrix for a list of formal primes. """
         skew = Rational (self.skew).limit_denominator (1e3)
         if self.skew == 0:
@@ -59,7 +59,7 @@ class NormSym (te.Norm):
             return Matrix.eye (len (primes)).col_join (
                 self.skew*Matrix.ones (1, len (primes)))
 
-    def val_skew_sym (self, primes):
+    def __val_skew_sym (self, primes):
         """Returns the val skew matrix for a list of formal primes. """
         if self.skew == 0:
             return Matrix.eye (len (primes))
@@ -73,17 +73,20 @@ class NormSym (te.Norm):
             - kr*Matrix.ones (len (primes), len (primes))).row_join (
                 r*Matrix.ones (len (primes), 1))
 
-    def val_transform_sym (self, vals, subgroup):
+    def val_transform_sym (self, vals, subgroup): 
+        """Returns the transformed val matrix. """
         primes = Matrix ([Rational (r.num, r.den) for r in subgroup.to_ratios ()])
-        return vals @ self.val_weight_sym (primes) @ self.val_skew_sym (primes)
+        return vals @ self.__val_weight_sym (primes) @ self.__val_skew_sym (primes)
 
-    def interval_transform_sym (self, intervals, subgroup):
+    def interval_transform_sym (self, intervals, subgroup): 
+        """Returns the transformed interval matrix. """
         primes = Matrix ([Rational (r.num, r.den) for r in subgroup.to_ratios ()])
-        return self.interval_skew_sym (primes) @ self.interval_weight_sym (primes) @ intervals
+        return self.__interval_skew_sym (primes) @ self.__interval_weight_sym (primes) @ intervals
 
     def val_transformer (self, subgroup):
+        """Returns the val transformation matrix. """
         primes = Matrix ([Rational (r.num, r.den) for r in subgroup.to_ratios ()])
-        return self.val_weight_sym (primes) @ self.val_skew_sym (primes)
+        return self.__val_weight_sym (primes) @ self.__val_skew_sym (primes)
 
 def wrapper_sym (breeds, target = None, norm = te.Norm (), inharmonic = False, 
         constraint = None, destretch = None, show = True): 

@@ -1,6 +1,6 @@
 # © 2020-2026 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 1.21.0
+# Version 1.21.1
 
 import re, itertools, functools, warnings
 import numpy as np
@@ -45,7 +45,8 @@ class SCALAR:
     OCTAVE = 1
     CENT = 1200
 
-def as_list (main):
+def as_list (main): 
+    """Returns the input as a list. """
     if isinstance (main, list):
         return main
     else:
@@ -229,11 +230,6 @@ class Subgroup:
         else:
             return [monzo2ratio (entry) for entry in self.basis_matrix.T]
 
-    def ratios (self, evaluate = False): 
-        """Alias of to_ratios. Deprecated since v1.19.0. """
-        warnings.warn ("`ratios` is deprecated. Use `to_ratios` instead. ", FutureWarning)
-        return to_ratios (evaluate = evaluate)
-
     def basis_matrix_to (self, other):
         """
         Returns the basis matrix with respect to another subgroup.
@@ -361,15 +357,15 @@ class Norm:
 
         return (modal_weighter (np.asarray (primes), wmode)/2)**wstrength
 
-    def interval_weight (self, primes):
+    def __interval_weight (self, primes):
         """Returns the interval weight matrix for a list of formal primes. """
         return np.diag (self.__weight_vec (primes))
 
-    def val_weight (self, primes):
+    def __val_weight (self, primes):
         """Returns the val weight matrix for a list of formal primes. """
         return np.diag (1/self.__weight_vec (primes))
 
-    def interval_skew (self, primes):
+    def __interval_skew (self, primes):
         """Returns the interval skew matrix for a list of formal primes. """
         if self.skew == 0:
             return np.eye (len (primes))
@@ -378,7 +374,7 @@ class Norm:
         else:
             raise NotImplementedError ("Skew only works with Euclidean norm as of now.")
 
-    def val_skew (self, primes):
+    def __val_skew (self, primes):
         """Returns the val skew matrix for a list of formal primes. """
         if self.skew == 0:
             return np.eye (len (primes))
@@ -393,13 +389,15 @@ class Norm:
         else:
             raise NotImplementedError ("Skew only works with Euclidean norm as of now.")
 
-    def val_transform (self, vals, subgroup):
+    def val_transform (self, vals, subgroup): 
+        """Returns the transformed val matrix. """
         primes = subgroup.to_ratios (evaluate = True)
-        return vals @ self.val_weight (primes) @ self.val_skew (primes)
+        return vals @ self.__val_weight (primes) @ self.__val_skew (primes)
 
-    def interval_transform (self, intervals, subgroup):
+    def interval_transform (self, intervals, subgroup): 
+        """Returns the transformed interval matrix. """
         primes = subgroup.to_ratios (evaluate = True)
-        return self.interval_skew (primes) @ self.interval_weight (primes) @ intervals
+        return self.__interval_skew (primes) @ self.__interval_weight (primes) @ intervals
 
 # canonicalization functions
 
@@ -422,12 +420,11 @@ def __sat (main):
     r = Matrix (main).rank ()
     return np.rint (linalg.inv (__hnf_col (main)[:, :r]) @ main).astype (int)
 
-def canonicalize (main, saturate = True, axis = AXIS.ROW, *, normalize = None):
-    """Saturation & normalization."""
-
-    if normalize is not None: 
-        warnings.warn ("The parameter \"normalize\" is deprecated and has no effects. ", \
-        FutureWarning)
+def canonicalize (main, saturate = True, axis = AXIS.ROW):
+    """
+    Normalizes a matrix to Hermite normal form, 
+    and optionally saturates it along a certain axis. 
+    """
 
     if axis == AXIS.ROW:
         if saturate: 

@@ -263,7 +263,7 @@ class Temperament:
         return np.array ([linalg.det (mapping_x[:, entry]) for entry in combinations], ndmin = r)
 
     def comma_basis (self, show = True):
-        """Finds a comma basis for the temperament. """
+        """Returns and displays a comma basis for the temperament. """
         comma_basis = te.canonicalize (te.nullspace (self.mapping), axis = te.AXIS.COL)
         
         if show:
