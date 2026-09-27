@@ -1,6 +1,6 @@
-# © 2020-2025 Flora Canou
+# © 2020-2026 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 0.30.1
+# Version 0.30.2
 
 import warnings
 import numpy as np
@@ -55,11 +55,11 @@ class Norm:
 
         return (modal_weighter (np.asarray (primes), self.wmode)/2)**self.wstrength
 
-    def val_weight (self, primes):
+    def __val_weight (self, primes):
         """Returns the val weight matrix for a list of formal primes. """
         return np.diag (1/self.__weight_vec (primes))
 
-    def val_skew (self, subgroup):
+    def __val_skew (self, subgroup):
         """Returns the val skew matrix for a list of formal primes. """
         if self.skew == 0:
             return np.eye (len (subgroup))
@@ -73,7 +73,7 @@ class Norm:
             r*np.ones ((len (subgroup), 1)), axis = 1)
 
     def val_transform (self, main, subgroup):
-        return main @ self.val_weight (subgroup) @ self.val_skew (subgroup)
+        return main @ self.__val_weight (subgroup) @ self.__val_skew (subgroup)
 
 def __get_subgroup (main, subgroup):
     main = np.asarray (main)

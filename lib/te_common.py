@@ -1,6 +1,6 @@
 # © 2020-2026 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 1.21.0
+# Version 1.21.1
 
 import re, itertools, functools, warnings
 import numpy as np
@@ -45,7 +45,8 @@ class SCALAR:
     OCTAVE = 1
     CENT = 1200
 
-def as_list (main):
+def as_list (main): 
+    """Converts the input to a list. Existing lists are not copied. """
     if isinstance (main, list):
         return main
     else:
@@ -361,15 +362,15 @@ class Norm:
 
         return (modal_weighter (np.asarray (primes), wmode)/2)**wstrength
 
-    def interval_weight (self, primes):
+    def __interval_weight (self, primes):
         """Returns the interval weight matrix for a list of formal primes. """
         return np.diag (self.__weight_vec (primes))
 
-    def val_weight (self, primes):
+    def __val_weight (self, primes):
         """Returns the val weight matrix for a list of formal primes. """
         return np.diag (1/self.__weight_vec (primes))
 
-    def interval_skew (self, primes):
+    def __interval_skew (self, primes):
         """Returns the interval skew matrix for a list of formal primes. """
         if self.skew == 0:
             return np.eye (len (primes))
@@ -378,7 +379,7 @@ class Norm:
         else:
             raise NotImplementedError ("Skew only works with Euclidean norm as of now.")
 
-    def val_skew (self, primes):
+    def __val_skew (self, primes):
         """Returns the val skew matrix for a list of formal primes. """
         if self.skew == 0:
             return np.eye (len (primes))
@@ -393,13 +394,15 @@ class Norm:
         else:
             raise NotImplementedError ("Skew only works with Euclidean norm as of now.")
 
-    def val_transform (self, vals, subgroup):
+    def val_transform (self, vals, subgroup): 
+        """Returns the transformed val matrix. """
         primes = subgroup.to_ratios (evaluate = True)
-        return vals @ self.val_weight (primes) @ self.val_skew (primes)
+        return vals @ self.__val_weight (primes) @ self.__val_skew (primes)
 
-    def interval_transform (self, intervals, subgroup):
+    def interval_transform (self, intervals, subgroup): 
+        """Returns the transformed interval matrix. """
         primes = subgroup.to_ratios (evaluate = True)
-        return self.interval_skew (primes) @ self.interval_weight (primes) @ intervals
+        return self.__interval_skew (primes) @ self.__interval_weight (primes) @ intervals
 
 # canonicalization functions
 
@@ -423,7 +426,10 @@ def __sat (main):
     return np.rint (linalg.inv (__hnf_col (main)[:, :r]) @ main).astype (int)
 
 def canonicalize (main, saturate = True, axis = AXIS.ROW, *, normalize = None):
-    """Saturation & normalization."""
+    """
+    Normalizes a matrix to Hermite normal form, 
+    and optionally saturates it along a certain axis. 
+    """
 
     if normalize is not None: 
         warnings.warn ("The parameter \"normalize\" is deprecated and has no effects. ", \
@@ -463,7 +469,7 @@ def setup (main, subgroup, axis):
     main = np.asarray (main)
     length_main = __get_length (main, axis)
     if subgroup is None: 
-        subgroup = Subgroup (monzos = np.eye (length_main, dtype = int))
+        subgroup = Subgroup (np.eye (length_main, dtype = int))
     else: 
         length_subgroup = len (subgroup)
         if length_main != length_subgroup:
@@ -558,14 +564,15 @@ def __ratio2monzo (ratio, *, primes = PRIME_LIST):
         monzo = __ratio2monzo (ratio, primes = primes_gen ())
     return np.array (monzo)
 
-def matrix2array (main):
-    """Takes a possibly fractional sympy matrix and converts it to an integer numpy array."""
+def __matrix2array (main):
+    """Takes a possibly fractional SymPy matrix and converts it to an integer NumPy array."""
     return np.array (main/functools.reduce (gcd, tuple (main)), dtype = int).squeeze ()
 
 def nullspace (covectors):
     """Returns the row-style nullspace matrix. """
     frac_nullspace_matrix = Matrix (covectors).nullspace ()
-    return np.column_stack ([matrix2array (entry) for entry in frac_nullspace_matrix])
+    return np.column_stack (
+        [__matrix2array (entry) for entry in frac_nullspace_matrix])
 
 def antinullspace (vectors):
     """
@@ -574,7 +581,8 @@ def antinullspace (vectors):
     where *antitranspose* refers to flip and transpose. 
     """
     frac_antinullspace_matrix = Matrix (np.flip (vectors.T)).nullspace ()
-    return np.flip (np.row_stack ([matrix2array (entry) for entry in frac_antinullspace_matrix]))
+    return np.flip (np.vstack (
+        [__matrix2array (entry) for entry in frac_antinullspace_matrix]))
 
 def breeds2mp (breeds, subgroup):
     """
