@@ -1,8 +1,8 @@
 # © 2020-2026 Flora Canou
 # This work is licensed under the GNU General Public License version 3.
-# Version 1.21.1
+# Version 2.0.0
 
-import re, itertools, functools, warnings
+import fractions, functools, itertools, warnings
 import numpy as np
 from scipy import linalg
 from sympy.matrices import Matrix, normalforms
@@ -55,53 +55,49 @@ def as_list (main):
         except TypeError:
             return [main]
 
-def vec_pad (vec, length):
+def __vec_pad (vector, length):
     """Pads a vector with zeros to a specified length."""
-    vec_copy = np.array (vec)
-    vec_copy.resize (length)
-    return vec_copy
+    vector = np.asarray (vector)
+    return np.pad (vector, (0, length - len (vector)))
 
-def column_stack_pad (vec_list, length = None):
-    """Column-stack with zero-padding."""
-    length = length or max (vec_list, key = len).__len__ () # finds the max length
-    return np.column_stack ([vec_pad (vec, length) for vec in vec_list])
+def column_stack_pad (vector_list, length = None):
+    """
+    Column-stack with zero-padding. 
+    Useful for forming monzo matrices of varied lengths. 
+    """
+    length = length or max (vector_list, key = len).__len__ () # finds the max length
+    return np.column_stack ([__vec_pad (vector, length) for vector in vector_list])
 
-class Ratio:
-    """Ratio in fraction."""
+class Ratio (fractions.Fraction):
+    """Ratio in fraction. Inherits native Python Fraction class. """
 
-    def __init__ (self, num, den):
-        # check type and float-to-integer value preservation property
-        if (not isinstance (num, (int, np.integer)) and num != round (num)
-                or not isinstance (den, (int, np.integer)) and den != round (den)): 
-            raise ValueError ("inconvertible non-integer input. ")
+    def __init__ (self, numerator = 0, denominator = None):
+        
+        # check for overflow
+        if (self._numerator >= np.iinfo (int).max or self._numerator <= np.iinfo (int).min 
+                or self._denominator >= np.iinfo (int).max or self._denominator <= np.iinfo (int).min): 
+            raise OverflowError ("value not safe to convert.")
 
         # check for regularity
-        if num == 0 or den == 0: 
+        if self._numerator == 0: 
             raise ValueError ("irregular number not supported yet. ")
-        
-        # convert to numpy integer type
-        nd = np.array ((num, den), dtype = int)
-        
-        self.pos, self.num, self.den = self.__reduce (nd[0], nd[1])
+    
+    @property
+    def num (self): 
+        return self._numerator
 
-    @staticmethod
-    def __reduce (num, den):
-        """Determines the sign and eliminates the common factors."""
-        pos = (num > 0) == (den > 0)
-        gcd = np.gcd (num, den)
-        num = np.abs (num//gcd)
-        den = np.abs (den//gcd)
-        return pos, num, den
-
+    @property
+    def den (self): 
+        return self._denominator
+    
     @classmethod
     def from_string (cls, s):
-        """Creates a ratio from a string."""
-        match = re.match (r"^(-?)(\d*)\/?(\d*)$", s)
-        num = int (match.group (2) or "1")
-        den = int (match.group (3) or "1")
-        if match.group (1): num = -num
-        return cls (num, den)
-    
+        """
+        Creates a ratio from a string.
+        Deprecated since v2.0.0. Enter the string directly instead. 
+        """
+        return cls (s)
+
     @classmethod
     def from_tuple (cls, t):
         """Creates a ratio from a list/tuple."""
@@ -116,28 +112,31 @@ class Ratio:
                 raise IndexError ("too many values provided.")
 
     def value (self):
-        """Returns the value of the ratio as a float."""
-        v = self.num/self.den
-        return v if self.pos else -v
+        """
+        Returns the value of the ratio as a float. 
+        Deprecated since v2.0.0. Convert to float directly instead. 
+        """
+        warnings.warn ("Ratio.value is deprecated. " \
+            "Use np.float64 (Ratio) instead. ", FutureWarning)
+        return np.float64 (self)
 
     def oct_count (self): 
         """Returns the number of full octaves the ratio has."""
         # NOTE: "oct" is a reserved word
-        return np.floor (np.log2 (self.value ())).astype (int)
+        return np.floor (np.log2 (np.float64 (self))).astype (int)
 
     def eq_count (self, eq): 
         """
         Enter a ratio for the equave, 
         returns the number of full equaves the ratio has.
         """
-        eq = as_ratio (eq)
-        if eq == 2.: 
+        if eq == 2: 
             return self.oct_count ()
         else:
             return self.__eq_count (eq)
             
     def __eq_count (self, eq):
-        return (np.log2 (self.value ())//np.log2 (eq.value ())).astype (int)
+        return (np.log2 (np.float64 (self))//np.log2 (np.float64 (eq))).astype (int)
 
     def oct_reduce (self): 
         """Returns the octave-reduced ratio."""
@@ -151,7 +150,7 @@ class Ratio:
     def eq_reduce (self, eq):
         """Enter a ratio for the equave, returns the equave-reduced ratio."""
         eq = as_ratio (eq)
-        if eq == 2.:
+        if eq == 2:
             return self.oct_reduce ()
         else:
             return self.__eq_reduce (eq)
@@ -179,28 +178,9 @@ class Ratio:
     def __eq_complement (self, eq):    
         return Ratio (self.den*eq.num, self.num*eq.den)
 
-    def __str__ (self):
-        s = f"{self.num}" if self.den == 1 else f"{self.num}/{self.den}"
-        return s if self.pos else "-" + s
-
-    def __eq__ (self, other):
-        return self.value () == (other.value () if isinstance (other, Ratio) else other)
-
 def as_ratio (n):
-    """
-    Returns a Ratio object, fractional notation supported.
-    Existing Ratio objects are not copied. 
-    """
-    if isinstance (n, Ratio):
-        return n
-    elif isinstance (n, str):
-        return Ratio.from_string (n)
-    elif isinstance (n, (list, tuple)):
-        return Ratio.from_tuple (n)
-    elif np.asarray (n).size == 1: 
-        return Ratio (n, 1)
-    else:
-        raise TypeError ("unsupported type.")
+    """Returns a Ratio object. Existing Ratio objects are not copied. """
+    return n if isinstance (n, Ratio) else Ratio (n)
 
 class Subgroup:
     """Subgroup profile of ji."""
@@ -496,7 +476,7 @@ def monzo2ratio (subgroup_monzo, subgroup = None):
     if subgroup is None: 
         monzo = subgroup_monzo
     else: 
-        monzo = subgroup.basis_matrix @ vec_pad (subgroup_monzo, length = len (subgroup))
+        monzo = subgroup.basis_matrix @ __vec_pad (subgroup_monzo, length = len (subgroup))
     return __monzo2ratio (monzo)
 
 def __monzo2ratio (monzo):
@@ -523,7 +503,7 @@ def ratio2monzo (ratio, subgroup = None):
     else:
         # pad zeros
         max_length = max (len (monzo), subgroup.basis_matrix.shape[0])
-        monzo = vec_pad (monzo, length = max_length)
+        monzo = __vec_pad (monzo, length = max_length)
         subgroup_basis_matrix = column_stack_pad (subgroup.basis_matrix.T, length = max_length)
 
         # find the subgroup monzo
