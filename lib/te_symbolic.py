@@ -127,7 +127,7 @@ def wrapper_sym (breeds, target = None, norm = te.Norm (), inharmonic = False,
         bias = __mean (error_map_mp_x)
 
         just_tuning_map = target.just_tuning_map (scalar = te.SCALAR.CENT)
-        target2mp = target.basis_matrix_to (target.minimal_prime_subgroup ())
+        target2mp = te.relative_basis_matrix (target)
         tempered_tuning_map = tempered_tuning_map_mp @ target2mp
         gen = tempered_tuning_map @ linalg.pinv (breeds)
         error_map = tempered_tuning_map - just_tuning_map
@@ -178,7 +178,7 @@ def __optimizer_sym (breeds, target, norm, constraint, destretch, show):
     if constraint is None:
         tuning_projection = val_transformer @ breeds_x.pinv () @ breeds_x @ val_transformer.pinv ()
     else:
-        cons_basis_matrix = Matrix (constraint.basis_matrix_to (target))
+        cons_basis_matrix = Matrix (te.relative_basis_matrix (constraint, target))
         cons_basis_matrix_x = norm.interval_transform_sym (cons_basis_matrix, target)
 
         # orthonormal complement basis of the weight-skewed constraints

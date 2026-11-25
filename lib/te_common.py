@@ -94,8 +94,10 @@ class Ratio (fractions.Fraction):
     def from_string (cls, s):
         """
         Creates a ratio from a string.
-        Deprecated since v2.0.0. Enter the string directly instead. 
+        Deprecated since v2.0.0 as string can be entered directly now. 
         """
+        warnings.warn ("Ratio.from_string is deprecated. " \
+            "Enter the string directly instead. ", FutureWarning)
         return cls (s)
 
     @classmethod
@@ -114,10 +116,10 @@ class Ratio (fractions.Fraction):
     def value (self):
         """
         Returns the value of the ratio as a float. 
-        Deprecated since v2.0.0. Convert to float directly instead. 
+        Deprecated since v2.0.0 as conversion is now trivial. 
         """
         warnings.warn ("Ratio.value is deprecated. " \
-            "Use np.float64 (Ratio) instead. ", FutureWarning)
+            "Use np.float64 (r) for Ratio r instead. ", FutureWarning)
         return np.float64 (self)
 
     def oct_count (self): 
@@ -206,88 +208,72 @@ class Subgroup:
     def to_ratios (self, evaluate = False):
         """Returns a list of ratios in Ratio objects or floats."""
         if evaluate:
-            return [monzo2ratio (entry).value () for entry in self.basis_matrix.T]
+            return [np.float64 (monzo2ratio (entry)) for entry in self.basis_matrix.T]
         else:
             return [monzo2ratio (entry) for entry in self.basis_matrix.T]
 
     def ratios (self, evaluate = False): 
         """Alias of to_ratios. Deprecated since v1.19.0. """
-        warnings.warn ("`ratios` is deprecated. Use `to_ratios` instead. ", FutureWarning)
+        warnings.warn ("`Subgroup.ratios` is deprecated. " \
+            "Use `Subgroup.to_ratios` instead. ", FutureWarning)
         return to_ratios (evaluate = evaluate)
 
-    def basis_matrix_to (self, other):
-        """
-        Returns the basis matrix with respect to another subgroup.
-        Also useful for padding zeros.
-        """
-
-        # pad zeros
-        max_length = max (self.basis_matrix.shape[0], other.basis_matrix.shape[0])
-        self_basis_matrix = column_stack_pad (self.basis_matrix.T, length = max_length)
-        other_basis_matrix = column_stack_pad (other.basis_matrix.T, length = max_length)
-
-        # find the subgroup basis matrix
-        result = linalg.pinv (other_basis_matrix) @ self_basis_matrix
-
-        # test for disjoint or degenerate subgroup
-        # NOTE: linalg.pinv can introduce small numerical errors
-        if not np.allclose (other_basis_matrix @ result, self_basis_matrix, rtol = 0, atol = 1e-6): 
-            raise ValueError ("disjoint or degenerate subgroup. ")
-        
-        # convert to integer type if possible
-        result_rd = np.rint (result)
-        if np.allclose (result, result_rd, rtol = 0, atol = 1e-6):
-            result = result_rd.astype (int)
-        else:
-            warnings.warn ("non-integer subgroup basis. Possibly improper subgroup. ")
-
-        return result
-    
     def just_tuning_map (self, scalar = SCALAR.OCTAVE): #in octaves by default
-        """Returns the just tuning map. """
+        """Returns the just tuning map for the basis. """
         primes = prime_list (self.basis_matrix.shape[0])
         return scalar*(np.log2 (primes) @ self.basis_matrix)
 
-    def is_prime_power (self):
+    def is_power (self):
         """
-        Returns whether the subgroup has a basis of only primes and/or their powers.
-        Such a basis allows no distinction between inharmonic and subgroup tunings
-        for tenney-weighted norms. 
+        Returns whether the subgroup is represented by a basis 
+        of only primes and/or their powers. Such a basis allows no distinction 
+        between inharmonic and subgroup tunings for tenney-weighted norms. 
         """
         return (all (np.count_nonzero (row) <= 1 for row in self.basis_matrix)
             and all (np.count_nonzero (row) <= 1 for row in self.basis_matrix.T))
 
+    def is_prime_power (self): 
+        """Alias of Subgroup.is_power. Deprecated since v2.0.0. """
+        warnings.warn ("`Subgroup.is_prime_power` is deprecated. " \
+            "Use `Subgroup.is_power` instead. ", FutureWarning)
+        return self.is_power ()
+
     def is_prime (self):
         """
-        Returns whether the subgroup has a basis of only primes.
-        Such a basis allows no distinction between inharmonic and subgroup tunings
-        for all norms. 
+        Returns whether the subgroup is represented by a basis 
+        of only primes. Such a basis allows no distinction 
+        between inharmonic and subgroup tunings for all norms. 
         """
-        return (self.is_prime_power ()
+        return (self.is_power ()
             and np.all (self.basis_matrix[self.basis_matrix != 0] == 1))
 
     def minimal_prime_subgroup (self):
         """Returns the smallest prime subgroup that contains this subgroup. """
-        selector = self.basis_matrix.nonzero ()[0]
+        selector = self.basis_matrix.nonzero ()[0] #row indices of nonzero entries
         monzos = np.zeros ((self.basis_matrix.shape[0], len (selector)), dtype = int)
         monzos[selector, np.arange (len (selector))] = 1
         return Subgroup (monzos)
 
+    def basis_matrix_to (self, other = None):
+        """
+        Returns the basis matrix with respect to another subgroup.
+        Displaced by relative_basis_matrix since v2.0.0. 
+        """
+        warnings.warn ("`Subgroup.basis_matrix_to` is deprecated. " \
+            "Use `relative_group` instead. ", FutureWarning)
+        return relative_basis_matrix (self, other)
+    
     def index (self, other = None):
         """
         Returns what fraction the subgroup is to another subgroup. 
-        Defaults to the minimal prime subgroup if not specified. 
-        1: it's a formally prime subgroup; inf: it's a degenerate subgroup. 
-        Used to validate temperament complexity and badness. 
+        Displaced by relative_index since v2.0.0. 
         """
-        if other is None: 
-            other = self.minimal_prime_subgroup ()
-        try:
-            return linalg.det (self.basis_matrix_to (other))
-        except ValueError:
-            return np.inf
+        warnings.warn ("`Subgroup.index` is deprecated. " \
+            "Use `relative_index` instead. ", FutureWarning)
+        return relative_index (self, other)
 
     def __str__ (self):
+        """Returns its dot notation."""
         return ".".join (entry.__str__ () for entry in self.to_ratios ())
 
     def __len__ (self):
@@ -297,6 +283,52 @@ class Subgroup:
     def __eq__ (self, other):
         return (isinstance (other, Subgroup) 
             and np.array_equal (self.basis_matrix, other.basis_matrix))
+
+def relative_basis_matrix (subgroup1, subgroup2 = None):
+    """
+    Returns the basis matrix of the first subgroup with respect to 
+    the other subgroup. Defaults to the minimal prime subgroup 
+    if not specified. Also useful for padding zeros.
+    """
+    if subgroup2 is None: 
+        subgroup2 = subgroup1.minimal_prime_subgroup ()
+    
+    # pad zeros
+    max_length = max (subgroup1.basis_matrix.shape[0], subgroup2.basis_matrix.shape[0])
+    subgroup1_basis_matrix = column_stack_pad (subgroup1.basis_matrix.T, length = max_length)
+    subgroup2_basis_matrix = column_stack_pad (subgroup2.basis_matrix.T, length = max_length)
+
+    # find the subgroup basis matrix
+    res = linalg.pinv (subgroup2_basis_matrix) @ subgroup1_basis_matrix
+
+    # test for improper subgroup
+    # NOTE: linalg.pinv can introduce small numerical errors
+    if not np.allclose (subgroup2_basis_matrix @ res, subgroup1_basis_matrix, rtol = 0, atol = 1e-6): 
+        raise ValueError ("improper subgroup. ")
+    
+    # convert to integer type if possible
+    res_rd = np.rint (res)
+    if np.allclose (res, res_rd, rtol = 0, atol = 1e-6):
+        res = res_rd.astype (int)
+    else:
+        warnings.warn ("non-integer subgroup basis. Possibly improper subgroup. ")
+
+    return res
+
+def relative_index (subgroup1, subgroup2 = None):
+    """
+    Returns what fraction the subgroup is to another subgroup. 
+    Defaults to the minimal prime subgroup if not specified. 
+    1: it's a formally prime subgroup; inf: it's a degenerate subgroup. 
+    Used to validate temperament complexity and badness. 
+    """
+    if subgroup2 is None: 
+        subgroup2 = subgroup1.minimal_prime_subgroup ()
+    
+    try:
+        return linalg.det (relative_basis_matrix (subgroup1, subgroup2))
+    except ValueError:
+        return np.inf
 
 class Norm: 
     """Tenney-Wilson parametric norm profile for the tuning space."""
@@ -494,12 +526,12 @@ def ratio2monzo (ratio, subgroup = None):
     Takes a ratio object, returns the monzo, 
     subgroup monzo supported.
     """
-    if ratio.value () < 0:
+    if ratio < 0:
         raise ValueError ("invalid ratio. ")
 
     monzo = __ratio2monzo (ratio)
     if subgroup is None:
-        subgroup_monzo = monzo
+        res = monzo
     else:
         # pad zeros
         max_length = max (len (monzo), subgroup.basis_matrix.shape[0])
@@ -507,21 +539,21 @@ def ratio2monzo (ratio, subgroup = None):
         subgroup_basis_matrix = column_stack_pad (subgroup.basis_matrix.T, length = max_length)
 
         # find the subgroup monzo
-        subgroup_monzo = linalg.pinv (subgroup_basis_matrix) @ monzo
+        res = linalg.pinv (subgroup_basis_matrix) @ monzo
 
-        # test for disjoint or degenerate subgroup
+        # test for improper subgroup
         # NOTE: linalg.pinv can introduce small numerical errors
-        if not np.allclose (subgroup_basis_matrix @ subgroup_monzo, monzo, rtol = 0, atol = 1e-6): 
-            raise ValueError ("disjoint or degenerate subgroup. ")
+        if not np.allclose (subgroup_basis_matrix @ res, monzo, rtol = 0, atol = 1e-6): 
+            raise ValueError ("improper subgroup. ")
         
         # convert to integer type if possible
-        subgroup_monzo_rd = np.rint (subgroup_monzo)
-        if np.allclose (subgroup_monzo, subgroup_monzo_rd, rtol = 0, atol = 1e-6):
-            subgroup_monzo = subgroup_monzo_rd.astype (int)
+        res_rd = np.rint (res)
+        if np.allclose (res, res_rd, rtol = 0, atol = 1e-6):
+            res = res_rd.astype (int)
         else:
             warnings.warn ("non-integer subgroup monzo. Possibly improper subgroup. ")
         
-    return subgroup_monzo
+    return res
 
 def __ratio2monzo (ratio, *, primes = PRIME_LIST):
     # optimized for stock primes
@@ -570,8 +602,7 @@ def breeds2mp (breeds, subgroup):
     returns the corresponding array of breeds in the minimal prime subgroup, 
     and the minimal prime subgroup itself. 
     """
-    subgroup_mp = subgroup.minimal_prime_subgroup ()
-    subgroup2mp = subgroup.basis_matrix_to (subgroup_mp)
+    subgroup2mp = relative_basis_matrix (subgroup)
     breeds_mp = canonicalize ( #NOTE: next line can introduce contorsion in rare cases
         antinullspace (subgroup2mp @ nullspace (breeds)))
     return breeds_mp, subgroup_mp
